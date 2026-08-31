@@ -29,7 +29,7 @@ function initTablist(tablist) {
   tabs.forEach((tab, index) => {
     tab.addEventListener('click', () => activateTab(tabs, panels, index));
     tab.addEventListener('keydown', (e) => {
-      let next = null;
+      let next;
       switch (e.key) {
         case 'ArrowRight':
           next = (index + 1) % tabs.length;
