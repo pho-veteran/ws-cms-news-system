@@ -177,6 +177,60 @@ intact.
 **Lower it to ~20 after moving back to Lightsail**, or it stops meaning anything.
 Details: `infra/terraform/README.md`.
 
+## 7b. Cloudflare edge + cutover (§5.3, §11)
+
+Not yet applied: there is no domain, so no zone exists. The origin firewall already
+admits 80/443 from Cloudflare ranges ONLY (§10.2), which means **the site is
+unreachable from the internet until the proxy is in front of it.** That is deliberate,
+and it makes the order below matter.
+
+`infra/scripts/pgds-cloudflare-setup.sh` turns §5.3 into one idempotent, self-verifying
+command. It sets SSL to Full (strict), Always Use HTTPS on, Brotli on, Auto Minify off,
+and creates exactly the **two** Cache Rules §5.3 budgets (2 of the Free plan's 10):
+
+1. bypass `/wp-admin/`, `/wp-login.php`, `/wp-json/`, `/wp-cron.php`, `/xmlrpc.php`
+2. cache static assets by extension, edge TTL 31 days
+
+HTML is absent from both, on purpose (§5.2/§5.6): the edge caches assets only, Nginx
+FastCGI owns the page cache and is purged on `save_post`. That is what removes the edge
+stale window and means no cookie-based bypass rule is needed.
+
+```bash
+# Dry run first — resolves the zone and reports its status without changing anything.
+CF_API_TOKEN=<scoped token> CF_DOMAIN=<domain> ./infra/scripts/pgds-cloudflare-setup.sh --dry-run
+CF_API_TOKEN=<scoped token> CF_DOMAIN=<domain> ./infra/scripts/pgds-cloudflare-setup.sh
+```
+
+Use a **scoped** token (Zone:Read + Zone Settings:Edit + Cache Rules:Edit for this zone),
+never the Global API Key, which cannot be scoped and can do anything to every zone.
+
+Note the script REPLACES the cache ruleset when it runs, so a rule added by hand in the
+dashboard is removed. Intentional: the cache design depends on knowing exactly what is
+there.
+
+### Cutover order
+
+1. Add the domain to Cloudflare, delegate its nameservers, wait for zone `status: active`
+   (§11 — propagation can take hours; do it before Day 1).
+2. Generate an Origin CA certificate, install it on the origin, confirm nginx serves 443.
+   Full (strict) requires this, and it is a manual step by design — a private key should
+   not pass through a shell script.
+3. Run the script above.
+4. Set `domain_name` in `terraform.tfvars`, `terraform apply`, then add the three DKIM
+   CNAMEs from `terraform output ses_dkim_tokens`. **This path is verified working** — it
+   was exercised end to end against the IANA-reserved `example.com`, which produced 3
+   tokens and then destroyed cleanly, so only the domain value is missing.
+5. Request SES production access (24h+, §11 — the one D0 item that can delay launch).
+6. Run the §13 go/no-go gate.
+7. **Last:** point the apex and `www` A records at the origin and enable the orange
+   cloud. This is the cutover; everything above is reversible without visitor impact.
+8. Confirm the edge is caching assets:
+   ```bash
+   curl -sI https://<domain>/wp-content/themes/pgds/assets/dist/main.<hash>.css | grep cf-cache-status
+   ```
+   Expect `HIT` on the second request. This is the one §13 item that cannot be checked
+   before a zone exists.
+
 ## 8. Exit plan (before decommissioning)
 
 ```bash
