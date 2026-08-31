@@ -101,9 +101,26 @@ systemctl restart redis-server
 #    server block / cache zone / secret-header check ships from
 #    infra/nginx/pgds.conf; this only prepares the cache directory and
 #    disables the default site.
+#
+#    The directory name MUST stay /var/cache/nginx/fcgi. Three places have to
+#    agree on it and there is no runtime error if they do not:
+#      - infra/nginx/http-snippet.conf  fastcgi_cache_path
+#      - wp-content/mu-plugins/pgds-cache-flush.php  PGDS_FCGI_CACHE_DIR
+#      - this script
+#    An earlier version created ".../fastcgi" here while the other two used
+#    ".../fcgi". The purge then deleted files from a directory nginx never wrote
+#    to, so it always "succeeded" while every cached page stayed stale —
+#    silently breaking the one requirement §5.1 calls non-negotiable, that an
+#    editor's change is visible to anonymous readers on the next request.
+#
+#    php-fpm must be able to delete files here, because the mu-plugin purges as
+#    the web user rather than through a privileged helper (§5.4). Both nginx and
+#    php-fpm run as www-data on Ubuntu, so ownership alone is sufficient; the
+#    group-write note in §5.4 applies only where they run as different users.
 # ---------------------------------------------------------------------------
-mkdir -p /var/cache/nginx/fastcgi
-chown www-data:www-data /var/cache/nginx/fastcgi
+mkdir -p /var/cache/nginx/fcgi
+chown -R www-data:www-data /var/cache/nginx/fcgi
+chmod 750 /var/cache/nginx/fcgi
 rm -f /etc/nginx/sites-enabled/default
 
 systemctl enable nginx

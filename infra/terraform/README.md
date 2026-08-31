@@ -1,13 +1,19 @@
 # Terraform — pgds infrastructure
 
-## BLOCKER — the account cannot create the specified instance size
+## Current state: running on the EC2 fallback, not Lightsail
 
-**Status as of 2026-08-31, account `334156771769`:** `bootstrap` is fully applied and
-`main` is applied **except `aws_lightsail_instance.app`**. Everything else exists:
-both S3 buckets, both IAM users with their access keys, both budgets, and the static
-IP. 9 of 12 `main` resources are live.
+**Account `334156771769`, 2026-08-31.** Both stacks are fully applied. The origin is
+live at Elastic IP **3.1.122.66** (`i-047f1e4d31db00df6`, `t4g.small`, 2 vCPU / 2 GB,
+arm64) — **not** on Lightsail, because this account cannot create a Lightsail bundle
+large enough.
 
-`CreateInstances` fails for the specified bundle:
+`compute_backend = "ec2"` selects the fallback. `"lightsail"` remains the default and
+the preferred target; switch back and destroy the EC2 resources as soon as the cap is
+lifted.
+
+### Why Lightsail could not be used
+
+`CreateInstances` refuses every bundle above `micro_3_0`:
 
 ```
 InvalidInputException: Sorry, your account can not create an instance using this
@@ -15,7 +21,7 @@ Lightsail plan size. Please try a smaller plan size or contact Customer Support
 if you need to use a larger plan.
 ```
 
-Probed empirically on a clean account with **zero** existing instances:
+Probed on a clean account with **zero** existing instances:
 
 | Bundle | RAM | Result |
 |---|---|---|
@@ -25,31 +31,51 @@ Probed empirically on a clean account with **zero** existing instances:
 | `small_ipv6_3_0` | 2 GB | **denied** |
 | `medium_3_0` | 4 GB | **denied** |
 
-So the account's plan-size ceiling is `micro_3_0`. The probe instances were deleted;
-no charges were left running.
+Also denied in `ap-southeast-2`, `ap-northeast-1`, `ap-south-1`, `us-east-1` and
+`eu-west-1` — the cap is **account-wide, not regional**. All probe instances were
+deleted; nothing was left billing.
 
-**Why Proposal 02 §8.2 did not catch this.** That section verified availability with
-`lightsail get-bundles`, which reports `isActive: true` for every bundle in the table
-above — including the three that are denied. `get-bundles` describes the regional
-**catalog**, not **account eligibility**. The §8.2 check was necessary but not
-sufficient, and no API exposes the per-account cap; it surfaces only on
-`CreateInstances`.
+**Why Proposal 02 §8.2 did not catch it.** §8.2 verified availability with
+`lightsail get-bundles`, which reports `isActive: true` for every bundle above,
+including the three that are denied. That API describes the regional **catalog**, not
+**account eligibility**. The check was necessary but not sufficient, and no API
+exposes the per-account cap — it surfaces only on `CreateInstances`.
 
-**Why the default was not simply lowered to `micro_3_0`.** Proposal 02 §2 excludes
-1 GB explicitly — *"cannot run WordPress + MariaDB + Redis. Excluded for technical
-reasons, not price"* — and §4.1's RAM budget already consumes ~1.17 GB before serving
-a single request. Running on 1 GB would replace a visible blocker with constant
-swapping, which §4.1 calls out as "the configuration is wrong". `bundle_id` therefore
-still defaults to `small_3_0`.
+**Why `micro_3_0` was not accepted as the fallback.** §2 excludes 1 GB explicitly:
+*"cannot run WordPress + MariaDB + Redis. Excluded for technical reasons, not
+price."* §4.1's RAM budget consumes ~1.17 GB before serving a request, so 1 GB would
+swap constantly — which §4.1 itself calls "the configuration is wrong". Downgrading
+would have traded a visible blocker for silent degradation under load.
 
-**To unblock:** request a Lightsail plan-size increase through AWS Support, then
-re-run `terraform apply` in `main/` with no changes. Note this account is on Basic
-support (`describe-severity-levels` returns `SubscriptionRequiredException`), so the
-request must go through the Support Center console rather than the API.
+### Cost consequence — a real regression against §8.1
 
-Until then the origin does not exist, so the §13 go/no-go gate items that need a live
-server (cache `X-Cache` behaviour, restore/RTO test, origin-not-reachable-by-IP) cannot
-be executed.
+| | Lightsail `small_3_0` | EC2 `t4g.small` |
+|---|---|---|
+| Instance | $12.00/mo (bundled) | $15.48/mo |
+| 60 GB SSD | included | $5.76/mo |
+| IPv4 | included | $3.65/mo |
+| Egress | 3 TB included | ~$6.00/mo (~150 GB; 100 GB free, then $0.12/GB) |
+| **Total** | **~$12.00/mo** | **~$30.89/mo** |
+| **6 months** | **~$72** | **~$185** |
+
+That **exceeds the $100 operational cap in §8.1** while still fitting inside the $200
+of credits. §8.1 describes the cap as "operational discipline to detect unexpected
+costs" rather than a hard budget — this is precisely such a cost, so it is reported
+rather than absorbed. The $50/$85 budget alarms will fire.
+
+Egress is the entire delta, and Cloudflare in front of static assets (§5.6) is now a
+**cost control**, not merely a cache. Do not disable it.
+
+### To get back to Lightsail
+
+1. Request a Lightsail plan-size increase via the AWS Support Center console. The
+   account is on Basic support (`describe-severity-levels` →
+   `SubscriptionRequiredException`), so the API route is unavailable.
+2. Set `compute_backend = "lightsail"` in `terraform.tfvars`.
+3. `terraform apply` — this destroys the EC2 instance and Elastic IP and creates the
+   Lightsail instance and static IP. **Back up first:** the root volume has
+   `delete_on_termination = false`, but the public IP changes, so Cloudflare's A
+   record must be repointed. Follow the §10.1 resize procedure.
 
 ---
 

@@ -3,9 +3,19 @@
  * (public ports). Snapshots are intentionally NOT managed here — Proposal
  * 02 §9.2 flags snapshots-in-Terraform as a perpetual-drift source; they are
  * created by a cron job on the instance instead (§6.1).
+ *
+ * This is the PREFERRED backend (§2: nothing is cheaper at this load). Every
+ * resource is gated on `var.compute_backend == "lightsail"` because this account
+ * currently cannot create bundles above micro_3_0 — see the header of ec2.tf for the
+ * evidence and the cost consequence of the fallback.
  */
 
+locals {
+  lightsail_instances = var.compute_backend == "lightsail" ? 1 : 0
+}
+
 resource "aws_lightsail_instance" "app" {
+  count             = local.lightsail_instances
   name              = var.instance_name
   availability_zone = var.availability_zone
   blueprint_id      = var.blueprint_id
@@ -22,12 +32,14 @@ resource "aws_lightsail_instance" "app" {
 }
 
 resource "aws_lightsail_static_ip" "app" {
-  name = "${var.instance_name}-static-ip"
+  count = local.lightsail_instances
+  name  = "${var.instance_name}-static-ip"
 }
 
 resource "aws_lightsail_static_ip_attachment" "app" {
-  static_ip_name = aws_lightsail_static_ip.app.name
-  instance_name  = aws_lightsail_instance.app.name
+  count          = local.lightsail_instances
+  static_ip_name = aws_lightsail_static_ip.app[0].name
+  instance_name  = aws_lightsail_instance.app[0].name
 }
 
 # ---------------------------------------------------------------------------
@@ -40,7 +52,8 @@ resource "aws_lightsail_static_ip_attachment" "app" {
 # ---------------------------------------------------------------------------
 
 resource "aws_lightsail_instance_public_ports" "app" {
-  instance_name = aws_lightsail_instance.app.name
+  count         = local.lightsail_instances
+  instance_name = aws_lightsail_instance.app[0].name
 
   port_info {
     protocol   = "tcp"
