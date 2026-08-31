@@ -1,14 +1,14 @@
 /**
- * Build asset cho theme pgds.
+ * Asset build for the pgds theme.
  *
- * Vi sao khong dung @wordpress/scripts (BOM proposal chot no):
- *  - Cache strategy (proposal §5.5) yeu cau filename CO content hash + immutable.
- *    @wordpress/scripts bust cache bang version query-string qua *.asset.php,
- *    KHONG doi filename -> khong dung duoc `Cache-Control: immutable` an toan.
- *  - JS cua theme la vanilla ES2020, KHONG import package @wordpress/* nao,
- *    nen loi ich chinh cua @wordpress/scripts (dependency extraction) = 0.
- *  => Dung sass (dart-sass) + esbuild, xuat filename co [contenthash] +
- *     manifest.json de PHP doc luc enqueue. Nhe hon, verify chay duoc that.
+ * Why we don't use @wordpress/scripts (decided by the BOM proposal):
+ *  - The cache strategy (proposal §5.5) requires filenames WITH a content hash + immutable.
+ *    @wordpress/scripts busts cache via a version query string through *.asset.php,
+ *    and does NOT change the filename -> can't safely use `Cache-Control: immutable`.
+ *  - The theme's JS is vanilla ES2020 and imports NO @wordpress/* packages,
+ *    so the main benefit of @wordpress/scripts (dependency extraction) = 0.
+ *  => We use sass (dart-sass) + esbuild, emitting filenames with [contenthash] +
+ *     a manifest.json for PHP to read at enqueue time. Lighter, and verified to actually run.
  *
  * Output:
  *   assets/dist/main.<hash>.css
@@ -95,7 +95,7 @@ if (CLEAN_ONLY) {
 }
 
 if (WATCH) {
-  // Watch mode: SCSS qua polling cua sass khong co san -> tu watch bang fs.
+  // Watch mode: sass has no built-in polling for SCSS -> watch manually via fs.
   const { watch } = await import('node:fs');
   const jsCtx = await esContext({
     entryPoints: [JS_ENTRY],
@@ -120,7 +120,7 @@ if (WATCH) {
   await rebuild('initial');
   watch(join(SRC, 'scss'), { recursive: true }, () => rebuild('scss'));
   watch(join(SRC, 'js'), { recursive: true }, () => rebuild('js'));
-  console.log('[pgds build] watching src/scss and src/js ... Ctrl+C de dung');
+  console.log('[pgds build] watching src/scss and src/js ... Ctrl+C to stop');
   await jsCtx.dispose;
 } else {
   await buildOnce(false);

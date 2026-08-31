@@ -1,11 +1,11 @@
 <?php
 /**
- * Sidebar block "Lich Van Nien".
+ * Sidebar block "Perpetual Calendar".
  *
- * Duong lich: luon tinh tu ngay hien tai.
- * Am lich + menh + gio hoang dao + trich dan: lay tu CPT pgds_lunar_note (neu co),
- * doc qua custom field. Neu khong co -> chi hien duong lich + trich dan mac dinh.
- * (Chuyen doi am lich day du la scope RUN - proposal §10.3.)
+ * Gregorian date: always computed from the current day.
+ * Lunar date + element + auspicious hours + quote: read from the pgds_lunar_note CPT
+ * (if present), via custom fields. If absent -> only show the Gregorian date + default quote.
+ * (Full lunar calendar conversion is out of scope for this run - proposal §10.3.)
  *
  * @param array $args { post: ?WP_Post }
  * @package pgds

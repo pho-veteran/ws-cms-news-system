@@ -10,24 +10,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Cac kich thuoc anh khai bao tuong minh de tranh CLS va phuc vu srcset.
- * Ty le bam sat layout v12 (16:10, 16:11, 4:3, vuong).
+ * Image sizes declared explicitly to avoid CLS and support srcset.
+ * Aspect ratios follow layout v12 closely (16:10, 16:11, 4:3, square).
  */
 function pgds_image_sizes() {
 	// name => array( width, height, crop )
 	return array(
-		'pgds-lead'   => array( 960, 600, true ),  // hero trang chu / anh dai dien bai
-		'pgds-card'   => array( 480, 300, true ),  // card 3 cot, feature-secondary
+		'pgds-lead'   => array( 960, 600, true ),  // front page hero / post featured image
+		'pgds-card'   => array( 480, 300, true ),  // 3-column card, feature-secondary
 		'pgds-list'   => array( 360, 220, true ),  // list-item
-		'pgds-thumb'  => array( 320, 220, true ),  // media thumb grid (16:11 xap xi)
-		'pgds-mini'   => array( 144, 108, true ),  // mini item cot chuyen muc
-		'pgds-rank'   => array( 140, 100, true ),  // sidebar "Doc nhieu nhat"
-		'pgds-square' => array( 116, 116, true ),  // compact-list Vietnam Buddhism
+		'pgds-thumb'  => array( 320, 220, true ),  // media thumb grid (roughly 16:11)
+		'pgds-mini'   => array( 144, 108, true ),  // category column mini item
+		'pgds-rank'   => array( 140, 100, true ),  // sidebar "Most read"
+		'pgds-square' => array( 116, 116, true ),  // Vietnam Buddhism compact-list
 	);
 }
 
 /**
- * Theme supports + dang ky image size + nav menu.
+ * Theme supports + register image sizes + nav menus.
  */
 function pgds_setup() {
 	load_theme_textdomain( 'pgds', PGDS_DIR . '/languages' );
@@ -64,14 +64,14 @@ function pgds_setup() {
 add_action( 'after_setup_theme', 'pgds_setup' );
 
 /**
- * Bo cac tinh nang khong dung de giam payload va be mat tan cong.
+ * Remove unused features to reduce payload and attack surface.
  */
 function pgds_trim_head() {
 	remove_action( 'wp_head', 'wp_generator' );
 	remove_action( 'wp_head', 'wlwmanifest_link' );
 	remove_action( 'wp_head', 'rsd_link' );
 	remove_action( 'wp_head', 'wp_shortlink_wp_head' );
-	// Emoji: bo hoan toan (khong can, nang JS/CSS).
+	// Emoji: remove entirely (not needed, adds JS/CSS weight).
 	remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 	remove_action( 'wp_print_styles', 'print_emoji_styles' );
 	remove_action( 'admin_print_scripts', 'print_emoji_detection_script' );
@@ -80,12 +80,12 @@ function pgds_trim_head() {
 add_action( 'init', 'pgds_trim_head' );
 
 /**
- * Tat XML-RPC (hardening §9.3). Origin chi phuc vu web + admin.
+ * Disable XML-RPC (hardening §9.3). Origin serves web + admin only.
  */
 add_filter( 'xmlrpc_enabled', '__return_false' );
 
 /**
- * Do dai excerpt + "doc them".
+ * Excerpt length + "read more".
  */
 function pgds_excerpt_length() {
 	return 32;
@@ -98,7 +98,7 @@ function pgds_excerpt_more() {
 add_filter( 'excerpt_more', 'pgds_excerpt_more' );
 
 /**
- * Kich thuoc content mac dinh cho editor.
+ * Default content width for the editor.
  */
 if ( ! isset( $content_width ) ) {
 	$content_width = 760;

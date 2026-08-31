@@ -1,6 +1,6 @@
 <?php
 /**
- * Card lead (horizontal) - tin dan dau trang chu.
+ * Lead card (horizontal) - top story on the front page.
  *
  * @param array $args { post: WP_Post, eager: bool }
  * @package pgds

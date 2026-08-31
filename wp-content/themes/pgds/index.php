@@ -1,7 +1,7 @@
 <?php
 /**
- * Fallback cuoi cung (WordPress bat buoc phai co index.php).
- * Dung khi trang bai viet (posts page) hoac cac truong hop khong khop template khac.
+ * Final fallback (WordPress requires an index.php).
+ * Used for the posts page or any case that doesn't match another template.
  *
  * @package pgds
  */

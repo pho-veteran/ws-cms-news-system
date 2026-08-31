@@ -1,10 +1,10 @@
 // ============================================================================
 // 03-ELEMENTS / FONTS (self-host, proposal §3.1.2)
-// Dat file .woff2 (subset vietnamese+latin) vao assets/fonts/.
-// Thieu file -> fallback system-ui / Georgia, web van chay.
-// Lay font: dung google-webfonts-helper hoac subset tu Google Fonts.
+// Place .woff2 files (Vietnamese + Latin subsets) in assets/fonts/.
+// Missing files -> system-ui / Georgia fallback; the site still works.
+// Get fonts: use google-webfonts-helper or subset them from Google Fonts.
 //   Be Vietnam Pro: 400, 600, 700 | Fraunces: 400, 700
-// Duong dan tuong doi tu assets/dist/main.css -> ../fonts/
+// Relative path from assets/dist/main.css -> ../fonts/
 // ============================================================================
 
 @font-face {

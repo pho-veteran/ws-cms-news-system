@@ -1,7 +1,7 @@
 /**
- * media-tabs — dieu khien nhom noi dung trong media block.
- * Pattern WAI-ARIA Tabs: role=tablist/tab/tabpanel, mui ten trai/phai, Home/End.
- * roving tabindex tren tab.
+ * media-tabs — control the content group in the media block.
+ * WAI-ARIA Tabs pattern: role=tablist/tab/tabpanel, Left/Right arrows, Home/End.
+ * roving tabindex on tabs.
  */
 
 function activateTab(tabs, panels, index) {
@@ -20,7 +20,7 @@ function initTablist(tablist) {
   const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
   if (!tabs.length) return;
 
-  // Panel tuong ung theo aria-controls.
+  // Match panels by aria-controls.
   const panels = tabs.map((t) => {
     const id = t.getAttribute('aria-controls');
     return id ? document.getElementById(id) : null;

@@ -1,84 +1,98 @@
 # Theme `pgds` — Phật giáo và Đời sống
 
-Theme WordPress classic (không FSE, không parent) cho chuyên trang tin tức Phật giáo.
-Token-first SCSS (ITCSS), vanilla JS, cache FastCGI + Redis. Xây theo `docs/PROPOSAL_01_WEB_WORDPRESS.md`.
+WordPress classic theme (no FSE, no parent) for a Buddhist news site.
+Token-first SCSS (ITCSS), vanilla JS, FastCGI + Redis caching. Built to
+`docs/initial_entries/PROPOSAL_01_WEB_WORDPRESS.md`.
 
-## Yêu cầu
+## Requirements
 
-- WordPress 6.4+, PHP 8.1+ (khuyến nghị 8.3), MariaDB 10.11, Redis.
-- Node 18+ để build asset (đã test trên Node 24).
+- WordPress 6.4+, PHP 8.1+ (8.3 recommended), MariaDB 10.11, Redis.
+- Node 18+ to build assets (tested on Node 24).
 
-## Cài đặt local (dev)
+## Local setup (dev)
 
 ```bash
-# 1. Đặt theme vào wp-content/themes/pgds (repo này đã mirror cấu trúc WP)
-# 2. Build asset
+# 1. Place the theme at wp-content/themes/pgds (this repo already mirrors the WP layout)
+# 2. Build assets
 cd wp-content/themes/pgds
 npm install
 npm run build          # -> assets/dist/main.<hash>.css + app.<hash>.js + manifest.json
-npm run watch          # chế độ theo dõi khi phát triển
+npm run watch          # watch mode during development
 
-# 3. Kích hoạt theme (tự seed 13 category theo nav)
+# 3. Activate the theme (seeds 13 categories matching the nav)
 wp theme activate pgds
 
-# 4. Menu: gán menu vào vị trí "primary" HOẶC để trống -> fallback tự dựng từ category
+# 4. Menus: assign a menu to the "primary" location, or leave it empty and the
+#    fallback builds one from categories
 ```
 
-> **Bắt buộc build trước khi dùng.** `assets/dist/` bị `.gitignore`; nếu chưa build,
-> theme không nạp CSS/JS (enqueue đọc `manifest.json`).
+> **You must build before use.** `assets/dist/` is gitignored; without a build the theme
+> loads no CSS or JS, because enqueueing reads `manifest.json`.
 
-## Build tooling — vì sao không phải `@wordpress/scripts`
+## Build tooling — why not `@wordpress/scripts`
 
-BOM proposal §8 chốt `@wordpress/scripts`, nhưng:
-- Cache §5.5 yêu cầu **filename có content hash + immutable**; `@wordpress/scripts`
-  bust cache bằng version query-string qua `*.asset.php`, không đổi filename.
-- JS theme là vanilla ES2020, **không** import package `@wordpress/*` → lợi ích chính
-  của `@wordpress/scripts` (dependency extraction) = 0.
+BOM proposal §8 specified `@wordpress/scripts`, but:
 
-→ Dùng `sass` (dart-sass) + `esbuild`, xuất filename `[contenthash]` + `manifest.json`.
-Nhẹ hơn, build verify chạy được. Xem `build.mjs`. **Đây là sai lệch có chủ đích so với BOM.**
+- Cache strategy §5.5 requires **content-hashed filenames** so `Cache-Control: immutable`
+  is safe. `@wordpress/scripts` busts caches with a version query string via
+  `*.asset.php` and never changes the filename.
+- The theme's JS is vanilla ES2020 and imports **no** `@wordpress/*` package, so the main
+  benefit of `@wordpress/scripts` (dependency extraction) is zero.
 
-## Cấu trúc
+So the build uses `sass` (dart-sass) plus `esbuild`, emitting `[contenthash]` filenames and
+a `manifest.json`. Lighter, and it verifiably runs. See `build.mjs`.
+**This is a deliberate deviation from the BOM.**
+
+## Structure
 
 ```
-inc/            module PHP (setup, enqueue, cpt-tax, meta-fields, query-blocks,
+inc/            PHP modules (setup, enqueue, cpt-tax, meta-fields, query-blocks,
                 template-tags, nav-walker, seo-schema, admin-ux, cli-import)
 template-parts/ card-lead, card-secondary, card-mini, list-item,
                 sidebar-popular, sidebar-lunar, video-facade
-src/scss/       ITCSS: _tokens _mixins _config main + 02..06 layer
+src/scss/       ITCSS: _tokens _mixins _config main + layers 02..06
 src/js/         index + modules/{nav-mobile, youtube-facade, media-tabs}
-assets/dist/    build output (content hash) — KHÔNG commit
-front-page.php  trang chủ 11 block
+assets/dist/    build output (content-hashed) — NOT committed
+front-page.php  front page, 11 blocks
 single/category/archive/search/404/page/index/sidebar.php
 ```
 
-## Import 2.000 bài (WP-CLI)
+## Importing 2,000 posts (WP-CLI)
 
 ```bash
 wp pgds import --file=tools/sample-data/data.sample.json --batch=200 --dry-run
 wp pgds import --file=tools/sample-data/data.sample.json --batch=200
-wp pgds media-variants --regenerate      # chạy nice -n 19, giảm pm.max_children=2
+wp pgds media-variants --regenerate      # runs at nice -n 19; lower pm.max_children to 2
 wp pgds build-redirects --out=/etc/nginx/redirects.map
 ```
 
-- Idempotent: khoá theo meta `_pgds_source_id` — chạy lại không tạo trùng.
-- Ngưỡng dừng: dry-run lỗi > 2% → dừng, không import.
+- Idempotent: keyed on the `_pgds_source_id` meta, so re-running creates no duplicates.
+- Abort threshold: if the dry run reports over 2% errors, stop and do not import.
 
-## Video YouTube (yêu cầu #1)
+## YouTube video (requirement #1)
 
-- 1 video canonical/bài: meta `_pgds_youtube_id` (tự tách ID từ URL khi lưu).
-- Facade lazy: chỉ nạp iframe `youtube-nocookie.com` khi bấm play.
-- Poster local kỳ vọng ở `wp-content/uploads/yt/<id>-640.webp` (cron sinh — scope RUN).
+- One canonical video per post: the `_pgds_youtube_id` meta (the ID is parsed from the URL
+  on save).
+- Lazy facade: the `youtube-nocookie.com` iframe loads only on click.
+- Local posters are expected at `wp-content/uploads/yt/<id>-640.webp` (generated by cron —
+  RUN scope).
 
 ## Schema (SEO)
 
-- Theme xuất: `VideoObject`, `NewsMediaOrganization`, video sitemap `/video-sitemap.xml`.
-- Plugin SEO xuất: `NewsArticle`, `BreadcrumbList`, `WebSite`, sitemap chính.
-- Không cài plugin SEO? đặt `define('PGDS_EMIT_ARTICLE_SCHEMA', true)` để theme lo NewsArticle.
-- Sau khi đổi rewrite (`/video-sitemap.xml`): `wp rewrite flush`.
+- The theme emits: `VideoObject`, `NewsMediaOrganization`, and the video sitemap at
+  `/video-sitemap.xml`.
+- The SEO plugin emits: `NewsArticle`, `BreadcrumbList`, `WebSite`, and the main sitemap.
+- No SEO plugin installed? Set `define('PGDS_EMIT_ARTICLE_SCHEMA', true)` and the theme
+  handles `NewsArticle`.
+- After changing the `/video-sitemap.xml` rewrite, run `wp rewrite flush`.
 
-## Hạ tầng liên quan (ngoài theme)
+## Related infrastructure (outside the theme)
 
-- `wp-content/mu-plugins/pgds-cache-flush.php` — flush FastCGI khi nội dung đổi.
-- `infra/nginx/` — server block, http snippet (cache zone), redirects.map mẫu.
-- `infra/wp-config-hardening.sample.php` — hardening bổ sung.
+- `wp-content/mu-plugins/pgds-cache-flush.php` — flushes FastCGI when content changes.
+- `infra/nginx/` — server block, http snippet (cache zone), sample redirects.map.
+- `infra/wp-config-hardening.sample.php` — additional hardening.
+
+## Known gap
+
+`package.json` defines a `lint:js` script and `.eslintrc.json` exists, but `eslint` is not
+in `devDependencies` — so `npm run lint:js` currently fails with `eslint: not found`.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Ket qua tim kiem.
+ * Search results.
  *
  * @package pgds
  */

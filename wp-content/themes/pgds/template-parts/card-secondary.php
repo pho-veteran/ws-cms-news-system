@@ -1,11 +1,11 @@
 <?php
 /**
- * Card secondary - dung cho grid 3 card va cac the phu.
+ * Secondary card - used for the 3-card grid and other secondary cards.
  *
  * @param array $args {
  *   post:    WP_Post,
- *   variant: 'full'|'compact'  (full = anh+title+sapo+meta; compact = anh+title),
- *   bordered:bool  (them vach ngan ben phai)
+ *   variant: 'full'|'compact'  (full = image+title+sapo+meta; compact = image+title),
+ *   bordered:bool  (adds a divider on the right)
  * }
  * @package pgds
  */

@@ -1,6 +1,6 @@
 <?php
 /**
- * Single post. Co video canonical -> facade dau than bai.
+ * Single post. If it has a canonical video -> facade at the top of the post.
  *
  * @package pgds
  */
@@ -82,7 +82,7 @@ while ( have_posts() ) :
 					</div>
 				<?php endif; ?>
 
-				<!-- Bai lien quan -->
+				<!-- Related posts -->
 				<?php
 				$related = array();
 				if ( $term ) {

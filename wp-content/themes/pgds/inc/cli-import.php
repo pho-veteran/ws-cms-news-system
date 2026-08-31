@@ -1,19 +1,19 @@
 <?php
 /**
- * WP-CLI: import 2.000 bai (idempotent), sinh bien the anh, build redirects.
- * Chi nap khi chay duoi WP-CLI.
+ * WP-CLI: import 2,000 posts (idempotent), generate image variants, and build redirects.
+ * Loaded only when running under WP-CLI.
  *
- * Lenh (proposal §9.2):
+ * Commands (proposal §9.2):
  *   wp pgds import --file=data.json --batch=200 --dry-run
  *   wp pgds import --file=data.json --batch=200
  *   wp pgds media-variants --regenerate
  *   wp pgds build-redirects --out=/etc/nginx/redirects.map
  *
- * Schema data.json (mang object):
- *   source_id (bat buoc, khoa chong trung), title, slug, sapo, body_html,
+ * data.json schema (array of objects):
+ *   source_id (required, deduplication key), title, slug, sapo, body_html,
  *   primary_cat (slug), cats (slug[]), tags (string[]), author (login/email),
  *   published_at (Y-m-d H:i:s), featured_image_url, gallery (url[]),
- *   youtube_url, source, old_url (de build redirect)
+ *   youtube_url, source, old_url (for building redirects)
  *
  * @package pgds
  */
@@ -27,23 +27,23 @@ if ( ! ( defined( 'WP_CLI' ) && WP_CLI ) ) {
 }
 
 /**
- * Lenh PGDS.
+ * PGDS commands.
  */
 class PGDS_CLI_Command {
 
 	/**
-	 * Import bai tu file JSON. Idempotent theo _pgds_source_id.
+	 * Import posts from a JSON file. Idempotent by _pgds_source_id.
 	 *
 	 * ## OPTIONS
 	 *
 	 * --file=<path>
-	 * : Duong dan file JSON.
+	 * : Path to the JSON file.
 	 *
 	 * [--batch=<n>]
-	 * : So bai moi lo. Mac dinh 200.
+	 * : Number of posts per batch. Defaults to 200.
 	 *
 	 * [--dry-run]
-	 * : Chi validate, khong ghi DB. Nguong dung: loi > 2%.
+	 * : Validate only; do not write to the database. Stop threshold: errors > 2%.
 	 *
 	 * @param array $args       Positional.
 	 * @param array $assoc_args Flags.
@@ -54,13 +54,13 @@ class PGDS_CLI_Command {
 		$dry_run = isset( $assoc_args['dry-run'] );
 
 		if ( ! $file || ! is_readable( $file ) ) {
-			WP_CLI::error( "Khong doc duoc file: {$file}" );
+			WP_CLI::error( "Unable to read file: {$file}" );
 		}
 
 		$raw  = file_get_contents( $file );
 		$data = json_decode( $raw, true );
 		if ( ! is_array( $data ) ) {
-			WP_CLI::error( 'JSON khong hop le hoac khong phai mang.' );
+			WP_CLI::error( 'Invalid JSON or the root value is not an array.' );
 		}
 
 		$total   = count( $data );
@@ -69,9 +69,9 @@ class PGDS_CLI_Command {
 		$skipped = 0;
 		$logfile = trailingslashit( sys_get_temp_dir() ) . 'pgds-import-' . gmdate( 'Ymd-His' ) . '.log';
 
-		WP_CLI::log( sprintf( '%s %d ban ghi (batch=%d)%s', $dry_run ? '[DRY-RUN]' : '[IMPORT]', $total, $batch, $dry_run ? '' : '' ) );
+		WP_CLI::log( sprintf( '%s %d records (batch=%d)%s', $dry_run ? '[DRY-RUN]' : '[IMPORT]', $total, $batch, $dry_run ? '' : '' ) );
 
-		$progress = \WP_CLI\Utils\make_progress_bar( 'Đang xử lý', $total );
+		$progress = \WP_CLI\Utils\make_progress_bar( 'Processing', $total );
 
 		foreach ( $data as $i => $rec ) {
 			$err = $this->validate_record( $rec );
@@ -81,7 +81,7 @@ class PGDS_CLI_Command {
 				continue;
 			}
 
-			// Idempotent: da ton tai?
+			// Idempotent: already exists?
 			$existing = $this->find_by_source_id( $rec['source_id'] );
 			if ( $existing ) {
 				$skipped++;
@@ -97,12 +97,12 @@ class PGDS_CLI_Command {
 					$created++;
 				}
 			} else {
-				$created++; // dem nhu se tao
+				$created++; // Count as created
 			}
 
 			$progress->tick();
 
-			// Nghi giua batch de khong day 2GB RAM vao swap.
+			// Pause between batches to avoid pushing 2 GB of RAM into swap.
 			if ( 0 === ( ( $i + 1 ) % $batch ) ) {
 				if ( function_exists( 'wp_cache_flush' ) ) {
 					wp_cache_flush();
@@ -117,35 +117,35 @@ class PGDS_CLI_Command {
 		file_put_contents( $logfile, implode( "\n", $errors ) );
 
 		WP_CLI::log( '----------------------------------------' );
-		WP_CLI::log( sprintf( 'Tạo: %d | Bỏ qua (đã có): %d | Lỗi: %d/%d (%.2f%%)', $created, $skipped, count( $errors ), $total, $fail_rate * 100 ) );
-		WP_CLI::log( "Log lỗi: {$logfile}" );
+		WP_CLI::log( sprintf( 'Created: %d | Skipped (existing): %d | Errors: %d/%d (%.2f%%)', $created, $skipped, count( $errors ), $total, $fail_rate * 100 ) );
+		WP_CLI::log( "Error log: {$logfile}" );
 
-		// Nguong dung 2% (proposal §9.2).
+		// Stop threshold: 2% (proposal §9.2).
 		if ( $fail_rate > 0.02 ) {
-			WP_CLI::error( sprintf( 'Tỉ lệ lỗi %.2f%% > 2%% — DỪNG. Sửa mapping rồi chạy lại. Không import tiếp.', $fail_rate * 100 ) );
+			WP_CLI::error( sprintf( 'Error rate %.2f%% exceeds 2%% — STOP. Fix the mapping and run again; do not continue the import.', $fail_rate * 100 ) );
 		}
 
 		if ( $dry_run ) {
-			WP_CLI::success( 'Dry-run đạt. Có thể chạy import thật.' );
+			WP_CLI::success( 'Dry run passed. The real import can proceed.' );
 		} else {
-			WP_CLI::success( "Import xong. Đã tạo {$created} bài." );
+			WP_CLI::success( "Import complete. Created {$created} posts." );
 		}
 	}
 
 	/**
-	 * Tai poster YouTube ve local + (tuy chon) lay duration.
+	 * Download YouTube posters locally and optionally fetch duration.
 	 *
-	 * Poster: tai tu i.ytimg.com (maxres -> hq fallback), luu vao Media Library,
-	 * ghi URL vao meta _pgds_youtube_poster. Khong hotlink khi hien thi.
-	 * Duration: chi lay neu co dinh nghia PGDS_YT_API_KEY (YouTube Data API v3).
+	 * Poster: download from i.ytimg.com (maxres -> hq fallback), save to the Media Library,
+	 * store the URL in _pgds_youtube_poster meta. Do not hotlink on display.
+	 * Duration: fetch only when PGDS_YT_API_KEY is defined (YouTube Data API v3).
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--post=<id>]
-	 * : Chi xu ly 1 bai. Bo trong = tat ca bai co _pgds_youtube_id.
+	 * : Process one post only. Empty = all posts with _pgds_youtube_id.
 	 *
 	 * [--force]
-	 * : Tai lai poster ke ca da co.
+	 * : Re-download posters even when one already exists.
 	 */
 	public function yt_sync( $args, $assoc_args ) {
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -169,7 +169,7 @@ class PGDS_CLI_Command {
 		$posts = get_posts( $query_args );
 
 		if ( ! $posts ) {
-			WP_CLI::warning( 'Không có bài nào có _pgds_youtube_id.' );
+			WP_CLI::warning( 'No posts have _pgds_youtube_id.' );
 			return;
 		}
 
@@ -185,7 +185,7 @@ class PGDS_CLI_Command {
 			// Poster.
 			$has_poster = get_post_meta( $p->ID, '_pgds_youtube_poster', true );
 			if ( $has_poster && ! $force ) {
-				WP_CLI::log( "• {$vid}: đã có poster, bỏ qua." );
+				WP_CLI::log( "• {$vid}: poster already exists; skipping." );
 			} else {
 				$url = $this->yt_thumb_url( $vid );
 				if ( $url ) {
@@ -198,36 +198,36 @@ class PGDS_CLI_Command {
 						if ( ! is_wp_error( $att_id ) ) {
 							update_post_meta( $p->ID, '_pgds_youtube_poster', wp_get_attachment_image_url( $att_id, 'pgds-lead' ) );
 							$done++;
-							WP_CLI::log( "✓ {$vid}: đã tải poster." );
+							WP_CLI::log( "✓ {$vid}: poster downloaded." );
 						} else {
 							@unlink( $tmp );
-							WP_CLI::warning( "{$vid}: sideload lỗi — " . $att_id->get_error_message() );
+							WP_CLI::warning( "{$vid}: sideload error — " . $att_id->get_error_message() );
 						}
 					} else {
-						WP_CLI::warning( "{$vid}: không tải được thumbnail." );
+						WP_CLI::warning( "{$vid}: unable to download thumbnail." );
 					}
 				}
 			}
 		}
 
-		// Duration (batch 50) neu co API key.
+		// Duration (batch 50) when an API key is available.
 		if ( $api_key && $ids ) {
 			$this->yt_fetch_durations( $ids, $api_key );
 		} elseif ( ! $api_key ) {
-			WP_CLI::log( 'Bỏ qua duration (chưa cấu hình PGDS_YT_API_KEY).' );
+			WP_CLI::log( 'Skipping duration (PGDS_YT_API_KEY is not configured).' );
 		}
 
-		WP_CLI::success( "yt-sync xong. Poster mới: {$done}." );
+		WP_CLI::success( "yt-sync complete. New posters: {$done}." );
 	}
 
 	/**
-	 * URL thumbnail YouTube (maxres, khong can API key).
+	 * YouTube thumbnail URL (maxres; no API key required).
 	 *
 	 * @param string $vid Video ID.
 	 * @return string
 	 */
 	private function yt_thumb_url( $vid ) {
-		// maxresdefault khong phai luc nao cung co; thu maxres roi hq.
+		// maxresdefault is not always available; try maxres, then hq.
 		$candidates = array(
 			"https://i.ytimg.com/vi/{$vid}/maxresdefault.jpg",
 			"https://i.ytimg.com/vi/{$vid}/hqdefault.jpg",
@@ -242,7 +242,7 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * Lay duration cho nhieu video (batch 50, 1 unit/call).
+	 * Fetch duration for multiple videos (batch 50, 1 unit/call).
 	 *
 	 * @param array  $ids     [video_id => post_id].
 	 * @param string $api_key API key.
@@ -261,7 +261,7 @@ class PGDS_CLI_Command {
 			);
 			$resp = wp_remote_get( $url, array( 'timeout' => 15 ) );
 			if ( is_wp_error( $resp ) ) {
-				WP_CLI::warning( 'Data API lỗi: ' . $resp->get_error_message() );
+				WP_CLI::warning( 'Data API error: ' . $resp->get_error_message() );
 				continue;
 			}
 			$body = json_decode( wp_remote_retrieve_body( $resp ), true );
@@ -276,7 +276,7 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * ISO-8601 duration -> giay.
+	 * ISO-8601 duration -> seconds.
 	 *
 	 * @param string $iso PT#H#M#S.
 	 * @return int
@@ -291,15 +291,15 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * Regenerate bien the anh + WebP.
+	 * Regenerate image variants + WebP.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--regenerate]
-	 * : Regenerate toan bo attachment.
+	 * : Regenerate all attachments.
 	 */
 	public function media_variants( $args, $assoc_args ) {
-		WP_CLI::log( 'Chạy nice -n 19 + giảm pm.max_children xuống 2 trong lúc này (proposal §9.3).' );
+		WP_CLI::log( 'Run with nice -n 19 and reduce pm.max_children to 2 for this operation (proposal §9.3).' );
 		$q = new WP_Query(
 			array(
 				'post_type'      => 'attachment',
@@ -320,21 +320,21 @@ class PGDS_CLI_Command {
 			$progress->tick();
 		}
 		$progress->finish();
-		WP_CLI::success( 'Regenerate xong ' . count( $ids ) . ' ảnh.' );
+		WP_CLI::success( 'Regeneration complete for ' . count( $ids ) . ' images.' );
 	}
 
 	/**
-	 * Sinh redirects.map cho nginx tu meta _pgds_old_url.
+	 * Generate redirects.map for nginx from _pgds_old_url meta.
 	 *
 	 * ## OPTIONS
 	 *
 	 * --out=<path>
-	 * : File dich (vd /etc/nginx/redirects.map).
+	 * : Output file (e.g. /etc/nginx/redirects.map).
 	 */
 	public function build_redirects( $args, $assoc_args ) {
 		$out = $assoc_args['out'] ?? '';
 		if ( ! $out ) {
-			WP_CLI::error( 'Thiếu --out=<path>' );
+			WP_CLI::error( 'Missing --out=<path>' );
 		}
 
 		$q = new WP_Query(
@@ -355,7 +355,7 @@ class PGDS_CLI_Command {
 			if ( ! $old ) {
 				continue;
 			}
-			// Chi lay path phan tuong doi.
+			// Keep only the relative path.
 			$old_path = wp_parse_url( $old, PHP_URL_PATH );
 			if ( ! $old_path ) {
 				$old_path = $old;
@@ -364,39 +364,39 @@ class PGDS_CLI_Command {
 			$lines[] = sprintf( '%s   %s;', $old_path, $new );
 		}
 
-		$header  = "# Sinh boi: wp pgds build-redirects — " . gmdate( 'c' ) . "\n";
-		$header .= "# " . count( $lines ) . " redirect. Sau khi cap nhat: nginx -t && systemctl reload nginx\n";
+		$header  = "# Generated by: wp pgds build-redirects — " . gmdate( 'c' ) . "\n";
+		$header .= "# " . count( $lines ) . " redirects. After updating: nginx -t && systemctl reload nginx\n";
 		file_put_contents( $out, $header . implode( "\n", $lines ) . "\n" );
 
-		WP_CLI::success( sprintf( 'Đã ghi %d redirect vào %s', count( $lines ), $out ) );
+		WP_CLI::success( sprintf( 'Wrote %d redirects to %s', count( $lines ), $out ) );
 	}
 
 	/* ----------------------- helper ----------------------- */
 
 	/**
-	 * Validate ban ghi. Tra ve chuoi loi hoac '' neu OK.
+	 * Validate a record. Return an error string or '' when valid.
 	 *
 	 * @param mixed $rec Record.
 	 * @return string
 	 */
 	private function validate_record( $rec ) {
 		if ( ! is_array( $rec ) ) {
-			return 'không phải object';
+			return 'not an object';
 		}
 		if ( empty( $rec['source_id'] ) ) {
-			return 'thiếu source_id';
+			return 'missing source_id';
 		}
 		if ( empty( $rec['title'] ) ) {
-			return 'thiếu title';
+			return 'missing title';
 		}
 		if ( empty( $rec['primary_cat'] ) ) {
-			return 'thiếu primary_cat';
+			return 'missing primary_cat';
 		}
 		return '';
 	}
 
 	/**
-	 * Tim post theo source_id.
+	 * Find a post by source_id.
 	 *
 	 * @param string $source_id Source ID.
 	 * @return int|null
@@ -417,7 +417,7 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * Tao post + meta + category + featured image.
+	 * Create a post with meta, categories, and a featured image.
 	 *
 	 * @param array $rec Record.
 	 * @return int|WP_Error
@@ -497,7 +497,7 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * Lam sach HTML than bai (bo inline style, font rac tu Word).
+	 * Clean article-body HTML (remove inline styles and stray Word fonts).
 	 *
 	 * @param string $html HTML.
 	 * @return string
@@ -514,10 +514,10 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * Tai anh dai dien ve va gan.
+	 * Download and attach a featured image.
 	 *
 	 * @param int    $post_id Post ID.
-	 * @param string $url     URL anh.
+	 * @param string $url     Image URL.
 	 */
 	private function sideload_featured( $post_id, $url ) {
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -541,8 +541,8 @@ class PGDS_CLI_Command {
 	}
 }
 
-// Dang ky tung subcommand voi ten hyphen (WP-CLI khong tu doi _ -> -).
-// Khop dung lenh trong proposal: import, media-variants, build-redirects, yt-sync.
+// Register each subcommand with a hyphenated name (WP-CLI does not convert _ to -).
+// Match the commands in the proposal: import, media-variants, build-redirects, yt-sync.
 WP_CLI::add_command( 'pgds import', array( 'PGDS_CLI_Command', 'import' ) );
 WP_CLI::add_command( 'pgds media-variants', array( 'PGDS_CLI_Command', 'media_variants' ) );
 WP_CLI::add_command( 'pgds build-redirects', array( 'PGDS_CLI_Command', 'build_redirects' ) );

@@ -1,11 +1,11 @@
 /**
- * nav-mobile — mo/dong menu chinh tren man hinh hep + disclosure submenu.
- * Keyboard: Esc dong menu, focus quay lai nut toggle.
- * ARIA: aria-expanded tren nut toggle va tung nut submenu.
+ * nav-mobile — open/close the main menu on narrow screens + disclosure submenu.
+ * Keyboard: Esc closes the menu, focus returns to the toggle button.
+ * ARIA: aria-expanded on the toggle button and each submenu button.
  */
 
 export function initNavMobile(root = document) {
-  // --- Toggle menu chinh ---
+  // --- Main menu toggle ---
   const toggle = root.querySelector('[data-pgds="nav-toggle"]');
   const list = root.querySelector('#pgds-primary-menu');
 

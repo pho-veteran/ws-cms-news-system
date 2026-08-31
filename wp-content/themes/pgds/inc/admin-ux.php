@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin UX: cot bai viet (noi bat, video, chuyen muc chinh), bo loc.
+ * Admin UX: post list column (featured, video, primary category), filter.
  *
  * @package pgds
  */
@@ -10,9 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Them cot.
+ * Add column.
  *
- * @param array $cols Cot.
+ * @param array $cols Columns.
  * @return array
  */
 function pgds_admin_columns( $cols ) {
@@ -28,9 +28,9 @@ function pgds_admin_columns( $cols ) {
 add_filter( 'manage_post_posts_columns', 'pgds_admin_columns' );
 
 /**
- * Noi dung cot.
+ * Column content.
  *
- * @param string $col     Cot.
+ * @param string $col     Column.
  * @param int    $post_id Post ID.
  */
 function pgds_admin_column_content( $col, $post_id ) {
@@ -53,7 +53,7 @@ function pgds_admin_column_content( $col, $post_id ) {
 add_action( 'manage_post_posts_custom_column', 'pgds_admin_column_content', 10, 2 );
 
 /**
- * Cho phep sap xep theo feature_rank.
+ * Allow sorting by feature_rank.
  */
 function pgds_admin_sortable( $cols ) {
 	$cols['pgds_flags'] = 'pgds_flags';
@@ -62,7 +62,7 @@ function pgds_admin_sortable( $cols ) {
 add_filter( 'manage_edit-post_sortable_columns', 'pgds_admin_sortable' );
 
 /**
- * Bo loc "chi bai noi bat" tren danh sach bai.
+ * "Featured posts only" filter on the post list.
  */
 function pgds_admin_filter_ui() {
 	global $typenow;
@@ -82,7 +82,7 @@ function pgds_admin_filter_ui() {
 add_action( 'restrict_manage_posts', 'pgds_admin_filter_ui' );
 
 /**
- * Ap dung bo loc.
+ * Apply the filter.
  *
  * @param WP_Query $query Query.
  */

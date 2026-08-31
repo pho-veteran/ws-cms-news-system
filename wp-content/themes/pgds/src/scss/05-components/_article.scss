@@ -29,7 +29,7 @@
   a:hover { color: var(--color-brand); }
 }
 
-// --- Cat label (nhan chuyen muc mau) ----------------------------------------
+// --- Category label (category color) ----------------------------------------
 .pgds-cat-label {
   display: inline-block;
   font-size: $fs-3xs;
@@ -94,7 +94,7 @@
     }
   }
 
-  // Than bai
+  // Article body
   &__body {
     max-width: $content-max;
     font-size: $fs-base;

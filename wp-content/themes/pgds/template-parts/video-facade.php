@@ -1,12 +1,12 @@
 <?php
 /**
- * YouTube facade - khong nap iframe truoc tuong tac (proposal §6.2).
- * Poster luu local (disk instance), khong hotlink.
+ * YouTube facade - doesn't load the iframe until interacted with (proposal §6.2).
+ * Poster is stored locally (disk instance), not hotlinked.
  *
  * @param array $args {
  *   video_id: string,
- *   poster:   string (URL anh poster local),
- *   dur:      int    (giay),
+ *   poster:   string (local poster image URL),
+ *   dur:      int    (seconds),
  *   title:    string,
  *   caption:  string
  * }

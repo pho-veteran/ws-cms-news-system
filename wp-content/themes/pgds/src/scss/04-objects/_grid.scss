@@ -1,6 +1,6 @@
 // ============================================================================
 // 04-OBJECTS / GRID
-// Layout chinh: content 1fr + sidebar 320px, sup ve 1 cot duoi 880px (lg).
+// Main layout: content 1fr + sidebar 320px, collapses to 1 column below 880px (lg).
 // ============================================================================
 @use 'config' as *;
 
@@ -14,7 +14,7 @@
   }
 }
 
-// Feature grid trang chu: main + panel 320
+// Homepage feature grid: main + 320 panel
 .pgds-feature-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -26,7 +26,7 @@
   }
 }
 
-// Grid 3 cot (tin phat su / three-category)
+// 3-column grid (Buddhist news / three-category)
 .pgds-grid-3 {
   display: grid;
   grid-template-columns: 1fr;

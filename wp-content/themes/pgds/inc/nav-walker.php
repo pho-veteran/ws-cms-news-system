@@ -1,8 +1,8 @@
 <?php
 /**
  * Nav walker + fallback.
- * Dropdown mo bang :hover / :focus-within (desktop) va bang disclosure button
- * co aria-expanded (mobile, dieu khien boi JS nav-mobile).
+ * Dropdown opens via :hover / :focus-within (desktop) and via a disclosure button
+ * with aria-expanded (mobile, controlled by nav-mobile JS).
  *
  * @package pgds
  */
@@ -12,15 +12,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Walker cho menu chinh.
+ * Walker for the main menu.
  */
 class PGDS_Nav_Walker extends Walker_Nav_Menu {
 
-	/** @var int ID item hien tai (de gan aria-controls cho submenu) */
+	/** @var int Current item ID (used to set aria-controls for the submenu) */
 	private $current_id = 0;
 
 	/**
-	 * Mo cap submenu.
+	 * Open a submenu level.
 	 *
 	 * @param string   $output Output.
 	 * @param int      $depth  Depth.
@@ -32,14 +32,14 @@ class PGDS_Nav_Walker extends Walker_Nav_Menu {
 	}
 
 	/**
-	 * Dong cap submenu.
+	 * Close a submenu level.
 	 */
 	public function end_lvl( &$output, $depth = 0, $args = null ) {
 		$output .= '</ul>';
 	}
 
 	/**
-	 * Mo 1 item.
+	 * Open one item.
 	 *
 	 * @param string   $output Output.
 	 * @param WP_Post  $item   Item.
@@ -81,7 +81,7 @@ class PGDS_Nav_Walker extends Walker_Nav_Menu {
 	}
 
 	/**
-	 * Dong 1 item.
+	 * Close one item.
 	 */
 	public function end_el( &$output, $item, $depth = 0, $args = null ) {
 		$output .= '</li>';
@@ -89,10 +89,10 @@ class PGDS_Nav_Walker extends Walker_Nav_Menu {
 }
 
 /**
- * Fallback khi chua gan menu: dung cay category (proposal §4.1)
- * de site chay duoc ngay sau khi kich hoat theme.
+ * Fallback when no menu is assigned: use the category tree (proposal §4.1)
+ * so the site works right after theme activation.
  *
- * @param array $args Args tu wp_nav_menu.
+ * @param array $args Args from wp_nav_menu.
  */
 function pgds_nav_fallback( $args ) {
 	if ( ! function_exists( 'pgds_category_tree' ) ) {
@@ -103,7 +103,7 @@ function pgds_nav_fallback( $args ) {
 
 	echo '<ul id="' . esc_attr( $menu_id ) . '" class="' . esc_attr( $menu_class ) . '">';
 
-	// Trang chu truoc.
+	// Front page first.
 	printf(
 		'<li class="pgds-navitem"><a class="pgds-navitem__link" href="%s">%s</a></li>',
 		esc_url( home_url( '/' ) ),

@@ -1,6 +1,6 @@
 // ============================================================================
-// CONFIG - diem vao duy nhat cho component.
-// Moi component: @use 'config' as *;
+// CONFIG - single entry point for components.
+// Every component: @use 'config' as *;
 // ============================================================================
 @forward 'tokens';
 @forward 'mixins';

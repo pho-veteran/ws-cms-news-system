@@ -1,6 +1,6 @@
 /**
- * pgds — entry. Chi 3 module launch (proposal §3.4).
- * Khoi dong qua data-pgds attribute, khong gan event theo class CSS.
+ * pgds — entry. Launch only 3 modules (proposal §3.4).
+ * Bootstrapped via the data-pgds attribute; do not bind events by CSS class.
  */
 
 import { initNavMobile } from './modules/nav-mobile.js';

@@ -1,13 +1,13 @@
 <?php
 /**
- * Query 11 block trang chu - deterministic, khong transient (proposal §4.4).
+ * Query the 11 front page blocks - deterministic, no transients (proposal §4.4).
  *
- * Nguyen tac:
- *  - Slot curated (featured/photo) uu tien truoc.
- *  - Query category theo batch, loai ID da dung ($used_ids chia se).
- *  - Fallback tat dinh khi curated trong: bai moi nhat cua category.
- *  - Thu tu dedup tuong minh: curated -> media -> grid1 -> three-cat -> grid2 -> sidebar.
- *  - KHONG transient: toan trang da FastCGI cache; ~11 WP_Query voi Redis 50-150ms/MISS.
+ * Principles:
+ *  - Curated slots (featured/photo) take priority first.
+ *  - Query categories in batches, excluding IDs already used (shared $used_ids).
+ *  - Deterministic fallback when curated is empty: category's most recent post.
+ *  - Explicit dedup order: curated -> media -> grid1 -> three-cat -> grid2 -> sidebar.
+ *  - NO transients: the whole page is already FastCGI-cached; ~11 WP_Query with Redis is 50-150ms/MISS.
  *
  * @package pgds
  */
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Bo theo doi ID da dung tren trang chu (session per-request).
+ * Tracks used IDs on the front page (per-request session).
  */
 class PGDS_Used_Ids {
 	/** @var int[] */
@@ -46,11 +46,11 @@ class PGDS_Used_Ids {
 }
 
 /**
- * Query bai theo category slug, loai ID da dung, danh dau va tra ve.
+ * Query posts by category slug, excluding IDs already used, mark and return.
  *
- * @param string|string[] $category_slug Slug category (hoac mang).
- * @param int             $count         So bai.
- * @param array           $extra         WP_Query args bo sung.
+ * @param string|string[] $category_slug Category slug (or array).
+ * @param int             $count         Number of posts.
+ * @param array           $extra         Extra WP_Query args.
  * @return WP_Post[]
  */
 function pgds_query_posts( $category_slug, $count, $extra = array() ) {
@@ -77,12 +77,12 @@ function pgds_query_posts( $category_slug, $count, $extra = array() ) {
 }
 
 /**
- * Query slot curated (featured) theo rank, fallback bai moi nhat.
+ * Query the curated (featured) slot by rank, fallback to most recent post.
  *
- * @param int      $rank_from Rank tu.
- * @param int      $rank_to   Rank den.
- * @param int      $count     So bai can (fallback bu du).
- * @param string   $fallback_cat Slug fallback (rong = toan site).
+ * @param int      $rank_from Rank from.
+ * @param int      $rank_to   Rank to.
+ * @param int      $count     Number of posts needed (fallback fills the gap).
+ * @param string   $fallback_cat Fallback slug (empty = whole site).
  * @return WP_Post[]
  */
 function pgds_query_featured( $rank_from, $rank_to, $count, $fallback_cat = '' ) {
@@ -113,7 +113,7 @@ function pgds_query_featured( $rank_from, $rank_to, $count, $fallback_cat = '' )
 	$posts = $q->posts;
 	PGDS_Used_Ids::mark( $posts );
 
-	// Fallback bu du.
+	// Fallback to fill the gap.
 	if ( count( $posts ) < $count ) {
 		$need   = $count - count( $posts );
 		$posts  = array_merge( $posts, pgds_query_posts( $fallback_cat, $need ) );
@@ -122,10 +122,10 @@ function pgds_query_featured( $rank_from, $rank_to, $count, $fallback_cat = '' )
 }
 
 /**
- * Bai xem nhieu nhat (sidebar). Uu tien comment_count, fallback moi nhat.
- * Duoc phep trung voi noi dung khac tren trang (danh sach tham khao).
+ * Most viewed posts (sidebar). Prioritizes comment_count, falls back to most recent.
+ * Allowed to overlap with other content on the page (reference list).
  *
- * @param int $count So bai.
+ * @param int $count Number of posts.
  * @return WP_Post[]
  */
 function pgds_query_popular( $count = 5 ) {
@@ -145,10 +145,10 @@ function pgds_query_popular( $count = 5 ) {
 }
 
 /**
- * Cot chuyen muc (three-category): 1 feat + N mini.
+ * Category column (three-category): 1 feature + N mini.
  *
  * @param string $slug  Category slug.
- * @param int    $mini  So mini.
+ * @param int    $mini  Number of mini items.
  * @return array{feat: ?WP_Post, mini: WP_Post[]}
  */
 function pgds_query_cat_column( $slug, $mini = 2 ) {
@@ -161,18 +161,18 @@ function pgds_query_cat_column( $slug, $mini = 2 ) {
 }
 
 /**
- * Tra ve toan bo du lieu 11 block trang chu.
+ * Return all data for the 11 front page blocks.
  *
  * @return array
  */
 function pgds_home_blocks() {
 	PGDS_Used_Ids::reset();
 
-	// (1) Slot curated: lead + 3 secondary.
+	// (1) Curated slot: lead + 3 secondary.
 	$lead      = pgds_query_featured( 1, 1, 1 );
 	$secondary = pgds_query_featured( 2, 4, 3 );
 
-	// (2) Panel Tin anh.
+	// (2) Photo story panel.
 	$photo = new WP_Query(
 		array(
 			'post_type'      => 'post',
@@ -190,14 +190,14 @@ function pgds_home_blocks() {
 	);
 	PGDS_Used_Ids::mark( $photo->posts );
 
-	// (3) Media block: 1 feature + 4 thumb (cat video), 3 bullet (chi infographic).
-	// Bullet query 'infographic-emagazine' RIENG (khong query cha 'media' de
-	// tranh gianh bai video cua thumb).
+	// (3) Media block: 1 feature + 4 thumbs (video category), 3 bullets (infographic only).
+	// Bullets query 'infographic-emagazine' SEPARATELY (don't query the parent 'media' to
+	// avoid stealing video posts from the thumbs).
 	$media_feature = pgds_query_posts( 'video', 1 );
 	$media_thumbs  = pgds_query_posts( 'video', 4 );
 	$media_bullets = pgds_query_posts( 'infographic-emagazine', 3 );
 
-	// (4) Content grid 1: Tin Phat su 3 card + 7 list.
+	// (4) Content grid 1: Buddhist Affairs News, 3 cards + 7 list.
 	$phatsu_cards = pgds_query_posts( 'tin-phat-su', 3 );
 	$phatsu_list  = pgds_query_posts( 'tin-phat-su', 7 );
 
@@ -206,12 +206,12 @@ function pgds_home_blocks() {
 	$col_phat  = pgds_query_cat_column( 'phat-tich', 2 );
 	$col_tot   = pgds_query_cat_column( 'tot-doi-dep-dao', 2 );
 
-	// (6) Content grid 2: Vietnam Buddhism truoc (block chuyen biet, tranh bi
-	// mixed_list "an" het), roi mixed_list (catch-all moi category con lai).
+	// (6) Content grid 2: Vietnam Buddhism first (dedicated block, to avoid
+	// mixed_list "eating" it all), then mixed_list (catch-all for remaining categories).
 	$vn_list    = pgds_query_posts( 'vietnam-buddhism', 3 );
 	$mixed_list = pgds_query_posts( '', 5 );
 
-	// (7) Sidebar: popular (co the trung), teaching CPT, lunar CPT.
+	// (7) Sidebar: popular (may overlap), teaching CPT, lunar CPT.
 	$popular  = pgds_query_popular( 5 );
 	$teaching = get_posts(
 		array(

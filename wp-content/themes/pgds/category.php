@@ -1,6 +1,6 @@
 <?php
 /**
- * Category archive: lead + grid 3 + list, phan trang, sidebar.
+ * Category archive: lead + 3-grid + list, pagination, sidebar.
  *
  * @package pgds
  */
@@ -24,7 +24,7 @@ pgds_breadcrumb();
 	<?php endif; ?>
 
 	<?php
-	// Sub-nav category con (neu co).
+	// Sub-nav for child categories (if any).
 	$children = get_terms(
 		array(
 			'taxonomy'   => 'category',
@@ -55,12 +55,12 @@ pgds_breadcrumb();
 					$idx++;
 
 					if ( 1 === $idx ) {
-						// Bai dau: lead horizontal.
+						// First post: horizontal lead.
 						get_template_part( 'template-parts/card-lead', null, array( 'post' => get_post(), 'eager' => true ) );
 						echo '<div class="pgds-grid-3" style="margin-top:20px;">';
 						$grid_open = true;
 					} elseif ( $idx >= 2 && $idx <= 4 ) {
-						// 3 bai tiep: grid card.
+						// Next 3 posts: grid card.
 						get_template_part( 'template-parts/card-secondary', null, array( 'post' => get_post(), 'variant' => 'full', 'bordered' => true ) );
 						if ( 4 === $idx ) {
 							echo '</div>';
@@ -68,9 +68,9 @@ pgds_breadcrumb();
 							echo '<div class="pgds-list">';
 						}
 					} else {
-						// Con lai: list.
+						// Remaining posts: list.
 						if ( 5 === $idx && ! $grid_open ) {
-							// da mo list o tren
+							// list already opened above
 						}
 						get_template_part( 'template-parts/list-item', null, array( 'post' => get_post() ) );
 					}
@@ -80,7 +80,7 @@ pgds_breadcrumb();
 					echo '</div>';
 				}
 				if ( $idx >= 5 ) {
-					echo '</div>'; // dong .pgds-list
+					echo '</div>'; // close .pgds-list
 				}
 				?>
 

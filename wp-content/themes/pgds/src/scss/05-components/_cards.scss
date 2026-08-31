@@ -35,7 +35,7 @@
   }
 }
 
-// --- Feature grid (khoi 3: Tin noi bat) -------------------------------------
+// --- Feature grid (block 3: Featured news) ----------------------------------
 .pgds-feature-main {
   border-right: 1px solid var(--color-border);
   padding-right: $sp-6;
@@ -78,7 +78,7 @@
   }
 }
 
-// --- Secondary cards (3 the nho duoi lead) ----------------------------------
+// --- Secondary cards (3 small cards below lead) -----------------------------
 .pgds-feature-secondary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -90,7 +90,7 @@
   }
 }
 
-// --- Card chung (grid3) ------------------------------------------------------
+// --- Shared card (grid3) -----------------------------------------------------
 .pgds-card {
   display: flex;
   flex-direction: column;
@@ -125,7 +125,7 @@
     margin-top: auto;
   }
 
-  // Bien the trong grid3: co vach ngan
+  // Variant in grid3: with divider
   &--bordered {
     border-right: 1px solid var(--color-border);
     padding-right: $sp-5;
@@ -146,7 +146,7 @@
   }
 }
 
-// --- List clean (danh sach ngang) -------------------------------------------
+// --- Clean list (horizontal list) -------------------------------------------
 .pgds-list {
   margin-top: $sp-5;
 }
@@ -206,7 +206,7 @@
   @include line-clamp(2);
 }
 
-// --- Photo panel (Tin anh) --------------------------------------------------
+// --- Photo panel (Photo news) ------------------------------------------------
 .pgds-photo-panel {
   background: var(--color-bg-inverse);
   border-radius: $radius-xl;

@@ -1,36 +1,41 @@
-# Môi trường DEV local (Docker)
+# Local dev environment (Docker)
 
-Chỉ để **verify theme chạy thật** trước khi deploy. Không phải môi trường prod
-(prod dùng Nginx FastCGI cache — xem `infra/nginx/`).
+For **verifying the theme actually runs** before deploying. This is not production —
+production uses Nginx FastCGI cache, see `infra/nginx/`.
 
-## Yêu cầu
-- Docker Desktop đang chạy.
-- Đã build asset: `cd wp-content/themes/pgds && npm run build` (dist bị gitignore).
+## Requirements
 
-## Chạy
+- Docker running.
+- Assets built: `cd wp-content/themes/pgds && npm run build` (`assets/dist/` is gitignored,
+  and the theme loads no CSS/JS without it).
 
-```powershell
+## Run
+
+```bash
 cd infra/local
 docker compose up -d                              # db + redis + wordpress (apache)
 
-# php -l toàn bộ (bắt lỗi cú pháp)
+# php -l across the theme and mu-plugins (catches syntax errors)
 docker compose run --rm wpcli /scripts/lint.sh
 
-# cài WP + kích hoạt theme + seed + import sample data
+# install WP, activate the theme, seed categories, import sample data
 docker compose run --rm wpcli /scripts/setup.sh
 ```
 
-Mở http://localhost:8080 — trang chủ 11 block.
+Open http://localhost:8080 — the front page renders 11 blocks.
 Admin: http://localhost:8080/wp-admin (admin / admin123).
 
-## Dọn
+## Tear down
 
-```powershell
-docker compose down          # giữ dữ liệu
-docker compose down -v       # xoá cả volume (làm lại từ đầu)
+```bash
+docker compose down          # keep data
+docker compose down -v       # drop volumes too (start clean next time)
 ```
 
-## Lưu ý
-- Theme + mu-plugins mount trực tiếp từ repo → sửa code thấy ngay (trừ khi cần build lại CSS/JS).
-- Redis object cache cài qua plugin `redis-cache` (cần mạng lần đầu).
-- Poster YouTube: dùng `wp pgds yt-sync` để tải thumbnail + duration về local.
+## Notes
+
+- The theme and mu-plugins are mounted straight from the repo, so PHP edits show up
+  immediately. CSS/JS changes still need a rebuild.
+- The Redis object cache is installed via the `redis-cache` plugin, which needs network
+  access on first run.
+- YouTube posters: `wp pgds yt-sync` pulls thumbnails and durations locally.

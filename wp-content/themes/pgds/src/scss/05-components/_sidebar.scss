@@ -26,7 +26,7 @@
   }
 }
 
-// --- Rank (Doc nhieu nhat) ---------------------------------------------------
+// --- Rank (Most read) -------------------------------------------------------
 .pgds-rank {
   display: flex;
   gap: $sp-3;
@@ -62,7 +62,7 @@
   }
 }
 
-// --- Lich Van Nien -----------------------------------------------------------
+// --- Perpetual calendar -----------------------------------------------------
 .pgds-lunar {
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
@@ -149,7 +149,7 @@
   }
 }
 
-// --- Loi Phat day (teaching audio list) -------------------------------------
+// --- Buddha's teachings (teaching audio list) -------------------------------
 .pgds-teaching li {
   display: flex;
   align-items: flex-start;

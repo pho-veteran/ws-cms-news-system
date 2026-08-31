@@ -1,6 +1,6 @@
 <?php
 /**
- * Footer 4 cot + thong tin phap ly toa soan (proposal §2.3, §5.4 bang goc).
+ * Footer with 4 columns + editorial legal info (proposal §2.3, §5.4 original table).
  *
  * @package pgds
  */
@@ -19,9 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<p class="pgds-footer__legal">
 				<?php
 				/*
-				 * BAT BUOC truoc go-live (Nghi dinh 72/2013 + Luat Bao chi 2016):
-				 * so giay phep, co quan chu quan, Tong bien tap, dia chi, dien thoai, email.
-				 * Dat qua Customizer/option 'pgds_footer_legal' de bien tap cap nhat.
+				 * REQUIRED before go-live (Decree 72/2013 + Press Law 2016):
+				 * license number, governing body, Editor-in-Chief, address, phone, email.
+				 * Set via the Customizer/'pgds_footer_legal' option so editors can update it.
 				 */
 				echo wp_kses_post( get_option( 'pgds_footer_legal', __( '[Cần bổ sung: Giấy phép hoạt động, Cơ quan chủ quản, Tổng biên tập, Địa chỉ, Điện thoại, Email]', 'pgds' ) ) );
 				?>

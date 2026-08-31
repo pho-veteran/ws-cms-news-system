@@ -4,7 +4,7 @@
 // Build: node build.mjs  ->  assets/dist/main.<hash>.css
 // ============================================================================
 // --- 02 generic --------------------------------------------------------------
-@use '02-generic/root';   // emit :root custom properties truoc tien
+@use '02-generic/root';   // emit :root custom properties first
 @use '02-generic/reset';
 
 // --- 03 elements -------------------------------------------------------------

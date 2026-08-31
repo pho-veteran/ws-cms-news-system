@@ -1,15 +1,15 @@
 // ============================================================================
 // 00-SETTINGS / TOKENS
-// Nguon chan ly duy nhat. Component CAM hard-code gia tri mau/spacing.
-// - Mau: xuat ra CSS custom property (runtime, doi theme sau) -> xem _mixins root-vars
+// Single source of truth. Components must not hard-code color/spacing.
+// - Color: emitted as CSS custom properties (runtime, for later theming) -> see _mixins root-vars
 // - Typography / spacing / radius / breakpoint / z-index: SCSS var (compile-time)
-// Bam sat PROPOSAL_01 §3.1
+// Follows PROPOSAL_01 §3.1
 // ============================================================================
 
 @use 'sass:map';
 
 // ---------------------------------------------------------------------------
-// MAU (dung boi mixin root-vars de emit :root custom properties)
+// COLORS (used by the root-vars mixin to emit :root custom properties)
 // ---------------------------------------------------------------------------
 $colors: (
   // Brand
@@ -21,7 +21,7 @@ $colors: (
   'gilt':         #A9812F,
   'gilt-light':   #C9A24E,
   'moss':         #3F5D4E,
-  'lotus':        #E3A8AA,  // accent du phong (layout v12 khai bao) - giu lam badge nhan
+  'lotus':        #E3A8AA,  // fallback accent (declared in layout v12) - keep as a badge color
   'line':         #D9CDAE,
 
   // Surface
@@ -30,13 +30,13 @@ $colors: (
   'surface-2':    #faf8f2,
   'surface-3':    #EFE6CF,
 
-  // Text phu
-  'text-muted':   #7A6E56,  // da nang tu #8a7f68 de dat contrast AA (>=4.5:1 tren paper)
+  // Supporting text
+  'text-muted':   #7A6E56,  // raised from #8a7f68 to meet AA contrast (>=4.5:1 on paper)
   'text-soft':    #6b5f4a,
   'text-dim':     #9B8F79,
   'text-alt':     #5c5243,
 
-  // Accent tren nen toi
+  // Accent on dark backgrounds
   'gilt-bright':  #E8C468,
   'gilt-pale':    #E4D6AE,
   'line-dark':    #5a4234,
@@ -44,7 +44,7 @@ $colors: (
   'line-mid':     #8C7E68,
 );
 
-// Alpha (rgba) - emit rieng
+// Alpha (rgba) - emitted separately
 $alpha: (
   'shadow-sm':    rgba(42, 33, 27, .15),
   'shadow-robe':  rgba(92, 58, 46, .12),
@@ -56,7 +56,7 @@ $alpha: (
   'on-dark-22':   rgba(255, 255, 255, .22),
 );
 
-// Nhan mau theo chuyen muc cap 1 (dai mau 7 category)
+// Category colors by level-1 section (7-category palette)
 $cat-colors: (
   'tin-phat-su':      #5C3A2E,
   'song-an-lanh':     #3F5D4E,
@@ -72,14 +72,14 @@ $cat-colors: (
 $font-body:    ('Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif);
 $font-display: ('Fraunces', Georgia, 'Times New Roman', serif);
 
-// Scale 9 muc (px)
+// Scale of 9 steps (px)
 $fs-hero: 44px;
 $fs-xl:   20px;
 $fs-lg:   19px;
 $fs-md:   16px;
 $fs-base: 15px;
 $fs-sm:   14px;
-$fs-xs:   13px;   // mac dinh
+$fs-xs:   13px;   // default
 $fs-2xs:  12px;
 $fs-3xs:  11.5px;
 
@@ -103,7 +103,7 @@ $fw-semibold: 600;
 $fw-bold:     700;
 
 // ---------------------------------------------------------------------------
-// SPACING (bac 4px)
+// SPACING (4px scale)
 // ---------------------------------------------------------------------------
 $sp-1:  4px;
 $sp-2:  8px;
@@ -111,7 +111,7 @@ $sp-3:  12px;
 $sp-4:  16px;
 $sp-5:  20px;
 $sp-6:  24px;
-$sp-7:  28px;   // khoang cach section mac dinh
+$sp-7:  28px;   // default section gap
 $sp-8:  32px;
 $sp-10: 40px;
 $sp-12: 48px;
@@ -121,7 +121,7 @@ $container-max: 1180px;
 $container-pad: 20px;
 $sidebar-w:     320px;
 $grid-gap:      20px;
-$content-max:   760px;  // do rong than bai
+$content-max:   760px;  // article body width
 
 // ---------------------------------------------------------------------------
 // RADIUS & SHADOW
@@ -135,7 +135,7 @@ $radius-2xl:  14px;
 $radius-full: 50%;
 $radius-pill: 999px;
 
-// Shadow dung var alpha (define trong root)
+// Shadows use alpha vars (defined in root)
 $shadow-sm: 0 1px 3px var(--pgds-shadow-flat);
 $shadow-md: 0 2px 8px var(--pgds-shadow-sm);
 $shadow-lg: 0 4px 16px var(--pgds-shadow-robe);

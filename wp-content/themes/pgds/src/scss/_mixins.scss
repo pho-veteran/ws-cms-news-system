@@ -13,11 +13,11 @@
       @content;
     }
   } @else {
-    @error "Breakpoint '#{$name}' khong ton tai trong \$breakpoints.";
+    @error "Breakpoint '#{$name}' does not exist in \$breakpoints.";
   }
 }
 
-// Max-width (dung han che, chuong trinh mobile-first)
+// Max-width (use sparingly, mobile-first approach)
 @mixin mq-max($name) {
   @if map.has-key(t.$breakpoints, $name) {
     @media (max-width: (map.get(t.$breakpoints, $name) - 1px)) {
@@ -26,15 +26,15 @@
   }
 }
 
-// --- Line clamp giu min-height theo em de thang hang ngang ------------------
-// Bam cach lam layout v12: .card h3 { -webkit-line-clamp:2; height:2.7em }
+// --- Line clamp keeps min-height in em for aligned columns ------------------
+// Follows layout v12 approach: .card h3 { -webkit-line-clamp:2; height:2.7em }
 @mixin line-clamp($lines, $lh: t.$lh-tight) {
   display: -webkit-box;
   -webkit-line-clamp: $lines;
   line-clamp: $lines;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  // Giu chieu cao co dinh de cac cot bat dau o vi tri thang nhau.
+  // Keeps a fixed height so columns start at the same position.
   min-height: #{$lines * $lh}em;
 }
 
@@ -51,21 +51,21 @@
   border: 0;
 }
 
-// --- Focus ring nhat quan ----------------------------------------------------
+// --- Consistent focus ring ---------------------------------------------------
 @mixin focus-ring {
   outline: 2px solid var(--pgds-gilt);
   outline-offset: 2px;
 }
 
-// --- Aspect ratio box (fallback padding cho trinh duyet cu) -----------------
+// --- Aspect ratio box (padding fallback for older browsers) -----------------
 @mixin ratio($w, $h) {
   aspect-ratio: #{$w} / #{$h};
 }
 
-// --- Emit :root custom properties tu color/alpha map ------------------------
+// --- Emit :root custom properties from color/alpha map ------------------------
 @mixin root-vars {
   :root {
-    // Mau brand + surface + text + accent
+    // Brand + surface + text + accent colors
     @each $name, $val in t.$colors {
       --pgds-#{$name}: #{$val};
     }
@@ -73,12 +73,12 @@
     @each $name, $val in t.$alpha {
       --pgds-#{$name}: #{$val};
     }
-    // Nhan mau chuyen muc
+    // Category colors
     @each $name, $val in t.$cat-colors {
       --pgds-cat-#{$name}: #{$val};
     }
 
-    // ---- Semantic alias (component nen dung nhom nay) ----
+    // ---- Semantic aliases (use this group in components) ----
     --color-bg: var(--pgds-paper);
     --color-bg-surface: var(--pgds-white);
     --color-bg-inverse: var(--pgds-robe-deep);

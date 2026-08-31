@@ -1,6 +1,6 @@
 <?php
 /**
- * List item (list-clean) - danh sach ngang anh trai + noi dung phai.
+ * List item (list-clean) - horizontal listing, image left + content right.
  *
  * @param array $args { post: WP_Post }
  * @package pgds

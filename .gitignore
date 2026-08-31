@@ -29,3 +29,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Claude Code local configuration and guidance — not part of the project
+.claude/
+CLAUDE.md

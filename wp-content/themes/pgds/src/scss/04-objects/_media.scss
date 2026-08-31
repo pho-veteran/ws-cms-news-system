@@ -1,6 +1,6 @@
 // ============================================================================
-// 04-OBJECTS / MEDIA (khung anh giu ty le, chong CLS)
-// .pgds-art la placeholder gradient khi chua co anh (giong layout v12).
+// 04-OBJECTS / MEDIA (image frame maintains aspect ratio, prevents CLS)
+// .pgds-art is a gradient placeholder when no image is available (matches layout v12).
 // ============================================================================
 @use 'config' as *;
 

@@ -1,12 +1,12 @@
 <?php
 /**
  * Plugin Name: PGDS Cache Flush
- * Description: Flush sach Nginx FastCGI page cache khi noi dung doi (proposal §5.4).
- *              Uu tien "sua la thay ngay" cho khach anonymous.
+ * Description: Cleanly flush the Nginx FastCGI page cache when content changes (proposal §5.4).
+ *              Prioritize "edits appear immediately" for anonymous visitors.
  * Version: 1.0.0
  *
- * Dieu kien: php-fpm phai GHI duoc thu muc cache (nginx + php-fpm cung group,
- * thu muc group-writable). Xem infra/nginx/README.
+ * Requirement: php-fpm must be able to WRITE to the cache directory (nginx and php-fpm
+ * share a group; the directory is group-writable). See infra/nginx/README.
  *
  * @package pgds
  */
@@ -16,15 +16,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Thu muc cache FastCGI. Cho phep override qua constant trong wp-config.php.
+ * FastCGI cache directory. Can be overridden with a constant in wp-config.php.
  */
 if ( ! defined( 'PGDS_FCGI_CACHE_DIR' ) ) {
 	define( 'PGDS_FCGI_CACHE_DIR', '/var/cache/nginx/fcgi' );
 }
 
 /**
- * Xoa toan bo file trong thu muc cache (flush sach, khong mapping path).
- * O tai hien tai, xoa het la dung: 1 lenh, khong sot, khong can logic mapping.
+ * Delete every file in the cache directory (clean flush, without path mapping).
+ * For the current scale, deleting everything is appropriate: one command, no leftovers, no mapping logic needed.
  */
 function pgds_flush_page_cache() {
 	$dir = PGDS_FCGI_CACHE_DIR;
@@ -44,14 +44,14 @@ function pgds_flush_page_cache() {
 			}
 		}
 	} catch ( Exception $e ) {
-		// Im lang: cache flush that bai khong duoc lam vo request.
+		// Remain silent: a failed cache flush must not break the request.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[pgds] cache flush error: ' . $e->getMessage() );
 		}
 	}
 }
 
-// Chi hook cac su kien noi dung that su doi (khong autosave/revision).
+// Hook only events where content actually changes (not autosaves/revisions).
 add_action( 'save_post', 'pgds_flush_page_cache', 10, 0 );
 add_action( 'deleted_post', 'pgds_flush_page_cache' );
 add_action( 'edited_term', 'pgds_flush_page_cache' );

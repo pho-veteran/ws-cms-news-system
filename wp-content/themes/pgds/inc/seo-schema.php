@@ -1,8 +1,8 @@
 <?php
 /**
- * Schema thuoc THEME (proposal §7): VideoObject + NewsMediaOrganization + video sitemap.
- * Cac schema con lai (NewsArticle, BreadcrumbList, WebSite) do plugin SEO xuat
- * -> tranh trung. Neu KHONG cai plugin, dat PGDS_EMIT_ARTICLE_SCHEMA=true de theme lo.
+ * Schema owned by the THEME (proposal §7): VideoObject + NewsMediaOrganization + video sitemap.
+ * The remaining schema (NewsArticle, BreadcrumbList, WebSite) is emitted by the SEO plugin
+ * -> avoid duplication. If the plugin is NOT installed, set PGDS_EMIT_ARTICLE_SCHEMA=true so the theme handles it.
  *
  * @package pgds
  */
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * NewsMediaOrganization - toan site, in o <head>.
+ * NewsMediaOrganization - site-wide, printed in <head>.
  */
 function pgds_schema_organization() {
 	if ( ! is_front_page() && ! is_home() ) {
@@ -38,8 +38,8 @@ function pgds_schema_organization() {
 add_action( 'wp_head', 'pgds_schema_organization', 20 );
 
 /**
- * VideoObject cho bai co _pgds_youtube_id + du lieu hop le.
- * Fallback (proposal §6.3): thieu du lieu / video removed -> KHONG xuat.
+ * VideoObject for posts with _pgds_youtube_id + valid data.
+ * Fallback (proposal §6.3): missing data / video removed -> do NOT emit.
  */
 function pgds_schema_video() {
 	if ( ! is_singular( 'post' ) ) {
@@ -50,7 +50,7 @@ function pgds_schema_video() {
 	if ( ! $vid ) {
 		return;
 	}
-	// Neu danh dau video khong kha dung -> khong xuat schema.
+	// If the video is marked unavailable -> don't emit schema.
 	if ( '1' === get_post_meta( $post_id, '_pgds_video_unavailable', true ) ) {
 		return;
 	}
@@ -79,7 +79,7 @@ function pgds_schema_video() {
 add_action( 'wp_head', 'pgds_schema_video', 21 );
 
 /**
- * NewsArticle - CHI khi khong co plugin SEO (tranh trung).
+ * NewsArticle - ONLY when there's no SEO plugin (avoid duplication).
  */
 function pgds_schema_article() {
 	if ( ! ( defined( 'PGDS_EMIT_ARTICLE_SCHEMA' ) && PGDS_EMIT_ARTICLE_SCHEMA ) ) {
@@ -108,7 +108,7 @@ function pgds_schema_article() {
 add_action( 'wp_head', 'pgds_schema_article', 22 );
 
 /**
- * In JSON-LD an toan.
+ * Print JSON-LD safely.
  *
  * @param array $data Data.
  */
@@ -119,9 +119,9 @@ function pgds_print_jsonld( $data ) {
 }
 
 /**
- * Giay -> ISO-8601 duration (PT#H#M#S).
+ * Seconds -> ISO-8601 duration (PT#H#M#S).
  *
- * @param int $seconds Giay.
+ * @param int $seconds Seconds.
  * @return string
  */
 function pgds_iso8601_duration( $seconds ) {
@@ -147,7 +147,7 @@ function pgds_iso8601_duration( $seconds ) {
  * ======================================================================= */
 
 /**
- * Dang ky rewrite + query var.
+ * Register rewrite + query var.
  */
 function pgds_video_sitemap_rewrite() {
 	add_rewrite_rule( '^video-sitemap\.xml$', 'index.php?pgds_video_sitemap=1', 'top' );
@@ -161,7 +161,7 @@ function pgds_video_sitemap_qv( $vars ) {
 add_filter( 'query_vars', 'pgds_video_sitemap_qv' );
 
 /**
- * Xuat XML video sitemap.
+ * Output the video sitemap XML.
  */
 function pgds_render_video_sitemap() {
 	if ( ! get_query_var( 'pgds_video_sitemap' ) ) {

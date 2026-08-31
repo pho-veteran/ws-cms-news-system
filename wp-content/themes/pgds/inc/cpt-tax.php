@@ -2,8 +2,8 @@
 /**
  * Custom post type + taxonomy + seed category.
  *
- * CPT:  pgds_teaching (Loi Phat day), pgds_lunar_note (Lich Van Nien)
- * Tax:  pgds_topic (chu de cat ngang category)
+ * CPT:  pgds_teaching (Buddha's teachings), pgds_lunar_note (lunar calendar)
+ * Tax:  pgds_topic (topic, cross-cutting category)
  *
  * @package pgds
  */
@@ -13,8 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Cay category khop nav 7 muc (proposal §4.1).
- * parent-slug => array( child-slug => label ), key 'label' cho chinh no.
+ * Category tree matching the 7-item nav (proposal §4.1).
+ * parent-slug => array( child-slug => label ), key 'label' is for the parent itself.
  *
  * @return array
  */
@@ -63,10 +63,10 @@ function pgds_category_tree() {
 }
 
 /**
- * Dang ky CPT + taxonomy.
+ * Register CPTs + taxonomy.
  */
 function pgds_register_cpt_tax() {
-	// --- CPT: Loi Phat day -------------------------------------------------
+	// --- CPT: Buddha's teachings --------------------------------------------
 	register_post_type(
 		'pgds_teaching',
 		array(
@@ -86,7 +86,7 @@ function pgds_register_cpt_tax() {
 		)
 	);
 
-	// --- CPT: Lich Van Nien ------------------------------------------------
+	// --- CPT: Lunar calendar -------------------------------------------------
 	register_post_type(
 		'pgds_lunar_note',
 		array(
@@ -104,7 +104,7 @@ function pgds_register_cpt_tax() {
 		)
 	);
 
-	// --- Taxonomy: chu de --------------------------------------------------
+	// --- Taxonomy: topic -----------------------------------------------------
 	register_taxonomy(
 		'pgds_topic',
 		array( 'post' ),
@@ -124,10 +124,10 @@ function pgds_register_cpt_tax() {
 add_action( 'init', 'pgds_register_cpt_tax' );
 
 /**
- * Seed category tree - chay 1 lan (idempotent, kiem tra ton tai theo slug).
- * Kich hoat qua: wp eval "pgds_seed_categories();" hoac tu dong khi switch theme.
+ * Seed the category tree - runs once (idempotent, checks existence by slug).
+ * Trigger via: wp eval "pgds_seed_categories();" or automatically on theme switch.
  *
- * @return array Ket qua tao (slug => term_id).
+ * @return array Created result (slug => term_id).
  */
 function pgds_seed_categories() {
 	$created = array();
@@ -144,11 +144,11 @@ function pgds_seed_categories() {
 }
 
 /**
- * Tao category neu chua co, tra ve term_id.
+ * Create category if it doesn't exist, return term_id.
  *
  * @param string $slug   Slug.
- * @param string $label  Ten hien thi.
- * @param int    $parent Term cha.
+ * @param string $label  Display name.
+ * @param int    $parent Parent term.
  * @return int
  */
 function pgds_ensure_category( $slug, $label, $parent = 0 ) {
@@ -171,6 +171,6 @@ function pgds_ensure_category( $slug, $label, $parent = 0 ) {
 }
 
 /**
- * Tu dong seed khi kich hoat theme.
+ * Automatically seed on theme activation.
  */
 add_action( 'after_switch_theme', 'pgds_seed_categories' );

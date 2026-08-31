@@ -1,7 +1,7 @@
 /**
- * youtube-facade — thay poster bang iframe youtube-nocookie khi nguoi dung bam.
- * Khong tai iframe truoc tuong tac (bao ve LCP, giam ~600KB-1.2MB JS cua YouTube).
- * A11y: nut la <button aria-label>, sau khi chen iframe focus vao iframe.
+ * youtube-facade — replace the poster with a youtube-nocookie iframe when clicked.
+ * Do not load the iframe before interaction (protects LCP, cuts ~600KB-1.2MB of YouTube JS).
+ * A11y: the button is <button aria-label>; after inserting the iframe, focus the iframe.
  */
 
 const HOST = (window.PGDS && window.PGDS.ytHost) || 'https://www.youtube-nocookie.com';
@@ -30,7 +30,7 @@ function activate(figure) {
   figure.dataset.pgdsActivated = '1';
 
   const iframe = buildIframe(videoId);
-  // Xoa poster + nut, chen iframe.
+  // Remove the poster + button, insert the iframe.
   figure.querySelectorAll('.pgds-video__poster, .pgds-video__play, .pgds-video__dur').forEach((el) => el.remove());
   figure.appendChild(iframe);
   iframe.focus();

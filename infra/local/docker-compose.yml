@@ -1,11 +1,11 @@
 # =============================================================================
-# Moi truong DEV LOCAL de verify theme pgds (KHONG phai prod).
-# Prod dung Nginx FastCGI cache (infra/nginx/); ban local nay dung Apache image
-# cho don gian - chi de chay + xem 11 block render + import sample data.
+# LOCAL DEV environment to verify the pgds theme (NOT production).
+# Production uses Nginx FastCGI cache (infra/nginx/); this local setup uses the
+# Apache image for simplicity - just to run + view the 11 rendered blocks + import sample data.
 #
-# Chay:  cd infra/local && docker compose up -d
-# Sau do: docker compose run --rm wpcli /scripts/setup.sh
-# Mo:     http://localhost:8080
+# Run:   cd infra/local && docker compose up -d
+# Then:  docker compose run --rm wpcli /scripts/setup.sh
+# Open:  http://localhost:8080
 # =============================================================================
 
 services:

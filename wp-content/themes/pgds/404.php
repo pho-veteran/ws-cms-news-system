@@ -1,6 +1,6 @@
 <?php
 /**
- * 404 - goi y bai moi + o tim kiem.
+ * 404 - suggests recent posts + a search box.
  *
  * @package pgds
  */

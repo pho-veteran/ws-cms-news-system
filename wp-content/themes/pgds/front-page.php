@@ -1,6 +1,6 @@
 <?php
 /**
- * Trang chu - 11 vung noi dung (proposal §2.2).
+ * Front page - 11 content zones (proposal §2.2).
  *
  * @package pgds
  */
@@ -14,7 +14,7 @@ get_header();
 $B = pgds_home_blocks();
 
 /**
- * Helper cuc bo: render 1 part cho moi post trong mang.
+ * Local helper: render 1 part for each post in an array.
  *
  * @param string $slug Part slug.
  * @param array  $posts Posts.
@@ -33,7 +33,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 
 	<h1 class="u-sr-only"><?php bloginfo( 'name' ); ?> — <?php bloginfo( 'description' ); ?></h1>
 
-	<!-- ============ (3) FEATURE GRID: Tin noi bat ============ -->
+	<!-- ============ (3) FEATURE GRID: Featured news ============ -->
 	<section class="pgds-section pgds-feature-grid" aria-label="<?php esc_attr_e( 'Tin nổi bật', 'pgds' ); ?>" style="margin-top:22px;">
 		<div class="pgds-feature-main">
 			<?php if ( $B['lead'] ) : ?>
@@ -47,7 +47,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 			<?php endif; ?>
 		</div>
 
-		<!-- Panel Tin anh -->
+		<!-- Photo news panel -->
 		<?php if ( ! empty( $B['photo'] ) ) : $ph = $B['photo'][0]; ?>
 			<aside class="pgds-photo-panel" aria-label="<?php esc_attr_e( 'Tin ảnh', 'pgds' ); ?>">
 				<div class="pgds-photo-panel__head"><?php esc_html_e( 'Tin ảnh', 'pgds' ); ?></div>
@@ -130,7 +130,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 	</section>
 	<?php endif; ?>
 
-	<!-- ============ (6+7) CONTENT GRID 1: Tin Phat su + sidebar ============ -->
+	<!-- ============ (6+7) CONTENT GRID 1: Buddhist affairs news + sidebar ============ -->
 	<div class="pgds-content-grid">
 		<div>
 			<section class="pgds-section" aria-labelledby="pgds-phatsu-title" style="margin-bottom:0;">
@@ -187,7 +187,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		<?php endforeach; ?>
 	</section>
 
-	<!-- ============ (10) CONTENT GRID 2: mixed + Vietnam Buddhism + teaching ============ -->
+	<!-- ============ (10) CONTENT GRID 2: mixed + Vietnam Buddhism + teachings ============ -->
 	<div class="pgds-content-grid">
 		<div>
 			<?php if ( ! empty( $B['mixed_list'] ) ) : ?>

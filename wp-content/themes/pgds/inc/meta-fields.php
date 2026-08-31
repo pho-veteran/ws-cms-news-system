@@ -1,7 +1,7 @@
 <?php
 /**
- * Custom meta box (khong dung ACF - proposal §8).
- * 8 field theo proposal §4.3.
+ * Custom meta box (no ACF - proposal §8).
+ * 8 fields per proposal §4.3.
  *
  * @package pgds
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Dinh nghia field.
+ * Field definitions.
  *
  * @return array
  */
@@ -53,7 +53,7 @@ function pgds_meta_fields() {
 }
 
 /**
- * Dang ky meta cho REST + sanitize.
+ * Register meta for REST + sanitize.
  */
 function pgds_register_meta() {
 	$types = array(
@@ -168,7 +168,7 @@ function pgds_render_meta_box( $post ) {
 }
 
 /**
- * Luu meta.
+ * Save meta.
  *
  * @param int $post_id Post ID.
  */
@@ -202,7 +202,7 @@ function pgds_save_meta( $post_id ) {
 
 			default:
 				$val = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
-				// YouTube ID: tach ID sach tu URL neu nguoi dung dan ca URL.
+				// YouTube ID: extract clean ID from URL if the user pasted the full URL.
 				if ( '_pgds_youtube_id' === $key && '' !== $val ) {
 					$val = pgds_extract_youtube_id( $val );
 				}
@@ -213,18 +213,18 @@ function pgds_save_meta( $post_id ) {
 add_action( 'save_post_post', 'pgds_save_meta' );
 
 /**
- * Tach YouTube ID tu URL hoac tra ve nguyen neu da la ID.
+ * Extract YouTube ID from a URL, or return as-is if already an ID.
  *
- * @param string $input URL hoac ID.
+ * @param string $input URL or ID.
  * @return string
  */
 function pgds_extract_youtube_id( $input ) {
 	$input = trim( $input );
-	// Da la ID (11 ky tu hop le).
+	// Already an ID (11 valid characters).
 	if ( preg_match( '/^[A-Za-z0-9_-]{11}$/', $input ) ) {
 		return $input;
 	}
-	// youtu.be/ID hoac youtube.com/watch?v=ID hoac /embed/ID
+	// youtu.be/ID or youtube.com/watch?v=ID or /embed/ID
 	if ( preg_match( '~(?:youtu\.be/|v=|/embed/|/shorts/)([A-Za-z0-9_-]{11})~', $input, $m ) ) {
 		return $m[1];
 	}

@@ -1,6 +1,6 @@
 <?php
 /**
- * Template tags - helper hien thi dung chung.
+ * Template tags - shared display helpers.
  *
  * @package pgds
  */
@@ -10,12 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * In khung anh .pgds-art. Co thumbnail -> img (srcset, width/height tu WP);
- * khong co -> gradient placeholder (khong layout shift nho ratio class).
+ * Print the .pgds-art image frame. Has thumbnail -> img (srcset, width/height from WP);
+ * no thumbnail -> gradient placeholder (no layout shift thanks to ratio class).
  *
  * @param int|WP_Post $post        Post.
- * @param string      $size        Image size da dang ky.
- * @param string      $ratio_class Class ty le (vd 'pgds-ratio-card').
+ * @param string      $size        Registered image size.
+ * @param string      $ratio_class Ratio class (e.g. 'pgds-ratio-card').
  * @param bool        $eager       LCP: eager + high fetchpriority.
  */
 function pgds_art( $post, $size = 'pgds-card', $ratio_class = 'pgds-ratio-card', $eager = false ) {
@@ -35,7 +35,7 @@ function pgds_art( $post, $size = 'pgds-card', $ratio_class = 'pgds-ratio-card',
 }
 
 /**
- * Sa-po: meta _pgds_sapo, fallback excerpt.
+ * Sapo: _pgds_sapo meta, falls back to excerpt.
  *
  * @param int|WP_Post $post Post.
  * @return string
@@ -53,7 +53,7 @@ function pgds_sapo( $post ) {
 }
 
 /**
- * Chuyen muc chinh: meta _pgds_primary_cat, fallback category dau tien.
+ * Primary category: _pgds_primary_cat meta, falls back to the first category.
  *
  * @param int|WP_Post $post Post.
  * @return WP_Term|null
@@ -75,7 +75,7 @@ function pgds_primary_cat( $post ) {
 }
 
 /**
- * Slug cap 1 cua chuyen muc (de gan data-cat lay mau nhan).
+ * Top-level category slug (used to set data-cat for label coloring).
  *
  * @param WP_Term|null $term Term.
  * @return string
@@ -95,7 +95,7 @@ function pgds_top_cat_slug( $term ) {
 }
 
 /**
- * In nhan chuyen muc mau.
+ * Print the colored category label.
  *
  * @param int|WP_Post $post Post.
  */
@@ -113,7 +113,7 @@ function pgds_cat_label( $post ) {
 }
 
 /**
- * Thoi gian dang dang dang doc (vd "2 giờ trước").
+ * Relative published time (e.g. "2 hours ago").
  *
  * @param int|WP_Post $post Post.
  * @return string
@@ -136,7 +136,7 @@ function pgds_time_ago( $post ) {
 }
 
 /**
- * Thoi gian doc uoc tinh (phut) tu so tu.
+ * Estimated reading time (minutes) from word count.
  *
  * @param int|WP_Post $post Post.
  * @return int
@@ -148,7 +148,7 @@ function pgds_reading_time( $post ) {
 }
 
 /**
- * YouTube ID canonical cua bai.
+ * The post's canonical YouTube ID.
  *
  * @param int|WP_Post $post Post.
  * @return string
@@ -159,9 +159,9 @@ function pgds_video_id( $post ) {
 }
 
 /**
- * Dinh dang thoi luong giay -> "MM:SS" hoac "H:MM:SS".
+ * Format duration in seconds -> "MM:SS" or "H:MM:SS".
  *
- * @param int $seconds Giay.
+ * @param int $seconds Seconds.
  * @return string
  */
 function pgds_format_duration( $seconds ) {
@@ -179,16 +179,16 @@ function pgds_format_duration( $seconds ) {
 }
 
 /**
- * SVG nut play (dung chung).
+ * Play button SVG (shared).
  */
 function pgds_play_svg() {
 	echo '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>';
 }
 
 /**
- * Breadcrumb (Trang chu > Chuyen muc > Tieu de).
+ * Breadcrumb (Home > Category > Title).
  *
- * @param int|WP_Post $post Post (tuy chon).
+ * @param int|WP_Post $post Post (optional).
  */
 function pgds_breadcrumb( $post = null ) {
 	$items = array();

@@ -1,6 +1,6 @@
 <?php
 /**
- * Page tinh (Gioi thieu, Lien he, Chinh sach...).
+ * Static page (About, Contact, Policy...).
  *
  * @package pgds
  */

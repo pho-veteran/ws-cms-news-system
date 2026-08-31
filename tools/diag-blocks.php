@@ -1,5 +1,5 @@
 <?php
-// Diagnostic: dem so bai moi block trang chu tra ve.
+// Diagnostic: count the posts returned by each homepage block.
 $b = pgds_home_blocks();
 $keys = array( 'lead', 'secondary', 'photo', 'media_feature', 'media_thumbs', 'media_bullets', 'phatsu_cards', 'phatsu_list', 'mixed_list', 'vn_list', 'popular', 'teaching' );
 foreach ( $keys as $k ) {

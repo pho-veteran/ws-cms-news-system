@@ -1,6 +1,6 @@
 <?php
 /**
- * Card mini - thumb nho + title (three-category mini, compact list).
+ * Mini card - small thumb + title (three-category mini, compact list).
  *
  * @param array $args { post: WP_Post, tag: 'h5'|'h4' }
  * @package pgds

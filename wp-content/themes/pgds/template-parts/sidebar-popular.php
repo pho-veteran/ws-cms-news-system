@@ -1,6 +1,6 @@
 <?php
 /**
- * Sidebar block "Doc nhieu nhat".
+ * Sidebar block "Most read".
  *
  * @param array $args { posts: WP_Post[] }
  * @package pgds

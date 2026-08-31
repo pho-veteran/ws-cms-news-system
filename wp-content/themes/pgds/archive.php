@@ -1,7 +1,7 @@
 <?php
 /**
- * Archive dung chung: tag, taxonomy, author, date.
- * (proposal §3.3: fallback cho cac template rieng bi hoan).
+ * Generic archive: tag, taxonomy, author, date.
+ * (proposal §3.3: fallback for dedicated templates that are deferred).
  *
  * @package pgds
  */

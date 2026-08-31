@@ -1,11 +1,11 @@
 <?php
 /**
- * Seed them bai demo cho DAY du 11 block (idempotent theo _pgds_source_id = 'demo-*').
- * Chay: wp eval-file /tools/seed-demo.php
+ * Seed additional demo posts to fill all 11 blocks (idempotent by _pgds_source_id = 'demo-*').
+ * Run: wp eval-file /tools/seed-demo.php
  */
 
 $plan = array(
-	// slug_cat => [so bai them, tien to tieu de]
+	// category_slug => [number of additional posts, title prefix]
 	'tin-phat-su'      => array( 8, 'Tin Phật sự' ),
 	'song-an-lanh'     => array( 5, 'Sống an lành' ),
 	'phat-tich'        => array( 5, 'Phật tích' ),
@@ -22,7 +22,7 @@ foreach ( $plan as $cat_slug => $spec ) {
 	if ( ! $term ) {
 		continue;
 	}
-	// Cat cha (de gan primary hop ly).
+	// Parent category (to assign a sensible primary category).
 	$primary_slug = $term->parent ? get_term( $term->parent, 'category' )->slug : $cat_slug;
 	$primary_id   = $term->parent ? $term->parent : $term->term_id;
 
@@ -30,7 +30,7 @@ foreach ( $plan as $cat_slug => $spec ) {
 		$sid = "demo-{$cat_slug}-{$i}";
 		$q   = new WP_Query( array( 'post_type' => 'post', 'post_status' => 'any', 'meta_key' => '_pgds_source_id', 'meta_value' => $sid, 'posts_per_page' => 1, 'fields' => 'ids' ) );
 		if ( $q->posts ) {
-			continue; // da co
+			continue; // already exists
 		}
 		$is_media = in_array( $cat_slug, array( 'video', 'infographic-emagazine' ), true );
 		$cat_ids  = array( $term->term_id );
@@ -65,4 +65,4 @@ foreach ( $plan as $cat_slug => $spec ) {
 	}
 }
 
-WP_CLI::success( "Seed demo xong. Tao them {$created} bai." );
+WP_CLI::success( "Demo seed complete. Created {$created} additional posts." );

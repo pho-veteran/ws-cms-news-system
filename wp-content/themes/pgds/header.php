@@ -1,6 +1,6 @@
 <?php
 /**
- * Header + logo + search + nav 7 muc.
+ * Header + logo + search + 7-item nav.
  *
  * @package pgds
  */

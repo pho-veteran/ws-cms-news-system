@@ -1,7 +1,7 @@
 <?php
 /**
- * Sidebar dung chung (single, category, archive).
- * Popular + Lich Van Nien.
+ * Shared sidebar (single, category, archive).
+ * Popular + Perpetual Calendar.
  *
  * @package pgds
  */
