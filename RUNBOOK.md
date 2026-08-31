@@ -117,10 +117,65 @@ before importing 2,000 posts as well.
 - Private or removed videos: set the `_pgds_video_unavailable=1` meta to hide the facade and
   drop the schema.
 
-## 7. Metrics to watch (CloudWatch)
+## 7. Monitoring and scheduled maintenance
 
-CPU burst < 20%, RAM > 85%, disk > 80%, 5xx > 1%, healthcheck failures.
-Snapshot at 03:00 ICT, DB dump every 6 hours.
+**Not CloudWatch.** §7 rejects the CloudWatch agent: RAM and disk are not built-in
+instance metrics, so they need custom metrics, which §7 costs at ~$24 over six months —
+28% of the budget, more than all backups combined — to watch two numbers. Free
+platform alarms still cover CPU utilisation, burst capacity, and the status check.
+
+Everything else runs from `infra/scripts/`, installed at `/usr/local/sbin/` on the
+origin. Credentials live in `/root/.pgds-backup.env`, root-owned mode 600 (§10.2).
+
+| Script | Schedule | What it does |
+|---|---|---|
+| `pgds-db-backup.sh` | `17 3,15 * * *` UTC (cron) | `mysqldump --single-transaction` → gzip → S3 `db-dumps/`, plus 2 local copies (§6.1) |
+| `pgds-health-alert.sh` | `*/10 * * * *` (cron) | RAM/disk/swap thresholds + service liveness → syslog, and SES email when configured (§7) |
+| `pgds-snapshot.sh` | **manual / CI, not cron** | Daily AMI + 4-rolling retention (§6.1) |
+
+Thresholds: memory ≥85% (of `MemAvailable`, not `used` — §4.1 budgets ~850 MB *for*
+the page cache), disk ≥80%, swap ≥256 MB. §4.1 is explicit that regular swap use means
+the configuration is wrong, hence the low swap bar. Alerts have a 3-hour cooldown so a
+sustained problem cannot mail every 10 minutes and get itself muted.
+
+**Why the snapshot job is not in cron on the origin:** it needs
+`ec2:DeregisterImage` and `ec2:DeleteSnapshot`, and a credential that can delete
+backups must not sit on an internet-facing box. Run it from the admin workstation:
+
+```bash
+PGDS_INSTANCE_ID=i-047f1e4d31db00df6 ./infra/scripts/pgds-snapshot.sh
+```
+
+It prunes the AMI **and** its backing EBS snapshot together. Deregistering an AMI alone
+orphans the snapshot, which keeps billing at $0.05/GB-month invisibly — check for
+orphans after any manual snapshot work:
+
+```bash
+aws ec2 describe-snapshots --owner-ids self --region ap-southeast-1 \
+  --query 'Snapshots[].{id:SnapshotId,desc:Description}' --output table
+```
+
+### Verifying a backup is actually restorable
+
+A backup that has never been read is a guess. Spot-check periodically:
+
+```bash
+aws s3 cp s3://pgds-backup-<account_id>/db-dumps/<newest>.sql.gz /tmp/v.sql.gz
+gzip -t /tmp/v.sql.gz                          # integrity
+zcat /tmp/v.sql.gz | grep -c 'CREATE TABLE'    # expect 12+
+zcat /tmp/v.sql.gz | grep -o '_pgds_[a-z_]*' | sort -u   # theme meta keys present
+```
+
+Last verified 2026-08-31: 12 tables, `wp_posts` present, all eight `_pgds_*` meta keys
+intact.
+
+### Budget alarms
+
+`pgds-lifetime-50` and `pgds-lifetime-85` track *cumulative* spend toward the $100 cap
+(ANNUALLY, so they do not reset inside the six-month life). `pgds-monthly-run-rate`
+($45, forecast at 100% + actual at 80%) catches a runaway — almost always egress.
+**Lower it to ~20 after moving back to Lightsail**, or it stops meaning anything.
+Details: `infra/terraform/README.md`.
 
 ## 8. Exit plan (before decommissioning)
 

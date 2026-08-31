@@ -61,10 +61,24 @@ would have traded a visible blocker for silent degradation under load.
 That **exceeds the $100 operational cap in §8.1** while still fitting inside the $200
 of credits. §8.1 describes the cap as "operational discipline to detect unexpected
 costs" rather than a hard budget — this is precisely such a cost, so it is reported
-rather than absorbed. The $50/$85 budget alarms will fire.
+rather than absorbed.
 
-Egress is the entire delta, and Cloudflare in front of static assets (§5.6) is now a
-**cost control**, not merely a cache. Do not disable it.
+**Egress is the entire delta**, which makes Cloudflare in front of static assets (§5.6)
+a **cost control**, not merely a cache. Do not disable it. Measured sensitivity:
+
+| Egress/month | Billed | Over 6 months |
+|---|---|---|
+| ≤100 GB | $0.00 | $0.00 (free tier) |
+| 150 GB | $6.00 | $36 |
+| 300 GB | $24.00 | $144 |
+| 500 GB | $48.00 | $288 |
+
+Levers that were checked and rejected: gp3's 3000 IOPS / 125 MB/s are the free
+baseline, so there is nothing to trim there; shrinking the volume 60→50 GB saves
+$0.96/mo but §4.2 puts media at 25–40 GB and warns that outgrowing the disk forces a
+migration — not worth the risk for a dollar. The budget guardrails were re-modelled
+instead (see Budgets below), because at ~$31/mo the original MONTHLY $50 budget would
+have alerted every month and been muted.
 
 ### To get back to Lightsail
 
@@ -133,17 +147,25 @@ no DynamoDB table (§9.1).
 
 | File | Resources |
 |---|---|
-| `lightsail.tf` | `aws_lightsail_instance`, `aws_lightsail_static_ip` (+ attachment), `aws_lightsail_instance_public_ports` |
+| `lightsail.tf` | `aws_lightsail_instance`, `aws_lightsail_static_ip` (+ attachment), `aws_lightsail_instance_public_ports` — all gated on `compute_backend == "lightsail"` |
+| `ec2.tf` | `aws_instance`, `aws_eip`, security group + rules — the fallback origin, gated on `compute_backend == "ec2"`. **Currently active.** |
 | `iam.tf` | Two IAM users (`pgds-backup`, `pgds-ses`) + policies + access keys |
 | `ses.tf` | SES domain identity + DKIM, gated on `var.domain_name != ""` |
-| `budgets.tf` | Two `aws_budgets_budget` resources ($50, $85 actual-spend alerts) |
-| `user_data.sh` | LEMP bootstrap script run on first boot |
+| `budgets.tf` | Three budgets: two lifetime (ANNUALLY $50/$85) + one monthly run-rate anomaly |
+| `user_data.sh` | LEMP bootstrap script run on first boot; shared by both backends |
+
+Exactly one compute backend exists at a time — `count`/`for_each` on
+`var.compute_backend` means the unused one has zero resources rather than being
+commented out.
 
 ### Instance and firewall
 
-- `bundle_id = "small_3_0"` (2 vCPU / 2GB / 60GB SSD / 3TB — $12/mo, §2, §8.2),
-  `blueprint_id = "ubuntu_24_04"` (not the WordPress blueprint, so Nginx
-  stays hand-configured, §4).
+- **Lightsail path (preferred, currently blocked):** `bundle_id = "small_3_0"`
+  (2 vCPU / 2GB / 60GB SSD / 3TB — $12/mo, §2, §8.2), `blueprint_id = "ubuntu_24_04"`
+  (not the WordPress blueprint, so Nginx stays hand-configured, §4).
+- **EC2 path (currently active):** `t4g.small` (same 2 vCPU / 2GB shape) on Canonical's
+  Ubuntu 24.04 arm64 AMI resolved through SSM, 60 GB gp3 with
+  `delete_on_termination = false`, IMDSv2 required. See the top of this file.
 - `user_data.sh` installs nginx, PHP 8.3-FPM (`pm=ondemand`,
   `pm.max_children=6`), MariaDB 10.11 (`innodb_buffer_pool_size=256M`),
   Redis (`maxmemory 160mb`, `allkeys-lru`), a 2GB swapfile, fail2ban, and
@@ -186,19 +208,91 @@ instead of an unverifiable one. Once a real domain is chosen: set
 `terraform output ses_dkim_tokens` to Cloudflare DNS (§11: DKIM needs
 Cloudflare nameservers delegated first).
 
-### Budgets — do NOT touch the existing zero-spend budget
+### Budgets
 
-`main/budgets.tf` creates two **new** budgets (`pgds-monthly-50`,
-`pgds-monthly-85`) at 100% of $50 / $85 actual spend, per §8.4. It
-deliberately does not reference, import, or delete the pre-existing
-`My Zero-Spend Budgettt` ($1.00 limit, currently in ALARM) — that resource
-was created out of band and Terraform must never adopt resources it didn't
-create.
+`main/budgets.tf` creates three budgets:
 
-That budget **will alert continuously** once Lightsail starts billing
-$12/month, which leads to alert fatigue and the real $50/$85 guardrails
-getting ignored (§8.4, §12). Clean it up manually, outside Terraform,
-before or right after the first `main` apply:
+| Budget | Limit | Period | Purpose |
+|---|---|---|---|
+| `pgds-lifetime-50` | $50 | ANNUALLY | §8.4 mid-project signal against the $100 cap |
+| `pgds-lifetime-85` | $85 | ANNUALLY | §8.4 approaching-the-cap signal |
+| `pgds-monthly-run-rate` | $45 | MONTHLY | Anomaly detection (forecast at 100%, actual at 80%) |
+
+**Why the §8.4 thresholds are ANNUALLY, not MONTHLY.** §8.4's "$50 and $85" are
+*cumulative lifetime* figures — they only read as mid-project milestones against
+Lightsail's ~$12/mo. On the EC2 fallback (~$31/mo) a MONTHLY $50 budget stays quiet in
+month one and then alerts every month after, which is precisely the alert-fatigue
+failure §8.4 warns about for the zero-spend budget: an always-on alarm gets muted, and
+then there is no guardrail at all. ANNUALLY is the longest window AWS Budgets offers,
+and since the project's life is six months it never resets mid-project. (QUARTERLY
+would reset twice inside it.)
+
+The separate monthly budget watches the *run rate* and is deliberately sized above the
+expected ~$31, so it fires on a runaway rather than on normal operation. Egress is the
+volatile component — $0.12/GB past the first 100 GB free, with nothing in the
+architecture capping it — so $45 trips at roughly 220 GB/month, well above the ~150 GB
+the traffic in §5.2 implies. **Lower `monthly_run_rate_budget` to ~20 after switching
+back to Lightsail**, or it stops being a meaningful signal.
+
+### SES — how far it is verified, and what is genuinely blocked
+
+The send path is proven as far as the sandbox allows. Using the real `pgds-ses`
+credentials from `terraform output`:
+
+```
+$ aws sesv2 send-email --from-email-address noreply@... --destination ...
+MessageRejected: Email address is not verified. The following identities failed
+the check in region AP-SOUTHEAST-1: noreply@..., admin@...
+```
+
+`MessageRejected` is the **success** signal here: the key authenticated as
+`arn:aws:iam::…:user/pgds/pgds-ses`, reached SES in the right region, and was
+*authorized* to call `SendEmail`. An IAM or wiring fault would have returned
+`AccessDenied` or `InvalidAccessKeyId` instead. The only missing piece is a verified
+identity.
+
+Least privilege confirmed at the same time — the same key is denied
+`s3:ListAllMyBuckets` and `ec2:DescribeInstances`.
+
+**Blocked on a decision, not on work:**
+
+- **No domain.** `domain_name = ""`, so `aws_ses_domain_identity` and DKIM are skipped
+  (`count = 0`) rather than created against a placeholder. Verifying a single address
+  instead would need someone to click a link in that mailbox.
+- **Sandbox.** `ProductionAccessEnabled: false`, 200 messages/24h, recipients must be
+  verified. `put-account-details` (the API route to request production access) rejects
+  a placeholder URL — `BadRequestException: Url contains invalid format` — because it
+  validates the TLD. §11 already flags this as the one D0 item that can delay the
+  schedule: the request takes 24h+.
+
+To finish, in order: pick the domain → delegate nameservers to Cloudflare → set
+`domain_name` and re-apply → add the DKIM CNAMEs from `terraform output
+ses_dkim_tokens` → request production access → send a real test.
+
+### Cloudflare — not configured, and why
+
+No Cloudflare resources exist and no credentials are configured. §9 calls the
+Cloudflare provider "optional", and every Cloudflare task in §5.3 (proxy ON, SSL Full
+strict, origin certificate, the two Cache Rules) needs a zone, which needs the domain.
+
+This means one §13 gate item cannot be run: `curl -sI …/assets/…css | grep
+cf-cache-status` → `HIT`. What *was* verified is the half that lives at the origin: the
+asset is served with a single `Cache-Control: public, max-age=31536000, immutable`, so
+it is correctly *eligible* for the edge cache — see §5.5.
+
+The origin firewall already assumes Cloudflare: 80/443 admit Cloudflare's published
+ranges only, so **the site is unreachable until the proxy is in front of it.** That is
+deliberate (§10.2) and is why local verification runs against `127.0.0.1` on the box.
+
+### The pre-existing zero-spend budget — resolved
+
+`My Zero-Spend Budgettt` ($1.00 limit, in ALARM) **has been deleted** (2026-08-31).
+Terraform never referenced, imported, or deleted it: it was created out of band, and
+Terraform must not adopt resources it did not create. It was removed with the CLI
+instead, because it would have alerted continuously the moment the origin started
+billing.
+
+Kept here for reference, and in case a similar budget reappears:
 
 ```bash
 # Option A — delete it outright (recommended: it's redundant once the

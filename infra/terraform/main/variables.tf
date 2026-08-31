@@ -198,3 +198,29 @@ variable "ec2_root_volume_gb" {
     error_message = "The media library alone is 25-40 GB (§4.2); anything under 40 GB will not fit WordPress plus media."
   }
 }
+
+variable "monthly_run_rate_budget" {
+  description = <<-EOT
+    Monthly run-rate budget in USD, for anomaly detection rather than for tracking the
+    lifetime cap (the lifetime $50/$85 thresholds in budgets.tf do that).
+
+    Sized ABOVE the expected run rate so it signals something unexpected instead of
+    firing every month on normal operation — the alert-fatigue trap §8.4 describes.
+
+    Expected: ~$12/mo on Lightsail, ~$31/mo on the EC2 fallback (ec2.tf). The default
+    of 45 leaves headroom over EC2's ~$31 while still catching a runaway: the volatile
+    component is egress at $0.12/GB beyond the first 100 GB free, and nothing in the
+    architecture caps it. At $45 the alarm trips at roughly 220 GB/month of egress,
+    which is well above the ~150 GB the traffic in §5.2 implies.
+
+    Lower this to ~20 after switching back to Lightsail, or the budget stops being a
+    meaningful signal.
+  EOT
+  type        = string
+  default     = "45"
+
+  validation {
+    condition     = can(tonumber(var.monthly_run_rate_budget)) && tonumber(var.monthly_run_rate_budget) > 0
+    error_message = "monthly_run_rate_budget must be a positive number expressed as a string, e.g. \"45\"."
+  }
+}
