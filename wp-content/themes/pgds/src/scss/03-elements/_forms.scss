@@ -1,0 +1,32 @@
+// ============================================================================
+// 03-ELEMENTS / FORMS
+// ============================================================================
+@use 'config' as *;
+
+input[type='text'],
+input[type='search'],
+input[type='email'],
+textarea {
+  width: 100%;
+  padding: $sp-2 $sp-3;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--pgds-line-soft);
+  border-radius: $radius-sm;
+  font-size: $fs-xs;
+  color: var(--color-text);
+
+  &::placeholder {
+    color: var(--pgds-text-dim);
+  }
+
+  &:focus-visible {
+    border-color: var(--color-brand);
+    outline: 2px solid var(--pgds-shadow-robe);
+    outline-offset: 0;
+  }
+}
+
+label {
+  font-size: $fs-2xs;
+  font-weight: $fw-medium;
+}

@@ -1,0 +1,63 @@
+// ============================================================================
+// 05-COMPONENTS / FOOTER
+// ============================================================================
+@use 'config' as *;
+
+.pgds-footer {
+  background: var(--color-bg-inverse);
+  color: var(--pgds-gilt-pale);
+  margin-top: $sp-5;
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: $sp-7;
+    padding: $sp-10 0 $sp-6;
+
+    @include mq-max(lg) {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @include mq-max(sm) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  h4 {
+    color: var(--pgds-gilt-light);
+    font-size: $fs-xs;
+    letter-spacing: $ls-wider;
+    text-transform: uppercase;
+    margin-bottom: $sp-4;
+  }
+
+  ul { font-size: $fs-xs; }
+
+  li {
+    margin-bottom: $sp-2;
+    opacity: .85;
+  }
+
+  a:hover { color: var(--pgds-white); }
+
+  &__intro {
+    font-size: $fs-xs;
+    opacity: .8;
+    line-height: $lh-loose;
+  }
+
+  &__legal {
+    font-size: $fs-3xs;
+    opacity: .7;
+    line-height: $lh-loose;
+    margin-top: $sp-3;
+  }
+
+  &__bottom {
+    border-top: 1px solid var(--pgds-line-dark);
+    text-align: center;
+    font-size: $fs-2xs;
+    padding: $sp-4 0;
+    opacity: .7;
+  }
+}

@@ -1,0 +1,97 @@
+// ============================================================================
+// 01-TOOLS / MIXINS
+// ============================================================================
+
+@use 'sass:map';
+@use 'tokens' as t;
+
+// --- Media query (min-width) --------------------------------------------------
+// @include mq(lg) { ... }
+@mixin mq($name) {
+  @if map.has-key(t.$breakpoints, $name) {
+    @media (min-width: map.get(t.$breakpoints, $name)) {
+      @content;
+    }
+  } @else {
+    @error "Breakpoint '#{$name}' khong ton tai trong \$breakpoints.";
+  }
+}
+
+// Max-width (dung han che, chuong trinh mobile-first)
+@mixin mq-max($name) {
+  @if map.has-key(t.$breakpoints, $name) {
+    @media (max-width: (map.get(t.$breakpoints, $name) - 1px)) {
+      @content;
+    }
+  }
+}
+
+// --- Line clamp giu min-height theo em de thang hang ngang ------------------
+// Bam cach lam layout v12: .card h3 { -webkit-line-clamp:2; height:2.7em }
+@mixin line-clamp($lines, $lh: t.$lh-tight) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  // Giu chieu cao co dinh de cac cot bat dau o vi tri thang nhau.
+  min-height: #{$lines * $lh}em;
+}
+
+// --- Visually hidden (sr-only) ----------------------------------------------
+@mixin visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// --- Focus ring nhat quan ----------------------------------------------------
+@mixin focus-ring {
+  outline: 2px solid var(--pgds-gilt);
+  outline-offset: 2px;
+}
+
+// --- Aspect ratio box (fallback padding cho trinh duyet cu) -----------------
+@mixin ratio($w, $h) {
+  aspect-ratio: #{$w} / #{$h};
+}
+
+// --- Emit :root custom properties tu color/alpha map ------------------------
+@mixin root-vars {
+  :root {
+    // Mau brand + surface + text + accent
+    @each $name, $val in t.$colors {
+      --pgds-#{$name}: #{$val};
+    }
+    // Alpha
+    @each $name, $val in t.$alpha {
+      --pgds-#{$name}: #{$val};
+    }
+    // Nhan mau chuyen muc
+    @each $name, $val in t.$cat-colors {
+      --pgds-cat-#{$name}: #{$val};
+    }
+
+    // ---- Semantic alias (component nen dung nhom nay) ----
+    --color-bg: var(--pgds-paper);
+    --color-bg-surface: var(--pgds-white);
+    --color-bg-inverse: var(--pgds-robe-deep);
+    --color-text: var(--pgds-ink);
+    --color-text-muted: var(--pgds-text-soft);
+    --color-text-meta: var(--pgds-text-muted);
+    --color-text-inverse: var(--pgds-paper);
+    --color-brand: var(--pgds-robe);
+    --color-brand-strong: var(--pgds-robe-deep);
+    --color-accent: var(--pgds-gilt);
+    --color-accent-soft: var(--pgds-gilt-light);
+    --color-border: var(--pgds-line);
+    --color-border-soft: var(--pgds-paper-deep);
+    --color-link-hover: var(--pgds-robe);
+  }
+}

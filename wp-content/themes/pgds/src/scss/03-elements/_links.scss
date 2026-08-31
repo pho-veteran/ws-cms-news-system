@@ -1,0 +1,13 @@
+// ============================================================================
+// 03-ELEMENTS / LINKS
+// ============================================================================
+@use 'config' as *;
+
+a {
+  color: inherit;
+  transition: color $dur-fast $ease-out;
+
+  &:hover {
+    color: var(--color-link-hover);
+  }
+}

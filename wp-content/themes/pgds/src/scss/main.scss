@@ -1,0 +1,32 @@
+// ============================================================================
+// pgds - main stylesheet (ITCSS)
+// settings -> tools -> generic -> elements -> objects -> components -> utilities
+// Build: node build.mjs  ->  assets/dist/main.<hash>.css
+// ============================================================================
+// --- 02 generic --------------------------------------------------------------
+@use '02-generic/root';   // emit :root custom properties truoc tien
+@use '02-generic/reset';
+
+// --- 03 elements -------------------------------------------------------------
+@use '03-elements/base';
+@use '03-elements/typography';
+@use '03-elements/links';
+@use '03-elements/forms';
+
+// --- 04 objects --------------------------------------------------------------
+@use '04-objects/container';
+@use '04-objects/grid';
+@use '04-objects/media';
+
+// --- 05 components -----------------------------------------------------------
+@use '05-components/header-nav';
+@use '05-components/cards';
+@use '05-components/media-block';
+@use '05-components/cat-triple';
+@use '05-components/sidebar';
+@use '05-components/video';
+@use '05-components/article';
+@use '05-components/footer';
+
+// --- 06 utilities ------------------------------------------------------------
+@use '06-utilities/utilities';

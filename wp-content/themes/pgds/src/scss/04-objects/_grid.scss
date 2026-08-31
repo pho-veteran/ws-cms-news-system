@@ -1,0 +1,54 @@
+// ============================================================================
+// 04-OBJECTS / GRID
+// Layout chinh: content 1fr + sidebar 320px, sup ve 1 cot duoi 880px (lg).
+// ============================================================================
+@use 'config' as *;
+
+.pgds-content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $sp-7;
+
+  @include mq(lg) {
+    grid-template-columns: 1fr $sidebar-w;
+  }
+}
+
+// Feature grid trang chu: main + panel 320
+.pgds-feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $sp-6;
+  align-items: stretch;
+
+  @include mq(lg) {
+    grid-template-columns: 1fr $sidebar-w;
+  }
+}
+
+// Grid 3 cot (tin phat su / three-category)
+.pgds-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $sp-5;
+  align-items: stretch;
+
+  @include mq(md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include mq(lg) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+// Grid 4 (media thumb)
+.pgds-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $sp-3;
+
+  @include mq(lg) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

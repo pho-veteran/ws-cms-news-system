@@ -1,0 +1,40 @@
+// ============================================================================
+// 03-ELEMENTS / BASE
+// ============================================================================
+@use 'config' as *;
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: $font-body;
+  font-size: $fs-xs;
+  line-height: $lh-normal;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+// Skip link (a11y)
+.pgds-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: $z-toast;
+  padding: $sp-2 $sp-4;
+  background: var(--color-brand-strong);
+  color: var(--color-text-inverse);
+  border-radius: 0 0 $radius-md 0;
+
+  &:focus {
+    left: 0;
+  }
+}
+
+:focus-visible {
+  @include focus-ring;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: $sp-7 0;
+}

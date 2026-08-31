@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output (co content hash, sinh luc CI build - khong commit)
+wp-content/themes/pgds/assets/dist/*
+!wp-content/themes/pgds/assets/dist/.gitkeep
+
+# WordPress core & uploads (khong thuoc repo theme)
+/wp-admin/
+/wp-includes/
+/wp-*.php
+!/wp-config-sample.php
+wp-content/uploads/
+wp-content/upgrade/
+wp-content/cache/
+
+# Secrets & env
+.env
+*.pem
+*.key
+wp-config.php
+tools/sample-data/media-cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

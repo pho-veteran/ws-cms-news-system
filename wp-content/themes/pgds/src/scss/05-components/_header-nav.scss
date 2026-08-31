@@ -1,0 +1,194 @@
+// ============================================================================
+// 05-COMPONENTS / HEADER + NAV + SEARCH
+// ============================================================================
+@use 'config' as *;
+
+// --- Header ------------------------------------------------------------------
+.pgds-header {
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pgds-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $sp-6;
+  padding: $sp-4 0;
+}
+
+.pgds-logo__img {
+  height: 64px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+
+  @include mq-max(lg) {
+    height: 48px;
+  }
+}
+
+.pgds-header__right {
+  display: flex;
+  align-items: center;
+  gap: $sp-5;
+  margin-left: auto;
+}
+
+.pgds-header__date {
+  font-size: $fs-xs;
+  color: var(--pgds-moss);
+  white-space: nowrap;
+  font-weight: $fw-medium;
+
+  @include mq-max(sm) {
+    display: none;
+  }
+}
+
+// --- Search box --------------------------------------------------------------
+.pgds-search {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--pgds-line-soft);
+  border-radius: $radius-sm;
+  padding: $sp-1 $sp-3;
+  width: 210px;
+  transition: all $dur-base $ease-out;
+
+  &:focus-within {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 2px var(--pgds-shadow-robe);
+  }
+
+  &__icon {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: var(--pgds-line-mid);
+    stroke-width: 2;
+    stroke-linecap: round;
+    flex: none;
+    margin-right: $sp-2;
+  }
+
+  &__input {
+    border: 0;
+    outline: none;
+    background: transparent;
+    font-size: $fs-xs;
+    width: 100%;
+    padding: 0;
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
+  @include mq-max(md) {
+    width: 160px;
+  }
+}
+
+// --- Nav ---------------------------------------------------------------------
+.pgds-nav {
+  background: var(--color-brand);
+  position: relative;
+  z-index: $z-nav;
+
+  &__inner {
+    display: flex;
+  }
+
+  &__toggle {
+    display: none;
+    color: var(--color-text-inverse);
+    padding: $sp-3 $sp-4;
+    font-size: $fs-sm;
+    align-items: center;
+    gap: $sp-2;
+
+    @include mq-max(lg) {
+      display: inline-flex;
+    }
+  }
+
+  &__list {
+    display: flex;
+
+    @include mq-max(lg) {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+
+      &.is-open {
+        display: flex;
+      }
+    }
+  }
+}
+
+.pgds-navitem {
+  position: relative;
+
+  &__link {
+    display: block;
+    padding: $sp-3 $sp-5;
+    color: var(--color-text-inverse);
+    font-size: $fs-sm;
+    font-weight: $fw-medium;
+  }
+
+  &:first-child &__link {
+    color: var(--pgds-gilt-light);
+    font-weight: $fw-bold;
+  }
+
+  &:hover > &__link,
+  &:focus-within > &__link {
+    background: var(--color-brand-strong);
+  }
+}
+
+// Dropdown
+.pgds-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 190px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-accent);
+  box-shadow: $shadow-dropdown;
+  padding: $sp-2 0;
+
+  .pgds-navitem:hover &,
+  .pgds-navitem:focus-within &,
+  &.is-open {
+    display: block;
+  }
+
+  a {
+    display: block;
+    padding: 9px 18px;
+    font-size: $fs-xs;
+    color: var(--color-text);
+
+    &:hover {
+      background: var(--color-bg);
+      color: var(--color-brand);
+    }
+  }
+
+  @include mq-max(lg) {
+    position: static;
+    border: 0;
+    box-shadow: none;
+    padding-left: $sp-5;
+    background: var(--color-brand-strong);
+
+    a { color: var(--color-text-inverse); }
+  }
+}

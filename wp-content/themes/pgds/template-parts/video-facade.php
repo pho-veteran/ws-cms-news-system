@@ -1,0 +1,48 @@
+<?php
+/**
+ * YouTube facade - khong nap iframe truoc tuong tac (proposal §6.2).
+ * Poster luu local (disk instance), khong hotlink.
+ *
+ * @param array $args {
+ *   video_id: string,
+ *   poster:   string (URL anh poster local),
+ *   dur:      int    (giay),
+ *   title:    string,
+ *   caption:  string
+ * }
+ * @package pgds
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+$vid = $args['video_id'] ?? '';
+if ( '' === $vid ) {
+	return;
+}
+$poster  = $args['poster'] ?? '';
+$dur     = isset( $args['dur'] ) ? (int) $args['dur'] : 0;
+$title   = $args['title'] ?? '';
+$caption = $args['caption'] ?? '';
+$dur_str = pgds_format_duration( $dur );
+?>
+<figure class="pgds-video" data-pgds="youtube-facade" data-video-id="<?php echo esc_attr( $vid ); ?>">
+	<?php if ( $poster ) : ?>
+		<img class="pgds-video__poster" src="<?php echo esc_url( $poster ); ?>"
+			width="1280" height="720" loading="lazy" decoding="async"
+			alt="<?php echo esc_attr( $title ); ?>">
+	<?php else : ?>
+		<div class="pgds-video__poster pgds-art pgds-ratio-video" aria-hidden="true"></div>
+	<?php endif; ?>
+	<button class="pgds-video__play" type="button"
+		aria-label="<?php echo esc_attr( sprintf( __( 'Phát video: %s', 'pgds' ), $title ) ); ?>">
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>
+	</button>
+	<?php if ( $dur_str ) : ?>
+		<span class="pgds-video__dur"><?php echo esc_html( $dur_str ); ?></span>
+	<?php endif; ?>
+	<?php if ( $caption ) : ?>
+		<figcaption class="pgds-video__caption"><?php echo esc_html( $caption ); ?></figcaption>
+	<?php endif; ?>
+</figure>

@@ -1,0 +1,7 @@
+# Vi du redirects.map — sinh tu dong boi: wp pgds build-redirects --out=/etc/nginx/redirects.map
+# Dinh dang: <duong_dan_cu>  <url_dich>;
+# Sau khi cap nhat: nginx -t && systemctl reload nginx
+
+/bai-viet-cu-2019/dai-le-phat-dan.html   /dai-le-phat-dan-pl-2570;
+/chuyen-muc/tin-tuc/                      /chuyen-muc/tin-phat-su/;
+/?p=1234                                  /an-chay-dung-cach;

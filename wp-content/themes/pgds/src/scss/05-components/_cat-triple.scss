@@ -1,0 +1,133 @@
+// ============================================================================
+// 05-COMPONENTS / THREE-CATEGORY BLOCK + COMPACT LIST (Vietnam Buddhism)
+// ============================================================================
+@use 'config' as *;
+
+.pgds-cat-triple {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $sp-6;
+  align-items: stretch;
+
+  @include mq-max(lg) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pgds-cat-col {
+  border-right: 1px solid var(--color-border);
+  padding-right: $sp-6;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &:last-child {
+    border-right: 0;
+    padding-right: 0;
+  }
+
+  @include mq-max(lg) {
+    border-right: 0;
+    padding-right: 0;
+    padding-bottom: $sp-4;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: $sp-2;
+    margin-bottom: $sp-4;
+
+    .bar {
+      width: 4px;
+      height: 18px;
+      background: var(--color-brand);
+      flex: none;
+    }
+
+    h3 {
+      font-size: $fs-md;
+      color: var(--color-brand-strong);
+    }
+  }
+
+  &__feat {
+    padding-bottom: $sp-3;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: $sp-2;
+
+    .pgds-art {
+      @include ratio(16, 10);
+      border-radius: $radius-md;
+      margin-bottom: $sp-3;
+    }
+
+    h4 {
+      font-size: $fs-sm;
+      line-height: $lh-tight;
+      font-weight: $fw-semibold;
+      color: var(--color-text);
+      @include line-clamp(2);
+    }
+  }
+}
+
+.pgds-mini {
+  display: flex;
+  gap: $sp-3;
+  padding: $sp-3 0;
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+
+  &:last-child { border-bottom: 0; }
+
+  .pgds-art {
+    width: 72px;
+    height: 54px;
+    border-radius: $radius-sm;
+    flex: none;
+  }
+
+  h5 {
+    font-size: 12.5px;
+    line-height: $lh-tight;
+    font-weight: $fw-semibold;
+    color: var(--color-text);
+    @include line-clamp(2);
+  }
+}
+
+// --- Compact list (Vietnam Buddhism) ----------------------------------------
+.pgds-compact li {
+  display: flex;
+  align-items: center;
+  gap: $sp-3;
+  padding: $sp-3 0;
+  border-bottom: 1px solid var(--color-border);
+
+  &:first-child { padding-top: 0; }
+  &:last-child { border-bottom: 0; }
+}
+
+.pgds-compact {
+  .pgds-art {
+    width: 58px;
+    height: 58px;
+    border-radius: $radius-md;
+    flex: none;
+  }
+
+  h4 {
+    font-size: 13.5px;
+    font-weight: $fw-semibold;
+    color: var(--color-text);
+    line-height: $lh-tight;
+  }
+
+  &__meta {
+    font-size: $fs-3xs;
+    color: var(--color-text-meta);
+    margin-top: $sp-1;
+  }
+}

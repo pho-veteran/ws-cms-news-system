@@ -1,0 +1,174 @@
+// ============================================================================
+// 05-COMPONENTS / SIDEBAR (side-block, rank, lunar, teaching)
+// ============================================================================
+@use 'config' as *;
+
+.pgds-side-block {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  padding: $sp-5;
+  margin-bottom: $sp-6;
+
+  &--flush {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  &__title {
+    font-size: $fs-xs;
+    letter-spacing: $ls-wider;
+    text-transform: uppercase;
+    color: var(--color-brand);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: $sp-3;
+    margin-bottom: $sp-3;
+  }
+}
+
+// --- Rank (Doc nhieu nhat) ---------------------------------------------------
+.pgds-rank {
+  display: flex;
+  gap: $sp-3;
+  padding: $sp-3 0;
+  border-bottom: 1px solid var(--color-border-soft);
+  align-items: center;
+
+  &:last-child { border-bottom: 0; }
+
+  .pgds-art {
+    width: 70px;
+    height: 50px;
+    border-radius: $radius-sm;
+    flex: none;
+  }
+
+  &__num {
+    font-family: $font-display;
+    font-size: $fs-xl;
+    font-weight: $fw-bold;
+    color: var(--color-accent);
+    line-height: 1;
+    flex: none;
+    min-width: 20px;
+  }
+
+  h4 {
+    font-size: $fs-xs;
+    line-height: $lh-tight;
+    font-weight: $fw-semibold;
+    color: var(--color-text);
+    @include line-clamp(2);
+  }
+}
+
+// --- Lich Van Nien -----------------------------------------------------------
+.pgds-lunar {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  overflow: hidden;
+
+  &__header {
+    background: var(--pgds-moss);
+    color: var(--pgds-white);
+    padding: $sp-3 $sp-4;
+    font-weight: $fw-bold;
+    font-size: $fs-xs;
+    letter-spacing: $ls-wide;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  &__body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--color-border);
+    min-height: 150px;
+  }
+
+  &__col {
+    padding: $sp-5 $sp-3;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    &--lunar {
+      border-left: 1px solid var(--color-border);
+      background: var(--pgds-surface-2);
+    }
+  }
+
+  &__label {
+    font-size: $fs-2xs;
+    font-weight: $fw-semibold;
+    color: var(--color-text-muted);
+    margin-bottom: $sp-2;
+  }
+
+  &__num {
+    font-family: $font-display;
+    font-size: $fs-hero;
+    font-weight: $fw-bold;
+    line-height: 1;
+    margin-bottom: $sp-2;
+    color: var(--color-brand);
+
+    .pgds-lunar__col--lunar & {
+      color: var(--pgds-moss);
+    }
+  }
+
+  &__sub {
+    font-size: 11.5px;
+    color: var(--color-text-meta);
+    font-weight: $fw-medium;
+  }
+
+  &__details {
+    padding: $sp-3 $sp-4;
+    background: var(--pgds-surface-1);
+    font-size: 11.5px;
+    line-height: $lh-loose;
+    color: var(--pgds-text-alt);
+    border-bottom: 1px solid var(--color-border);
+
+    div { margin-bottom: 3px; }
+  }
+
+  &__quote {
+    background: var(--pgds-paper-deep);
+    color: var(--color-brand-strong);
+    font-size: $fs-2xs;
+    font-style: italic;
+    padding: $sp-3 $sp-4;
+    text-align: center;
+    line-height: $lh-normal;
+    font-weight: $fw-medium;
+  }
+}
+
+// --- Loi Phat day (teaching audio list) -------------------------------------
+.pgds-teaching li {
+  display: flex;
+  align-items: flex-start;
+  gap: $sp-2;
+  padding: $sp-3 0;
+  border-bottom: 1px solid var(--color-border-soft);
+  font-size: $fs-xs;
+  font-weight: $fw-semibold;
+  line-height: $lh-snug;
+  color: var(--color-text);
+
+  &:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.pgds-teaching__icon {
+  flex: none;
+  font-size: $fs-sm;
+  color: var(--color-accent);
+}

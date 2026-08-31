@@ -1,0 +1,90 @@
+// ============================================================================
+// 05-COMPONENTS / YOUTUBE FACADE
+// ============================================================================
+@use 'config' as *;
+
+.pgds-video {
+  position: relative;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: var(--color-bg-inverse);
+  @include ratio(16, 9);
+
+  &__poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 68px;
+    height: 68px;
+    border-radius: $radius-full;
+    background: var(--pgds-white);
+    opacity: .92;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform $dur-base $ease-out, opacity $dur-base $ease-out;
+
+    svg {
+      width: 26px;
+      height: 26px;
+      fill: var(--color-brand-strong);
+      margin-left: 3px;
+    }
+
+    &:hover {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.06);
+    }
+  }
+
+  &__dur {
+    position: absolute;
+    bottom: $sp-2;
+    right: $sp-2;
+    background: var(--pgds-overlay);
+    color: var(--pgds-white);
+    font-size: $fs-3xs;
+    font-weight: $fw-semibold;
+    padding: 2px 6px;
+    border-radius: $radius-xs;
+  }
+
+  &__caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: $sp-6 $sp-3 $sp-2;
+    color: var(--pgds-white);
+    font-size: $fs-2xs;
+    background: linear-gradient(0deg, var(--pgds-overlay), transparent);
+  }
+
+  // Iframe sau khi click
+  iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  &__unavailable {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pgds-gilt-pale);
+    font-size: $fs-xs;
+    text-align: center;
+    padding: $sp-4;
+  }
+}

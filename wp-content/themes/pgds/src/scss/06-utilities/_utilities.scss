@@ -1,0 +1,23 @@
+// ============================================================================
+// 06-UTILITIES (danh sach trang, dung han che)
+// ============================================================================
+@use 'config' as *;
+
+.u-sr-only { @include visually-hidden; }
+
+.u-clamp-1 { @include line-clamp(1); }
+.u-clamp-2 { @include line-clamp(2); }
+.u-clamp-3 { @include line-clamp(3); }
+
+.u-hide-lg {
+  @include mq(lg) { display: none !important; }
+}
+
+.u-show-lg {
+  display: none !important;
+  @include mq(lg) { display: block !important; }
+}
+
+.u-mt-4 { margin-top: $sp-4; }
+.u-mt-5 { margin-top: $sp-5; }
+.u-mb-0 { margin-bottom: 0; }

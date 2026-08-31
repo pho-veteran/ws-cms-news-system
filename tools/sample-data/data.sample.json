@@ -1,0 +1,53 @@
+[
+  {
+    "source_id": "legacy-1001",
+    "title": "Đại lễ Phật đản PL.2570 diễn ra trang nghiêm trên cả nước",
+    "slug": "dai-le-phat-dan-pl-2570",
+    "sapo": "Sáng nay, đại lễ Phật đản PL.2570 đã được tổ chức trang nghiêm tại nhiều tỉnh, thành trên cả nước với sự tham gia đông đảo của tăng ni, phật tử.",
+    "body_html": "<p>Sáng nay, đại lễ Phật đản PL.2570 đã được tổ chức trang nghiêm tại nhiều tỉnh, thành trên cả nước.</p><p>Chương trình gồm nghi thức tắm Phật, dâng hương và thuyết pháp.</p>",
+    "primary_cat": "tin-phat-su",
+    "cats": ["tin-phat-su", "su-kien-le-hoi"],
+    "tags": ["Phật đản", "lễ hội"],
+    "author": "admin",
+    "published_at": "2026-08-28 08:10:00",
+    "featured_image_url": "",
+    "gallery": [],
+    "youtube_url": "https://youtu.be/IDrb0rGinII?si=fI4zqQ8ZQbHj3cd1",
+    "source": "PGDS Media",
+    "old_url": "/bai-viet-cu-2019/dai-le-phat-dan.html"
+  },
+  {
+    "source_id": "legacy-1002",
+    "title": "Ăn chay đúng cách: đủ chất mà vẫn nhẹ nhàng",
+    "slug": "an-chay-dung-cach",
+    "sapo": "Gợi ý thực đơn chay cân bằng dinh dưỡng, dễ nấu cho người mới bắt đầu.",
+    "body_html": "<p>Ăn chay đúng cách cần đảm bảo đủ đạm thực vật, rau xanh và ngũ cốc.</p>",
+    "primary_cat": "song-an-lanh",
+    "cats": ["song-an-lanh", "am-thuc-chay"],
+    "tags": ["ăn chay", "dinh dưỡng"],
+    "author": "admin",
+    "published_at": "2026-08-27 09:00:00",
+    "featured_image_url": "",
+    "gallery": [],
+    "youtube_url": "",
+    "source": "",
+    "old_url": "/?p=1002"
+  },
+  {
+    "source_id": "legacy-1003",
+    "title": "Kiến trúc chùa cổ Bắc Bộ: nét đẹp còn lưu giữ",
+    "slug": "kien-truc-chua-co-bac-bo",
+    "sapo": "Trải qua hàng trăm năm, nhiều ngôi chùa cổ Bắc Bộ vẫn giữ được giá trị kiến trúc đặc sắc.",
+    "body_html": "<p>Chùa cổ Bắc Bộ nổi bật với mái đao cong, kết cấu gỗ và hoa văn tinh xảo.</p>",
+    "primary_cat": "phat-tich",
+    "cats": ["phat-tich", "chua-am"],
+    "tags": ["kiến trúc", "chùa cổ"],
+    "author": "admin",
+    "published_at": "2026-08-26 14:30:00",
+    "featured_image_url": "",
+    "gallery": [],
+    "youtube_url": "",
+    "source": "",
+    "old_url": "/?p=1003"
+  }
+]

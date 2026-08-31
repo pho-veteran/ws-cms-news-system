@@ -1,0 +1,28 @@
+// ============================================================================
+// 04-OBJECTS / MEDIA (khung anh giu ty le, chong CLS)
+// .pgds-art la placeholder gradient khi chua co anh (giong layout v12).
+// ============================================================================
+@use 'config' as *;
+
+.pgds-art {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #EFE6CF, #E4D6AE);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.pgds-ratio-lead   { @include ratio(16, 10); }
+.pgds-ratio-card   { @include ratio(16, 10); }
+.pgds-ratio-thumb  { @include ratio(16, 11); }
+.pgds-ratio-mini   { @include ratio(4, 3); }
+.pgds-ratio-square { @include ratio(1, 1); }
+.pgds-ratio-video  { @include ratio(16, 9); }

@@ -1,0 +1,21 @@
+/*
+Theme Name: Phật giáo và Đời sống (pgds)
+Theme URI: https://phatgiaovadoisong.vn
+Author: PGDS Engineering
+Author URI: https://phatgiaovadoisong.vn
+Description: Theme báo chí tuỳ biến cho chuyên trang "Phật giáo và Đời sống". Classic PHP templates, token-first SCSS (ITCSS), vanilla JS. Không FSE, không parent theme. Xây theo PROPOSAL_01.
+Version: 1.0.0
+Requires at least: 6.4
+Tested up to: 6.7
+Requires PHP: 8.1
+License: GPL-2.0-or-later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: pgds
+Tags: news, magazine, custom-colors, translation-ready
+*/
+
+/*
+  File nay chi la manifest cua theme (WordPress bat buoc phai co style.css o goc).
+  CSS production duoc build tu src/scss/main.scss -> assets/dist/main.<hash>.css
+  va nap qua inc/enqueue.php (doc manifest.json). KHONG viet CSS truc tiep o day.
+*/
