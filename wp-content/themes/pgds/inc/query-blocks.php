@@ -190,10 +190,12 @@ function pgds_home_blocks() {
 	);
 	PGDS_Used_Ids::mark( $photo->posts );
 
-	// (3) Media block: 1 feature + 4 thumb (cat video), 3 bullet (infographic).
+	// (3) Media block: 1 feature + 4 thumb (cat video), 3 bullet (chi infographic).
+	// Bullet query 'infographic-emagazine' RIENG (khong query cha 'media' de
+	// tranh gianh bai video cua thumb).
 	$media_feature = pgds_query_posts( 'video', 1 );
 	$media_thumbs  = pgds_query_posts( 'video', 4 );
-	$media_bullets = pgds_query_posts( array( 'infographic-emagazine', 'media' ), 3 );
+	$media_bullets = pgds_query_posts( 'infographic-emagazine', 3 );
 
 	// (4) Content grid 1: Tin Phat su 3 card + 7 list.
 	$phatsu_cards = pgds_query_posts( 'tin-phat-su', 3 );
@@ -204,9 +206,10 @@ function pgds_home_blocks() {
 	$col_phat  = pgds_query_cat_column( 'phat-tich', 2 );
 	$col_tot   = pgds_query_cat_column( 'tot-doi-dep-dao', 2 );
 
-	// (6) Content grid 2: 5 bai mixed (ngoai tin-phat-su) + Vietnam Buddhism 3.
-	$mixed_list = pgds_query_posts( '', 5 );
+	// (6) Content grid 2: Vietnam Buddhism truoc (block chuyen biet, tranh bi
+	// mixed_list "an" het), roi mixed_list (catch-all moi category con lai).
 	$vn_list    = pgds_query_posts( 'vietnam-buddhism', 3 );
+	$mixed_list = pgds_query_posts( '', 5 );
 
 	// (7) Sidebar: popular (co the trung), teaching CPT, lunar CPT.
 	$popular  = pgds_query_popular( 5 );

@@ -43,12 +43,13 @@ while ( have_posts() ) :
 
 				<?php if ( $vid ) : ?>
 					<?php
+					$poster = get_post_meta( $post_id, '_pgds_youtube_poster', true );
 					get_template_part(
 						'template-parts/video-facade',
 						null,
 						array(
 							'video_id' => $vid,
-							'poster'   => content_url( '/uploads/yt/' . $vid . '-640.webp' ),
+							'poster'   => $poster ? $poster : '',
 							'dur'      => $dur,
 							'title'    => get_the_title(),
 							'caption'  => $source ? ( 'Nguồn: ' . $source ) : '',

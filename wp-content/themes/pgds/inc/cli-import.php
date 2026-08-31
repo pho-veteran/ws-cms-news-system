@@ -133,6 +133,164 @@ class PGDS_CLI_Command {
 	}
 
 	/**
+	 * Tai poster YouTube ve local + (tuy chon) lay duration.
+	 *
+	 * Poster: tai tu i.ytimg.com (maxres -> hq fallback), luu vao Media Library,
+	 * ghi URL vao meta _pgds_youtube_poster. Khong hotlink khi hien thi.
+	 * Duration: chi lay neu co dinh nghia PGDS_YT_API_KEY (YouTube Data API v3).
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--post=<id>]
+	 * : Chi xu ly 1 bai. Bo trong = tat ca bai co _pgds_youtube_id.
+	 *
+	 * [--force]
+	 * : Tai lai poster ke ca da co.
+	 */
+	public function yt_sync( $args, $assoc_args ) {
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$force   = isset( $assoc_args['force'] );
+		$only    = isset( $assoc_args['post'] ) ? (int) $assoc_args['post'] : 0;
+		$api_key = defined( 'PGDS_YT_API_KEY' ) ? PGDS_YT_API_KEY : '';
+
+		$query_args = array(
+			'post_type'      => 'post',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'no_found_rows'  => true,
+			'meta_query'     => array( array( 'key' => '_pgds_youtube_id', 'compare' => 'EXISTS' ) ),
+		);
+		if ( $only ) {
+			$query_args = array( 'post_type' => 'post', 'p' => $only, 'post_status' => 'any' );
+		}
+		$posts = get_posts( $query_args );
+
+		if ( ! $posts ) {
+			WP_CLI::warning( 'Không có bài nào có _pgds_youtube_id.' );
+			return;
+		}
+
+		$ids   = array();
+		$done  = 0;
+		foreach ( $posts as $p ) {
+			$vid = get_post_meta( $p->ID, '_pgds_youtube_id', true );
+			if ( ! $vid ) {
+				continue;
+			}
+			$ids[ $vid ] = $p->ID;
+
+			// Poster.
+			$has_poster = get_post_meta( $p->ID, '_pgds_youtube_poster', true );
+			if ( $has_poster && ! $force ) {
+				WP_CLI::log( "• {$vid}: đã có poster, bỏ qua." );
+			} else {
+				$url = $this->yt_thumb_url( $vid );
+				if ( $url ) {
+					$tmp = download_url( $url );
+					if ( ! is_wp_error( $tmp ) ) {
+						$att_id = media_handle_sideload(
+							array( 'name' => $vid . '.jpg', 'tmp_name' => $tmp ),
+							$p->ID
+						);
+						if ( ! is_wp_error( $att_id ) ) {
+							update_post_meta( $p->ID, '_pgds_youtube_poster', wp_get_attachment_image_url( $att_id, 'pgds-lead' ) );
+							$done++;
+							WP_CLI::log( "✓ {$vid}: đã tải poster." );
+						} else {
+							@unlink( $tmp );
+							WP_CLI::warning( "{$vid}: sideload lỗi — " . $att_id->get_error_message() );
+						}
+					} else {
+						WP_CLI::warning( "{$vid}: không tải được thumbnail." );
+					}
+				}
+			}
+		}
+
+		// Duration (batch 50) neu co API key.
+		if ( $api_key && $ids ) {
+			$this->yt_fetch_durations( $ids, $api_key );
+		} elseif ( ! $api_key ) {
+			WP_CLI::log( 'Bỏ qua duration (chưa cấu hình PGDS_YT_API_KEY).' );
+		}
+
+		WP_CLI::success( "yt-sync xong. Poster mới: {$done}." );
+	}
+
+	/**
+	 * URL thumbnail YouTube (maxres, khong can API key).
+	 *
+	 * @param string $vid Video ID.
+	 * @return string
+	 */
+	private function yt_thumb_url( $vid ) {
+		// maxresdefault khong phai luc nao cung co; thu maxres roi hq.
+		$candidates = array(
+			"https://i.ytimg.com/vi/{$vid}/maxresdefault.jpg",
+			"https://i.ytimg.com/vi/{$vid}/hqdefault.jpg",
+		);
+		foreach ( $candidates as $u ) {
+			$resp = wp_remote_head( $u, array( 'timeout' => 8 ) );
+			if ( ! is_wp_error( $resp ) && 200 === wp_remote_retrieve_response_code( $resp ) ) {
+				return $u;
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Lay duration cho nhieu video (batch 50, 1 unit/call).
+	 *
+	 * @param array  $ids     [video_id => post_id].
+	 * @param string $api_key API key.
+	 */
+	private function yt_fetch_durations( $ids, $api_key ) {
+		$vids   = array_keys( $ids );
+		$chunks = array_chunk( $vids, 50 );
+		foreach ( $chunks as $chunk ) {
+			$url  = add_query_arg(
+				array(
+					'part' => 'contentDetails',
+					'id'   => implode( ',', $chunk ),
+					'key'  => $api_key,
+				),
+				'https://www.googleapis.com/youtube/v3/videos'
+			);
+			$resp = wp_remote_get( $url, array( 'timeout' => 15 ) );
+			if ( is_wp_error( $resp ) ) {
+				WP_CLI::warning( 'Data API lỗi: ' . $resp->get_error_message() );
+				continue;
+			}
+			$body = json_decode( wp_remote_retrieve_body( $resp ), true );
+			foreach ( ( $body['items'] ?? array() ) as $item ) {
+				$vid = $item['id'] ?? '';
+				$iso = $item['contentDetails']['duration'] ?? '';
+				if ( $vid && $iso && isset( $ids[ $vid ] ) ) {
+					update_post_meta( $ids[ $vid ], '_pgds_youtube_dur', $this->iso8601_to_seconds( $iso ) );
+				}
+			}
+		}
+	}
+
+	/**
+	 * ISO-8601 duration -> giay.
+	 *
+	 * @param string $iso PT#H#M#S.
+	 * @return int
+	 */
+	private function iso8601_to_seconds( $iso ) {
+		try {
+			$d = new DateInterval( $iso );
+			return ( $d->h * 3600 ) + ( $d->i * 60 ) + $d->s + ( $d->d * 86400 );
+		} catch ( Exception $e ) {
+			return 0;
+		}
+	}
+
+	/**
 	 * Regenerate bien the anh + WebP.
 	 *
 	 * ## OPTIONS
@@ -383,4 +541,9 @@ class PGDS_CLI_Command {
 	}
 }
 
-WP_CLI::add_command( 'pgds', 'PGDS_CLI_Command' );
+// Dang ky tung subcommand voi ten hyphen (WP-CLI khong tu doi _ -> -).
+// Khop dung lenh trong proposal: import, media-variants, build-redirects, yt-sync.
+WP_CLI::add_command( 'pgds import', array( 'PGDS_CLI_Command', 'import' ) );
+WP_CLI::add_command( 'pgds media-variants', array( 'PGDS_CLI_Command', 'media_variants' ) );
+WP_CLI::add_command( 'pgds build-redirects', array( 'PGDS_CLI_Command', 'build_redirects' ) );
+WP_CLI::add_command( 'pgds yt-sync', array( 'PGDS_CLI_Command', 'yt_sync' ) );

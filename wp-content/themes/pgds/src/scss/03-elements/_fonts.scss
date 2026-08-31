@@ -1,0 +1,45 @@
+// ============================================================================
+// 03-ELEMENTS / FONTS (self-host, proposal §3.1.2)
+// Dat file .woff2 (subset vietnamese+latin) vao assets/fonts/.
+// Thieu file -> fallback system-ui / Georgia, web van chay.
+// Lay font: dung google-webfonts-helper hoac subset tu Google Fonts.
+//   Be Vietnam Pro: 400, 600, 700 | Fraunces: 400, 700
+// Duong dan tuong doi tu assets/dist/main.css -> ../fonts/
+// ============================================================================
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/be-vietnam-pro-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/be-vietnam-pro-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/be-vietnam-pro-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/fraunces-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/fraunces-700.woff2') format('woff2');
+}

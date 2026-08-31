@@ -1,0 +1,76 @@
+# =============================================================================
+# Moi truong DEV LOCAL de verify theme pgds (KHONG phai prod).
+# Prod dung Nginx FastCGI cache (infra/nginx/); ban local nay dung Apache image
+# cho don gian - chi de chay + xem 11 block render + import sample data.
+#
+# Chay:  cd infra/local && docker compose up -d
+# Sau do: docker compose run --rm wpcli /scripts/setup.sh
+# Mo:     http://localhost:8080
+# =============================================================================
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpw
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wppw
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "160mb", "--maxmemory-policy", "allkeys-lru"]
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wppw
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_REDIS_HOST', 'redis');
+        define('WP_REDIS_PORT', 6379);
+        define('WP_CACHE_KEY_SALT', 'pgds:');
+        define('WP_DEBUG_LOG', true);
+        define('WP_DEBUG_DISPLAY', false);
+    volumes:
+      - wp_core:/var/www/html
+      - ../../wp-content/themes/pgds:/var/www/html/wp-content/themes/pgds
+      - ../../wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
+
+  wpcli:
+    image: wordpress:cli-php8.3
+    depends_on:
+      - wordpress
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wppw
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_core:/var/www/html
+      - ../../wp-content/themes/pgds:/var/www/html/wp-content/themes/pgds
+      - ../../wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
+      - ../../tools:/tools
+      - ./scripts:/scripts
+    entrypoint: ["sh"]
+    profiles: ["cli"]
+
+volumes:
+  db_data:
+  wp_core:

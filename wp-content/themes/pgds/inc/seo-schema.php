@@ -56,7 +56,10 @@ function pgds_schema_video() {
 	}
 
 	$dur   = (int) get_post_meta( $post_id, '_pgds_youtube_dur', true );
-	$thumb = content_url( '/uploads/yt/' . $vid . '-640.webp' );
+	$thumb = get_post_meta( $post_id, '_pgds_youtube_poster', true );
+	if ( ! $thumb ) {
+		$thumb = 'https://i.ytimg.com/vi/' . $vid . '/hqdefault.jpg';
+	}
 
 	$data = array(
 		'@context'     => 'https://schema.org',
@@ -189,7 +192,10 @@ function pgds_render_video_sitemap() {
 		if ( ! $vid ) {
 			continue;
 		}
-		$thumb = content_url( '/uploads/yt/' . $vid . '-640.webp' );
+		$thumb = get_post_meta( $p->ID, '_pgds_youtube_poster', true );
+		if ( ! $thumb ) {
+			$thumb = 'https://i.ytimg.com/vi/' . $vid . '/hqdefault.jpg';
+		}
 		echo "  <url>\n";
 		echo '    <loc>' . esc_url( get_permalink( $p ) ) . "</loc>\n";
 		echo "    <video:video>\n";
