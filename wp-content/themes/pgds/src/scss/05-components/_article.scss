@@ -226,3 +226,232 @@
 .pgds-prevnext__next {
   text-align: right;
 }
+
+// ============================================================================
+// GUTENBERG BLOCKS INSIDE THE ARTICLE BODY
+//
+// §1 uses Gutenberg for post content, but the article stylesheet had ZERO wp-block
+// rules, so every block fell back to core's defaults plus whatever the element
+// styles happened to do. Rendering a post with 13 real blocks showed the damage:
+// a huge void after the table and the pull quote (core reserves margin for
+// alignment classes the theme never styles), and the code block colliding with the
+// paragraph below it because nothing set its bottom margin.
+//
+// These rules cover the blocks a newsroom actually reaches for. Values come from
+// the spacing scale, so block rhythm matches the rest of the article.
+// ============================================================================
+.pgds-article {
+
+  // --- Shared block rhythm ---------------------------------------------------
+  // One rule rather than per-block margins: any block core adds later inherits a
+  // sane default instead of collapsing against its neighbour.
+  > *,
+  .wp-block-group > * {
+    margin-bottom: $sp-5;
+  }
+
+  // --- Figures, images, embeds ----------------------------------------------
+  figure,
+  .wp-block-image,
+  .wp-block-embed,
+  .wp-block-video {
+    margin: $sp-6 0;
+  }
+
+  .wp-block-image img,
+  .wp-block-video video {
+    max-width: 100%;
+    height: auto;
+    border-radius: $radius-md;
+  }
+
+  // responsive-embeds (added in inc/setup.php) makes core emit an aspect-ratio
+  // wrapper; this keeps the iframe filling it without the 560x315 default leaking
+  // out and overflowing the measure on mobile.
+  .wp-block-embed__wrapper {
+    position: relative;
+
+    iframe {
+      width: 100%;
+      max-width: 100%;
+      border: 0;
+      border-radius: $radius-md;
+      aspect-ratio: 16 / 9;
+      height: auto;
+      display: block;
+    }
+  }
+
+  figcaption,
+  .wp-element-caption {
+    margin-top: $sp-2;
+    font-size: $fs-2xs;
+    line-height: $lh-relax;
+    color: var(--color-text-meta);
+    text-align: left;
+  }
+
+  // --- Lists ----------------------------------------------------------------
+  // The reset strips list markers globally; restore them inside prose, where the
+  // marker carries meaning.
+  ul.wp-block-list,
+  ol.wp-block-list,
+  .wp-block-list {
+    padding-left: $sp-6;
+    margin-bottom: $sp-5;
+    list-style: disc;
+
+    li {
+      margin-bottom: $sp-2;
+      line-height: $lh-relax;
+    }
+
+    li::marker {
+      color: var(--color-accent);
+    }
+  }
+
+  ol.wp-block-list,
+  ol {
+    list-style: decimal;
+  }
+
+  // --- Table ----------------------------------------------------------------
+  // Core reserves space for alignment variants the theme does not style, which left
+  // a large void beneath the table. Collapsing the figure's own margin fixes it.
+  .wp-block-table {
+    margin: $sp-6 0;
+    overflow-x: auto; // a wide table scrolls rather than breaking the measure
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: $fs-sm;
+    }
+
+    th,
+    td {
+      padding: $sp-2 $sp-3;
+      border: 1px solid var(--color-border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--pgds-paper-deep);
+      font-weight: $fw-semibold;
+      color: var(--color-brand-strong);
+    }
+
+    // Zebra striping on a warm palette: tint from the paper, never grey.
+    tbody tr:nth-child(even) {
+      background: var(--pgds-surface-2);
+    }
+  }
+
+  // --- Pull quote -----------------------------------------------------------
+  // Distinct from blockquote: centred, wider, and the loudest voice in the article.
+  .wp-block-pullquote {
+    margin: $sp-8 0;
+    padding: $sp-6 0;
+    border-top: 2px solid var(--color-accent);
+    border-bottom: 2px solid var(--color-accent);
+    text-align: center;
+
+    blockquote {
+      margin: 0;
+      padding: 0;
+      border: 0;
+
+      // The blockquote element style adds a hanging quote mark; a centred pull quote
+      // does not want it hanging off to one side.
+      &::before {
+        content: none;
+      }
+    }
+
+    p {
+      font-family: $font-display;
+      font-size: $fs-xl;
+      line-height: $lh-snug;
+      color: var(--color-brand-strong);
+      margin-bottom: $sp-3;
+    }
+
+    cite {
+      display: block;
+      font-family: $font-body;
+      font-size: $fs-2xs;
+      font-style: normal;
+      letter-spacing: $ls-wide;
+      text-transform: uppercase;
+      color: var(--color-text-meta);
+    }
+  }
+
+  // --- Code -----------------------------------------------------------------
+  // The missing bottom margin here is what made the code block collide with the
+  // following paragraph.
+  .wp-block-code,
+  pre {
+    margin: $sp-5 0;
+    padding: $sp-4;
+    background: var(--pgds-surface-3);
+    border: 1px solid var(--color-border);
+    border-radius: $radius-md;
+    overflow-x: auto;
+
+    code {
+      background: none;
+      padding: 0;
+      font-size: $fs-2xs;
+      line-height: $lh-relax;
+    }
+  }
+
+  // --- Separator ------------------------------------------------------------
+  .wp-block-separator {
+    margin: $sp-8 auto;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    max-width: 160px; // a short centred rule reads as a section break, not a divider
+  }
+
+  // --- Buttons --------------------------------------------------------------
+  .wp-block-button__link {
+    display: inline-block;
+    padding: $sp-3 $sp-5;
+    background: var(--color-brand);
+    color: var(--color-text-inverse);
+    border-radius: $radius-sm;
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--color-brand-strong);
+    }
+  }
+
+  // --- Alignment ------------------------------------------------------------
+  // align-wide is enabled in setup.php; let a wide block break the measure
+  // deliberately rather than being clipped by it.
+  .alignwide {
+    @include mq(lg) {
+      margin-inline: -#{$sp-8};
+      max-width: calc(100% + #{$sp-8 * 2});
+    }
+  }
+
+  .alignfull {
+    @include mq(lg) {
+      margin-inline: -#{$sp-10};
+      max-width: calc(100% + #{$sp-10 * 2});
+    }
+  }
+
+  .aligncenter {
+    margin-inline: auto;
+    text-align: center;
+  }
+}

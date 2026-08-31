@@ -40,6 +40,14 @@ function pgds_setup() {
 		'post-formats',
 		array( 'video', 'gallery' )
 	);
+	/*
+	 * Gutenberg is used for post body content (§1), so the theme has to support what it
+	 * emits. Without responsive-embeds an embedded video keeps its hardcoded 560x315
+	 * and overflows the 760px article measure on mobile.
+	 */
+	add_theme_support( 'responsive-embeds' );
+	// Lets the editor's alignwide/alignfull match the article measure below.
+	add_theme_support( 'align-wide' );
 	add_theme_support(
 		'custom-logo',
 		array(
@@ -96,6 +104,90 @@ function pgds_excerpt_more() {
 	return '…';
 }
 add_filter( 'excerpt_more', 'pgds_excerpt_more' );
+
+/**
+ * Resolve embed blocks whose oEmbed cache was never primed.
+ *
+ * The core embed block does NOT call the oEmbed provider at render time. It relies on a
+ * per-post `_oembed_*` meta cache that is written when a post is saved through the
+ * editor. Content created any other way never gets it, and the block then degrades to
+ * printing the bare URL as text.
+ *
+ * Measured on a CLI-created post:
+ *   oembed meta keys: 0
+ *   do_blocks(embed block)      -> iframe: NO   (raw URL rendered instead)
+ *   $wp_embed->autoembed(url)   -> iframe: YES
+ *   $wp_embed->shortcode([],url) -> iframe: YES
+ *
+ * So the provider and the network are fine; only the cache is missing. This matters
+ * well beyond one test post: §9 imports 2,000 posts through WP-CLI, and any of them
+ * with a body embed would have shipped a naked URL in the middle of the article.
+ *
+ * Fixed at render time rather than at import time on purpose — it then also covers
+ * posts migrated by any other route, and re-rendering is cheap because the whole page
+ * is FastCGI-cached (§5.3) and $wp_embed keeps its own transient cache.
+ *
+ * @param string $html  Rendered block HTML.
+ * @param array  $block Parsed block.
+ * @return string
+ */
+function pgds_resolve_embed_block( $html, $block ) {
+	if ( empty( $block['blockName'] ) || 'core/embed' !== $block['blockName'] ) {
+		return $html;
+	}
+	// Already resolved (editor-saved post, or another filter got there first).
+	if ( false !== strpos( $html, '<iframe' ) || false !== strpos( $html, '<blockquote' ) ) {
+		return $html;
+	}
+
+	$url = $block['attrs']['url'] ?? '';
+	if ( ! $url || ! wp_http_validate_url( $url ) ) {
+		return $html;
+	}
+
+	global $wp_embed;
+	if ( ! $wp_embed instanceof WP_Embed ) {
+		return $html;
+	}
+
+	// shortcode() consults the provider and writes the transient cache, so subsequent
+	// renders are local.
+	$resolved = $wp_embed->shortcode( array(), $url );
+
+	// A provider outage returns a link rather than an embed; keep the original markup
+	// in that case so the block still carries its figure/caption structure.
+	if ( ! $resolved || false === strpos( $resolved, '<iframe' ) ) {
+		return $html;
+	}
+
+	/*
+	 * Force youtube-nocookie.com. oEmbed returns www.youtube.com/embed/..., which sets
+	 * tracking cookies on page load — exactly what the lazy facade avoids for the
+	 * canonical video (§6.2, and CLAUDE.md: "loads the youtube-nocookie.com iframe").
+	 * Leaving the body embed on the tracking domain would reintroduce, halfway down
+	 * every article, the precise thing the facade exists to prevent.
+	 *
+	 * Also add loading="lazy": a body embed sits below the fold, and an eager iframe
+	 * there competes with LCP on the article's own featured image.
+	 */
+	$resolved = str_replace(
+		array( 'https://www.youtube.com/embed/', 'https://youtube.com/embed/' ),
+		'https://www.youtube-nocookie.com/embed/',
+		$resolved
+	);
+	if ( false === strpos( $resolved, 'loading=' ) ) {
+		$resolved = str_replace( '<iframe ', '<iframe loading="lazy" ', $resolved );
+	}
+
+	// Swap only the wrapper's contents, preserving the block's classes and <figcaption>.
+	return preg_replace(
+		'#(<div class="wp-block-embed__wrapper">)(.*?)(</div>)#s',
+		'$1' . $resolved . '$3',
+		$html,
+		1
+	);
+}
+add_filter( 'render_block', 'pgds_resolve_embed_block', 10, 2 );
 
 /**
  * Vietnamese archive titles.
