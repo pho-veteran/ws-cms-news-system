@@ -87,12 +87,33 @@ add_action( 'init', 'pgds_register_meta' );
  * Meta box.
  */
 function pgds_add_meta_box() {
+	/*
+	 * Context is 'normal', NOT 'side'.
+	 *
+	 * With 'side' the block editor put this box inside `div#metaboxes.hidden`
+	 * (`form.metabox-location-side`), which is `display: none`. Walking the DOM from
+	 * the box up to <body> showed every ancestor at height 0 until `#wpwrap`:
+	 *
+	 *   [0] div#pgds_article_meta .postbox            h=0
+	 *   [5] div#metaboxes .hidden                     h=0  display=NONE   <-- here
+	 *
+	 * So all eight editorial fields — sapo, primary category, YouTube ID, duration,
+	 * featured, feature rank, photo story, source — were completely unreachable for
+	 * anyone using the block editor, which is the default for posts. Every one is a
+	 * field §14 expects an editor to set in a one-hour session, and §4.3/§4.4 make the
+	 * front page depend on them: no `_pgds_is_featured` means no lead story.
+	 *
+	 * The block editor only renders 'normal' and 'advanced' meta boxes, in the drawer
+	 * below the content. 'side' is silently dropped. This was invisible in testing
+	 * until the admin screens were opened in a real browser as a real editor user —
+	 * php -l, the front end, and the REST API all looked perfectly healthy.
+	 */
 	add_meta_box(
 		'pgds_article_meta',
 		__( 'Thông tin PGDS', 'pgds' ),
 		'pgds_render_meta_box',
 		'post',
-		'side',
+		'normal',
 		'high'
 	);
 }
