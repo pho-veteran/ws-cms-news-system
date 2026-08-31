@@ -59,7 +59,16 @@ while ( have_posts() ) :
 							'video_id'    => $vid,
 							'poster'      => $poster ? $poster : '',
 							'dur'         => $dur,
-							'title'       => get_the_title(),
+							/*
+							 * Prefer the video's OWN title (synced by `wp pgds yt-sync`)
+							 * for the play button's accessible name and the poster's alt
+							 * text: it describes the thing being played, which is what a
+							 * screen-reader user needs before deciding to activate it. The
+							 * post headline is editorial framing and can differ from the
+							 * video ("Toàn cảnh Đại lễ..." vs "Đại lễ Phật đản PL.2570 —
+							 * bản đầy đủ"). Falls back to the headline when unsynced.
+							 */
+							'title'       => get_post_meta( $post_id, '_pgds_youtube_title', true ) ?: get_the_title(),
 							'caption'     => $source ? ( 'Nguồn: ' . $source ) : '',
 							// §6.3: hides the facade and drops the play affordance for a
 							// private / removed / age-restricted video.

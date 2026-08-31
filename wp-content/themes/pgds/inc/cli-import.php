@@ -249,30 +249,158 @@ class PGDS_CLI_Command {
 	 */
 	private function yt_fetch_durations( $ids, $api_key ) {
 		$vids   = array_keys( $ids );
+		// 50 IDs per call: videos.list costs 1 quota unit per CALL, not per video, so
+		// batching is what keeps 2,000 posts inside the 10,000 units/day quota (§6.4).
 		$chunks = array_chunk( $vids, 50 );
+		$stats  = array(
+			'checked'     => 0,
+			'duration'    => 0,
+			'title'       => 0,
+			'unavailable' => 0,
+			'kept'        => 0,
+		);
+
 		foreach ( $chunks as $chunk ) {
+			// 'snippet' as well as 'contentDetails': §6.4 requires duration AND title.
+			// Both parts come back in the same call, so this costs no extra quota.
 			$url  = add_query_arg(
 				array(
-					'part' => 'contentDetails',
+					'part' => 'contentDetails,snippet,status',
 					'id'   => implode( ',', $chunk ),
 					'key'  => $api_key,
 				),
 				'https://www.googleapis.com/youtube/v3/videos'
 			);
 			$resp = wp_remote_get( $url, array( 'timeout' => 15 ) );
+
 			if ( is_wp_error( $resp ) ) {
-				WP_CLI::warning( 'Data API error: ' . $resp->get_error_message() );
+				// §6.4: on API failure keep the stored metadata. Continuing to the next
+				// chunk (rather than treating the silence as "no data") is what prevents
+				// a transient outage from blanking good durations.
+				WP_CLI::warning( 'Data API transport error, keeping stored meta: ' . $resp->get_error_message() );
+				$stats['kept'] += count( $chunk );
 				continue;
 			}
+
+			$code = (int) wp_remote_retrieve_response_code( $resp );
 			$body = json_decode( wp_remote_retrieve_body( $resp ), true );
+
+			if ( 200 !== $code ) {
+				/*
+				 * The response code was previously never checked, so a 403 looked exactly
+				 * like a success with zero items — and the loop below would simply write
+				 * nothing while reporting success. 403 is also how the API reports
+				 * quotaExceeded, which §6.4 singles out.
+				 */
+				$reason = $body['error']['errors'][0]['reason'] ?? 'unknown';
+				if ( 403 === $code && in_array( $reason, array( 'quotaExceeded', 'dailyLimitExceeded' ), true ) ) {
+					WP_CLI::warning( 'YouTube API quota exhausted — stopping. Stored metadata is unchanged (§6.4).' );
+					// Stop entirely: every further chunk would fail the same way and burn
+					// wall-clock time for nothing.
+					break;
+				}
+				WP_CLI::warning( sprintf( 'Data API HTTP %d (%s), keeping stored meta.', $code, $reason ) );
+				$stats['kept'] += count( $chunk );
+				continue;
+			}
+
+			$returned = array();
 			foreach ( ( $body['items'] ?? array() ) as $item ) {
 				$vid = $item['id'] ?? '';
+				if ( ! $vid || ! isset( $ids[ $vid ] ) ) {
+					continue;
+				}
+				$returned[] = $vid;
+				$post_id    = $ids[ $vid ];
+				$stats['checked']++;
+
+				// --- Availability (§6.3) ------------------------------------------
+				// A video that is present but not publicly playable: private, or region
+				// blocked everywhere. uploadStatus covers rejected/deleted uploads.
+				$privacy  = $item['status']['privacyStatus'] ?? '';
+				$upload   = $item['status']['uploadStatus'] ?? '';
+				$embeddable = $item['status']['embeddable'] ?? true;
+				$blocked  = ! empty( $item['contentDetails']['regionRestriction']['blocked'] );
+
+				$unavailable = ( 'private' === $privacy )
+					|| in_array( $upload, array( 'rejected', 'deleted', 'failed' ), true )
+					|| ! $embeddable;
+
+				if ( $unavailable ) {
+					update_post_meta( $post_id, '_pgds_video_unavailable', '1' );
+					$stats['unavailable']++;
+					WP_CLI::warning(
+						sprintf(
+							'%s: not playable (privacy=%s upload=%s embeddable=%s) — facade hidden, VideoObject dropped.',
+							$vid,
+							$privacy ?: '?',
+							$upload ?: '?',
+							$embeddable ? 'yes' : 'no'
+						)
+					);
+					// Do NOT continue: duration and title are still worth storing so the
+					// card keeps its badge if the video is later made public again.
+				} else {
+					// Recovered: clear a stale flag so the facade comes back.
+					if ( get_post_meta( $post_id, '_pgds_video_unavailable', true ) ) {
+						delete_post_meta( $post_id, '_pgds_video_unavailable' );
+						WP_CLI::log( "✓ {$vid}: available again — flag cleared." );
+					}
+				}
+				if ( $blocked ) {
+					WP_CLI::warning( "{$vid}: has regional blocks; still shown, but check manually." );
+				}
+
+				// --- Duration (§6.4) ----------------------------------------------
 				$iso = $item['contentDetails']['duration'] ?? '';
-				if ( $vid && $iso && isset( $ids[ $vid ] ) ) {
-					update_post_meta( $ids[ $vid ], '_pgds_youtube_dur', $this->iso8601_to_seconds( $iso ) );
+				$sec = $iso ? $this->iso8601_to_seconds( $iso ) : 0;
+				// Never overwrite stored metadata with an empty value (§6.4). A live
+				// stream returns PT0S, which would otherwise wipe a real duration.
+				if ( $sec > 0 ) {
+					update_post_meta( $post_id, '_pgds_youtube_dur', $sec );
+					$stats['duration']++;
+				} elseif ( get_post_meta( $post_id, '_pgds_youtube_dur', true ) ) {
+					$stats['kept']++;
+					WP_CLI::log( "• {$vid}: API returned no usable duration; keeping stored value." );
+				}
+
+				// --- Title (§6.4) -------------------------------------------------
+				// Stored in its own meta key rather than overwriting post_title: the
+				// editor's headline is editorial copy and must not be replaced by
+				// YouTube's. This is used for the facade's aria-label and VideoObject.
+				$title = $item['snippet']['title'] ?? '';
+				if ( '' !== trim( $title ) ) {
+					update_post_meta( $post_id, '_pgds_youtube_title', sanitize_text_field( $title ) );
+					$stats['title']++;
 				}
 			}
+
+			/*
+			 * IDs absent from the response are removed or permanently unavailable —
+			 * videos.list omits them rather than returning an error, which is the only
+			 * signal that a video is gone (§6.3 "private / removed").
+			 */
+			$missing = array_diff( $chunk, $returned );
+			foreach ( $missing as $vid ) {
+				if ( ! isset( $ids[ $vid ] ) ) {
+					continue;
+				}
+				update_post_meta( $ids[ $vid ], '_pgds_video_unavailable', '1' );
+				$stats['unavailable']++;
+				WP_CLI::warning( "{$vid}: not returned by the API (removed) — facade hidden, VideoObject dropped." );
+			}
 		}
+
+		WP_CLI::log(
+			sprintf(
+				'YouTube sync: %d checked, %d durations, %d titles, %d unavailable, %d kept from stored meta.',
+				$stats['checked'],
+				$stats['duration'],
+				$stats['title'],
+				$stats['unavailable'],
+				$stats['kept']
+			)
+		);
 	}
 
 	/**

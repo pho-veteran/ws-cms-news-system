@@ -61,6 +61,11 @@ function pgds_register_meta() {
 		'_pgds_primary_cat'  => 'integer',
 		'_pgds_youtube_id'   => 'string',
 		'_pgds_youtube_dur'  => 'integer',
+		// Written by `wp pgds yt-sync` from the YouTube API, never by hand — hence it is
+		// registered here (so it is typed and REST-visible) but deliberately absent from
+		// pgds_meta_fields(), which drives the editor meta box. An editable field would
+		// invite an editor to type a title the next sync silently overwrites.
+		'_pgds_youtube_title' => 'string',
 		'_pgds_is_featured'  => 'boolean',
 		'_pgds_feature_rank' => 'integer',
 		'_pgds_photo_story'  => 'boolean',
