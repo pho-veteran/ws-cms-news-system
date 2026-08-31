@@ -63,6 +63,46 @@ of credits. §8.1 describes the cap as "operational discipline to detect unexpec
 costs" rather than a hard budget — this is precisely such a cost, so it is reported
 rather than absorbed.
 
+#### The $100 cap is arithmetically unreachable on EC2 — this is not a tuning problem
+
+Worth stating plainly so nobody spends time hunting for savings that do not exist.
+Using §2's own unit prices, the *floor* for any 2 vCPU / 2 GB EC2 origin over six
+months:
+
+| Component | Monthly | 6 months |
+|---|---|---|
+| `t4g.small` — cheapest 2 GB Graviton | $15.48 | **$92.86** |
+| Public IPv4 — mandatory for a reachable origin | $3.65 | $21.90 |
+| gp3 40 GB — the smallest disk §4.2's media can fit on | $3.84 | $23.04 |
+| **Absolute floor, at zero egress** | | **$137.80** |
+
+**The instance alone consumes 93% of the entire cap** before disk, IP, or a single byte
+of egress, and the floor overshoots by $37.80. No configuration of EC2 satisfies both
+"2 GB RAM" (§4.1's budget needs ~1.17 GB) and "under $100 for six months". Only
+Lightsail's bundle does, because it folds disk, IPv4 and 3 TB of egress into $12/mo —
+and that bundle is the thing this account cannot create.
+
+So the cap is not missed through waste; it is unreachable given the constraint. The
+options are: raise the Lightsail cap via Support (restores ~$72/6mo), accept ~$185
+against the $200 of credits, or change the requirement. That is a decision for the
+budget owner, not something to optimise away.
+
+Savings that were evaluated and **rejected**, with reasons:
+
+- **Shrink the volume 60 → 40 GB** (saves $11.52/6mo). Rejected: EBS volumes cannot
+  shrink, only grow, so this means snapshot → new volume → migrate → swap, i.e. real
+  downtime risk on a live origin for $11.52. And at 40 GB provisioned, §4.2's upper
+  bound of 40 GB of media leaves nothing for the OS, database, and FastCGI cache.
+  Current usage is 5.1 GB of 58 GB.
+- **Reduce gp3 IOPS/throughput.** Rejected: 3000 IOPS and 125 MB/s are the free
+  baseline; there is nothing to give back.
+- **`t4g.micro` (1 GB)** — the only cheaper instance. Rejected for the same reason
+  `micro_3_0` was: §2 excludes 1 GB as unable to run WordPress + MariaDB + Redis.
+
+One genuine EC2 *advantage* over Lightsail is worth noting: gp3 grows online with no
+downtime, so the disk can be expanded as the media library actually lands. Lightsail
+cannot — its resize is a full instance migration (§10.1).
+
 **Egress is the entire delta**, which makes Cloudflare in front of static assets (§5.6)
 a **cost control**, not merely a cache. Do not disable it. Measured sensitivity:
 
