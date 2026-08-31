@@ -27,6 +27,12 @@
 }
 
 // 3-column grid (Buddhist news / three-category)
+//
+// Column count adapts to how many children actually exist. The front page requests
+// more posts than a thin category can supply (proposal §4.4 dedup means earlier
+// blocks consume posts first), and a fixed `repeat(3, 1fr)` then reserved two empty
+// columns and stretched one card's image across a third of the page. Editorially a
+// short row should fill the width instead of advertising the shortfall.
 .pgds-grid-3 {
   display: grid;
   grid-template-columns: 1fr;
@@ -35,10 +41,23 @@
 
   @include mq(md) {
     grid-template-columns: repeat(2, 1fr);
+
+    // A lone card must not stretch to a full-width image; cap it at half.
+    &:has(> :last-child:nth-child(1)) {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   @include mq(lg) {
     grid-template-columns: repeat(3, 1fr);
+
+    &:has(> :last-child:nth-child(1)) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &:has(> :last-child:nth-child(2)) {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 }
 
@@ -50,5 +69,23 @@
 
   @include mq(lg) {
     grid-template-columns: repeat(4, 1fr);
+
+    // Same rationale as .pgds-grid-3: match the columns to the content.
+    &:has(> :last-child:nth-child(1)) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &:has(> :last-child:nth-child(2)) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &:has(> :last-child:nth-child(3)) {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
+}
+
+// Card grid that follows a lead story rather than starting a section.
+.pgds-grid-3--spaced {
+  margin-top: $sp-5;
 }

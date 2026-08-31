@@ -37,7 +37,15 @@ while ( have_posts() ) :
 					<div class="pgds-article__meta">
 						<span><?php echo esc_html( get_the_author() ); ?></span>
 						<span><?php echo esc_html( get_the_date( 'd/m/Y H:i' ) ); ?></span>
-						<span><?php printf( esc_html__( '%d phút đọc', 'pgds' ), pgds_reading_time( $post_id ) ); ?></span>
+						<span>
+							<?php
+							printf(
+								/* translators: %s: estimated reading time in minutes */
+								esc_html__( '%s phút đọc', 'pgds' ),
+								esc_html( number_format_i18n( pgds_reading_time( $post_id ) ) )
+							);
+							?>
+						</span>
 					</div>
 				</header>
 
@@ -48,11 +56,14 @@ while ( have_posts() ) :
 						'template-parts/video-facade',
 						null,
 						array(
-							'video_id' => $vid,
-							'poster'   => $poster ? $poster : '',
-							'dur'      => $dur,
-							'title'    => get_the_title(),
-							'caption'  => $source ? ( 'Nguồn: ' . $source ) : '',
+							'video_id'    => $vid,
+							'poster'      => $poster ? $poster : '',
+							'dur'         => $dur,
+							'title'       => get_the_title(),
+							'caption'     => $source ? ( 'Nguồn: ' . $source ) : '',
+							// §6.3: hides the facade and drops the play affordance for a
+							// private / removed / age-restricted video.
+							'unavailable' => '1' === get_post_meta( $post_id, '_pgds_video_unavailable', true ),
 						)
 					);
 					?>
@@ -97,7 +108,7 @@ while ( have_posts() ) :
 				}
 				if ( $related ) :
 					?>
-					<section class="pgds-section" aria-labelledby="pgds-related-title" style="margin-top:32px;">
+					<section class="pgds-section pgds-section--spaced" aria-labelledby="pgds-related-title">
 						<div class="pgds-cat-head"><h2 id="pgds-related-title"><?php esc_html_e( 'Bài liên quan', 'pgds' ); ?></h2></div>
 						<div class="pgds-grid-3">
 							<?php foreach ( $related as $r ) : ?>
@@ -120,7 +131,7 @@ while ( have_posts() ) :
 						</a>
 					<?php endif; ?>
 					<?php if ( $next ) : ?>
-						<a href="<?php echo esc_url( get_permalink( $next ) ); ?>" style="text-align:right;">
+						<a class="pgds-prevnext__next" href="<?php echo esc_url( get_permalink( $next ) ); ?>">
 							<span class="pgds-post-nav__dir"><?php esc_html_e( 'Bài sau', 'pgds' ); ?></span>
 							<span class="pgds-post-nav__title"><?php echo esc_html( get_the_title( $next ) ); ?></span>
 						</a>

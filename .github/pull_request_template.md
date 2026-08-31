@@ -25,7 +25,7 @@ Keep it under 70 characters; put the detail in the body below.
 
 - [ ] `npm run build` succeeds and `assets/dist/manifest.json` is regenerated
 - [ ] `npm run lint:js` passes
-- [ ] `docker compose run --rm wpcli /scripts/lint.sh` passes (`php -l`)
+- [ ] `./sync.sh && docker compose run --rm wpcli /var/www/html/.pgds-scripts/lint.sh` passes (`php -l`)
 - [ ] Front page verified at `localhost:8080` — all 11 blocks render
 - [ ] Not verified (explain below)
 
@@ -54,5 +54,6 @@ Notes:
 
 ## Risk and rollback
 
-<!-- Blast radius, and how to undo this. Deployment is a manual rsync — CI does not
-     exist yet, so `git revert` alone does not roll production back. -->
+<!-- Blast radius, and how to undo this. `.github/workflows/deploy.yml` deploys pushes
+     to main, so `git revert` + push redeploys the previous theme state. The blast
+     radius is one directory: core, database, and plugins are never deployed. -->

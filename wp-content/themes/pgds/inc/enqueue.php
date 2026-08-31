@@ -86,7 +86,7 @@ add_action( 'wp_enqueue_scripts', 'pgds_enqueue_assets' );
 function pgds_preload_fonts() {
 	$fonts = array(
 		'/assets/fonts/be-vietnam-pro-400.woff2',
-		'/assets/fonts/fraunces-700.woff2',
+		'/assets/fonts/newsreader-700.woff2',
 	);
 	foreach ( $fonts as $f ) {
 		$abs = PGDS_DIR . $f;

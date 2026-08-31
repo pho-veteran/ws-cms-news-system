@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored: it carries
+# the administrator's IP and notification addresses, which do not belong in the repo.
+
+# Lightsail key pair name (create it first; the private key never enters the repo):
+#   aws lightsail create-key-pair --region ap-southeast-1 --key-pair-name pgds-deploy \
+#     --query privateKeyBase64 --output text > ~/.ssh/pgds-deploy.pem
+#   chmod 600 ~/.ssh/pgds-deploy.pem
+key_pair_name = "pgds-deploy"
+
+# SSH ingress. Deliberately has NO default (Proposal 02 §10.2) and rejects 0.0.0.0/0,
+# so an apply cannot silently expose port 22. Use your own address with /32.
+ssh_admin_cidrs = ["203.0.113.10/32"]
+
+# From the bootstrap stack's outputs.
+backup_bucket_name = "pgds-backup-<account_id>"
+backup_bucket_arn  = "arn:aws:s3:::pgds-backup-<account_id>"
+
+# Budget alerts at $50 and $85 (Proposal 02 §8.4).
+budget_notification_emails = ["ops@example.com"]
+
+# Leave empty until a real domain exists. While empty, the SES domain identity and
+# DKIM resources are skipped entirely rather than created against a placeholder.
+domain_name = ""

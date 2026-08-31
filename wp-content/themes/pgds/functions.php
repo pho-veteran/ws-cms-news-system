@@ -21,6 +21,7 @@ define( 'PGDS_URI', get_template_directory_uri() );
  */
 $pgds_modules = array(
 	'inc/setup.php',         // theme support, nav menu, image size
+	'inc/icons.php',         // inline SVG icon set (loaded early: templates and nav use it)
 	'inc/nav-walker.php',    // nav walker + fallback (7 items, dropdown a11y)
 	'inc/enqueue.php',       // asset + hash versioning (reads manifest.json)
 	'inc/cpt-tax.php',       // CPT + taxonomy

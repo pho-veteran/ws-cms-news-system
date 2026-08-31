@@ -1,11 +1,17 @@
 #!/bin/sh
 # =============================================================================
 # Bootstrap local WordPress, activate the pgds theme, seed data, and import sample data.
-# Run: docker compose run --rm wpcli /scripts/setup.sh
+#
+# Run: ./sync.sh && docker compose run --rm wpcli /var/www/html/.pgds-scripts/setup.sh
+#
+# The scripts and tools directories are NOT bind-mounted (see docker-compose.yml).
+# ./sync.sh copies them into the shared wp_core volume, so they are reachable at
+# /var/www/html/.pgds-scripts and /var/www/html/.pgds-tools inside any service.
 # =============================================================================
 set -e
 
 WP="wp --path=/var/www/html --allow-root"
+TOOLS="/var/www/html/.pgds-tools"
 
 echo "==> Waiting for WordPress core to be ready..."
 until $WP core is-installed 2>/dev/null || $WP core version 2>/dev/null; do
@@ -44,9 +50,9 @@ echo "==> Flushing rewrite rules (video-sitemap.xml)..."
 $WP rewrite flush --hard
 
 echo "==> Importing sample data (dry run first)..."
-$WP pgds import --file=/tools/sample-data/data.sample.json --batch=200 --dry-run || true
+$WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200 --dry-run || true
 echo "==> Performing the actual import..."
-$WP pgds import --file=/tools/sample-data/data.sample.json --batch=200 || true
+$WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200 || true
 
 echo "==> Marking the first post as Featured News (lead) so the homepage has data..."
 FIRST_ID=$($WP post list --post_type=post --posts_per_page=1 --field=ID --orderby=date --order=DESC)

@@ -16,7 +16,7 @@ while ( have_posts() ) :
 	the_post();
 	?>
 	<main id="pgds-main" class="pgds-wrap" role="main">
-		<article <?php post_class( 'pgds-article' ); ?> style="max-width:820px;margin-inline:auto;">
+		<article <?php post_class( 'pgds-article pgds-article--standalone' ); ?>>
 			<header class="pgds-article__header">
 				<h1 class="pgds-article__title"><?php the_title(); ?></h1>
 			</header>

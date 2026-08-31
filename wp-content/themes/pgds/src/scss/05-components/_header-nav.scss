@@ -17,6 +17,16 @@
   padding: $sp-4 0;
 }
 
+// Wordmark fallback when no custom logo is set. Uses the display face: the site
+// name IS the masthead, so it carries the brand rather than the body font.
+.pgds-logo__text {
+  font-family: $font-display;
+  font-size: $fs-xl;
+  font-weight: $fw-bold;
+  color: var(--color-brand-strong);
+  letter-spacing: -.01em;
+}
+
 .pgds-logo__img {
   height: 64px;
   width: auto;
@@ -53,23 +63,21 @@
   background: var(--color-bg-surface);
   border: 1px solid var(--pgds-line-soft);
   border-radius: $radius-sm;
-  padding: $sp-1 $sp-3;
-  width: 210px;
-  transition: all $dur-base $ease-out;
+  padding: $sp-1 $sp-2 $sp-1 $sp-3;
+  // Widened from the demo's 210px to absorb the submit control without truncating
+  // the placeholder, which was clipping to "Tìm kiếm tin tứ".
+  width: 250px;
+  transition: border-color $dur-base $ease-out, box-shadow $dur-base $ease-out;
 
   &:focus-within {
     border-color: var(--color-brand);
     box-shadow: 0 0 0 2px var(--pgds-shadow-robe);
   }
 
+  // Stroke geometry comes from the icon set (inc/icons.php); only the colour is a
+  // component concern, so it is the only thing overridden here.
   &__icon {
-    width: 15px;
-    height: 15px;
-    fill: none;
-    stroke: var(--pgds-line-mid);
-    stroke-width: 2;
-    stroke-linecap: round;
-    flex: none;
+    color: var(--pgds-line-mid);
     margin-right: $sp-2;
   }
 
@@ -84,10 +92,53 @@
     &:focus-visible {
       outline: none;
     }
+
+    // The UA's default placeholder grey fails 4.5:1 on this warm surface.
+    &::placeholder {
+      color: var(--pgds-text-muted);
+      opacity: 1; // Firefox dims placeholders by default.
+    }
+  }
+
+  // Submit control. Present for keyboard and screen-reader users; visually quiet so
+  // it does not compete with the field itself.
+  &__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    // 24px minimum target (WCAG 2.2) without inflating the compact header field.
+    width: 24px;
+    height: 24px;
+    margin-left: $sp-1;
+    padding: 0;
+    border: 0;
+    border-radius: $radius-sm;
+    background: none;
+    color: var(--color-brand);
+    cursor: pointer;
+    transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out;
+
+    &:hover {
+      background: var(--pgds-paper-deep);
+      color: var(--color-brand-strong);
+    }
   }
 
   @include mq-max(md) {
     width: 160px;
+  }
+
+  // Full-width variant for the search page and 404, where the form is the primary
+  // control on the surface rather than a header affordance.
+  &--block {
+    width: 100%;
+    max-width: 520px;
+    padding: $sp-2 $sp-3;
+
+    @include mq-max(md) {
+      width: 100%;
+    }
   }
 }
 
@@ -106,11 +157,31 @@
     color: var(--color-text-inverse);
     padding: $sp-3 $sp-4;
     font-size: $fs-sm;
+    font-weight: $fw-medium;
     align-items: center;
     gap: $sp-2;
+    background: none;
+    border: 0;
+    cursor: pointer;
 
     @include mq-max(lg) {
       display: inline-flex;
+    }
+
+    // Swap the menu glyph for a close glyph from the button's own ARIA state, so
+    // the icon can never disagree with what the button reports to assistive tech.
+    &-icon--close {
+      display: none;
+    }
+
+    &[aria-expanded='true'] {
+      .pgds-nav__toggle-icon--menu {
+        display: none;
+      }
+
+      .pgds-nav__toggle-icon--close {
+        display: block;
+      }
     }
   }
 
@@ -140,9 +211,18 @@
     font-weight: $fw-medium;
   }
 
+  // gilt-bright, not gilt-light: on the --robe nav bar gilt-light measures 4.17:1,
+  // under AA for 14px text. gilt-bright is an existing token at 5.97:1, so no new
+  // near-duplicate colour is introduced to fix it.
   &:first-child &__link {
-    color: var(--pgds-gilt-light);
+    color: var(--pgds-gilt-bright);
     font-weight: $fw-bold;
+  }
+
+  // Submenu disclosure caret. Explicitly coloured because it sits on the dark nav
+  // bar, where inheriting the body ink gave 1.58:1.
+  &__disc-icon {
+    color: var(--color-text-inverse);
   }
 
   &:hover > &__link,

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Run php -l on all PHP files in the theme and mu-plugin. Fail on syntax errors.
-# Run: docker compose run --rm wpcli /scripts/lint.sh
+# Run: ./sync.sh && docker compose run --rm wpcli /var/www/html/.pgds-scripts/lint.sh
 set -e
 
 ERRORS=0

@@ -14,18 +14,23 @@ body {
 }
 
 // Skip link (a11y)
+// Hidden by translating out of view rather than with left:-9999px, which widens the
+// document scroll area and reports as horizontal overflow in layout audits.
 .pgds-skip-link {
-  position: absolute;
-  left: -9999px;
-  top: 0;
+  position: fixed;
+  left: $sp-2;
+  top: $sp-2;
   z-index: $z-toast;
   padding: $sp-2 $sp-4;
   background: var(--color-brand-strong);
   color: var(--color-text-inverse);
-  border-radius: 0 0 $radius-md 0;
+  border-radius: $radius-md;
+  font-weight: $fw-semibold;
+  transform: translateY(calc(-100% - #{$sp-4}));
+  transition: transform $dur-base $ease-out;
 
   &:focus {
-    left: 0;
+    transform: translateY(0);
   }
 }
 
@@ -37,4 +42,79 @@ hr {
   border: 0;
   border-top: 1px solid var(--color-border);
   margin: $sp-7 0;
+}
+
+// ---------------------------------------------------------------------------
+// Browser-owned surfaces.
+// Selection, caret, form accents, and scrollbars ship with UA colors that belong
+// to no design system; on a warm paper palette the default blue selection is the
+// most visible break in the whole page. These are themed from the tokens.
+// ---------------------------------------------------------------------------
+::selection {
+  background: var(--pgds-gilt-light);
+  color: var(--pgds-robe-deep);
+}
+
+html {
+  // Anchor links and skip-link jumps land below the sticky-ish header rather than
+  // flush against the viewport edge.
+  scroll-padding-top: $sp-8;
+  caret-color: var(--color-brand);
+  accent-color: var(--color-brand);
+  // Firefox: colour the scrollbar to the palette. `thin` keeps it unobtrusive
+  // without hiding it, which would remove a real scroll affordance.
+  scrollbar-color: var(--pgds-line-soft) var(--pgds-paper-deep);
+  scrollbar-width: thin;
+}
+
+// WebKit/Blink equivalent of scrollbar-color. Kept narrow and low-contrast so it
+// reads as part of the page rather than as a control.
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pgds-paper-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pgds-line-soft);
+  border: 3px solid var(--pgds-paper-deep);
+  border-radius: $radius-pill;
+
+  &:hover {
+    background: var(--pgds-line-mid);
+  }
+}
+
+// Dates, ranks, and the calendar numerals align in columns only with tabular
+// figures; proportional digits make ranked lists look ragged.
+time,
+.pgds-rank__num,
+.pgds-lunar__num,
+.pgds-meta {
+  font-variant-numeric: tabular-nums;
+}
+
+// Icons inherit their colour and align with the text they label.
+.pgds-icon {
+  flex: none;
+  vertical-align: middle;
+}
+
+// One chevron asset serves both directions; mirroring beats shipping a second path.
+.pgds-icon--flip {
+  transform: scaleX(-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

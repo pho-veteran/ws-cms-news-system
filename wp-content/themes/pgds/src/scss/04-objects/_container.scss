@@ -29,3 +29,18 @@
   border-bottom: 1.5px solid var(--color-border);
   margin: $sp-7 0;
 }
+
+// Replaces an inline `margin-bottom:0` the front page used to carry.
+.pgds-section--flush {
+  margin-bottom: 0;
+}
+
+// Extra separation above a section that follows body copy (single.php "related").
+.pgds-section--spaced {
+  margin-top: $sp-8;
+}
+
+// Front-page feature grid sits just below the nav bar and needs a little air.
+.pgds-feature-grid--top {
+  margin-top: $sp-6;
+}

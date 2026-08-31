@@ -65,9 +65,12 @@ class PGDS_Nav_Walker extends Walker_Nav_Menu {
 			if ( $has_children ) {
 				$sid     = 'pgds-submenu-' . $item->ID;
 				$output .= sprintf(
-					'<button class="pgds-navitem__disc" type="button" data-pgds="submenu-toggle" aria-expanded="false" aria-controls="%s"><span class="u-sr-only">%s</span><span aria-hidden="true">▾</span></button>',
+					'<button class="pgds-navitem__disc" type="button" data-pgds="submenu-toggle" aria-expanded="false" aria-controls="%s"><span class="u-sr-only">%s</span>%s</button>',
 					esc_attr( $sid ),
-					esc_html__( 'Mở menu con', 'pgds' )
+					esc_html__( 'Mở menu con', 'pgds' ),
+					// Icon rather than a '▾' glyph: the glyph inherited ink-on-brown at
+					// 1.58:1 and rendered in the reader's system font.
+					pgds_get_icon( 'chevron', array( 'class' => 'pgds-navitem__disc-icon', 'size' => 14 ) )
 				);
 			}
 		} else {
@@ -131,9 +134,10 @@ function pgds_nav_fallback( $args ) {
 		if ( $has ) {
 			$sid = 'pgds-submenu-fb-' . $i;
 			printf(
-				'<button class="pgds-navitem__disc" type="button" data-pgds="submenu-toggle" aria-expanded="false" aria-controls="%s"><span class="u-sr-only">%s</span><span aria-hidden="true">▾</span></button>',
+				'<button class="pgds-navitem__disc" type="button" data-pgds="submenu-toggle" aria-expanded="false" aria-controls="%s"><span class="u-sr-only">%s</span>%s</button>',
 				esc_attr( $sid ),
-				esc_html__( 'Mở menu con', 'pgds' )
+				esc_html__( 'Mở menu con', 'pgds' ),
+				pgds_get_icon( 'chevron', array( 'class' => 'pgds-navitem__disc-icon', 'size' => 14 ) )
 			);
 			echo '<ul class="pgds-dropdown" id="' . esc_attr( $sid ) . '">';
 			foreach ( $node['children'] as $cslug => $clabel ) {

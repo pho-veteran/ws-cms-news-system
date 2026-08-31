@@ -30,13 +30,57 @@ b {
   font-weight: $fw-semibold;
 }
 
+// Pull quote. Set as an editorial pull quote rather than the generic accent-bar
+// callout: the display face at a larger size and a hanging open-quote do the work,
+// so no coloured side rule is needed. Hairline rules above and below tie it to the
+// column rhythm the way a print feature does.
 blockquote {
-  margin: $sp-5 0;
-  padding: $sp-3 $sp-5;
-  border-left: 3px solid var(--color-accent);
-  background: var(--pgds-paper-deep);
+  position: relative;
+  margin: $sp-8 0;
+  padding: $sp-6 0 $sp-6 $sp-8;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  font-family: $font-display;
+  font-size: $fs-xl;
+  line-height: $lh-snug;
   color: var(--color-brand-strong);
-  font-style: italic;
+
+  // Hanging quotation mark, optically outside the text block so the quoted line
+  // itself stays flush with the measure.
+  &::before {
+    content: '\201C';
+    position: absolute;
+    left: 0;
+    top: $sp-3;
+    font-family: $font-display;
+    font-size: 64px;
+    line-height: $lh-none;
+    color: var(--color-accent);
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  cite {
+    display: block;
+    margin-top: $sp-3;
+    font-family: $font-body;
+    font-size: $fs-2xs;
+    font-style: normal;
+    letter-spacing: $ls-wide;
+    text-transform: uppercase;
+    color: var(--color-text-meta);
+  }
+
+  @include mq-max(md) {
+    padding-left: $sp-6;
+    font-size: $fs-md;
+
+    &::before {
+      font-size: 44px;
+    }
+  }
 }
 
 code,

@@ -214,3 +214,15 @@
     @include line-clamp(2);
   }
 }
+
+// A page (not a post) with no sidebar: centre the measure instead of letting it run
+// the full container width, which would push the body far past a readable line length.
+.pgds-article--standalone {
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+// Right-align the "next" card's text so the pair reads outward from the centre.
+.pgds-prevnext__next {
+  text-align: right;
+}

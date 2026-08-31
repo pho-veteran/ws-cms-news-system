@@ -34,7 +34,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 	<h1 class="u-sr-only"><?php bloginfo( 'name' ); ?> — <?php bloginfo( 'description' ); ?></h1>
 
 	<!-- ============ (3) FEATURE GRID: Featured news ============ -->
-	<section class="pgds-section pgds-feature-grid" aria-label="<?php esc_attr_e( 'Tin nổi bật', 'pgds' ); ?>" style="margin-top:22px;">
+	<section class="pgds-section pgds-feature-grid pgds-feature-grid--top" aria-label="<?php esc_attr_e( 'Tin nổi bật', 'pgds' ); ?>">
 		<div class="pgds-feature-main">
 			<?php if ( $B['lead'] ) : ?>
 				<?php get_template_part( 'template-parts/card-lead', null, array( 'post' => $B['lead'], 'eager' => true ) ); ?>
@@ -51,7 +51,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		<?php if ( ! empty( $B['photo'] ) ) : $ph = $B['photo'][0]; ?>
 			<aside class="pgds-photo-panel" aria-label="<?php esc_attr_e( 'Tin ảnh', 'pgds' ); ?>">
 				<div class="pgds-photo-panel__head"><?php esc_html_e( 'Tin ảnh', 'pgds' ); ?></div>
-				<a href="<?php echo esc_url( get_permalink( $ph ) ); ?>" style="position:relative;flex:1;display:flex;">
+				<a class="pgds-photo-panel__link" href="<?php echo esc_url( get_permalink( $ph ) ); ?>">
 					<?php pgds_art( $ph, 'pgds-lead', 'pgds-ratio-lead' ); ?>
 					<span class="pgds-photo-panel__cap"><?php echo esc_html( get_the_title( $ph ) ); ?></span>
 				</a>
@@ -101,7 +101,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 						<?php foreach ( (array) $B['media_thumbs'] as $mt ) : ?>
 							<a class="pgds-media-thumb" href="<?php echo esc_url( get_permalink( $mt ) ); ?>">
 								<?php pgds_art( $mt, 'pgds-thumb', 'pgds-ratio-thumb' ); ?>
-								<span class="pgds-play" aria-hidden="true" style="width:26px;height:26px;"><?php pgds_play_svg(); ?></span>
+								<span class="pgds-play pgds-play--sm" aria-hidden="true"><?php pgds_play_svg(); ?></span>
 								<span class="pgds-media-thumb__title"><?php echo esc_html( get_the_title( $mt ) ); ?></span>
 							</a>
 						<?php endforeach; ?>
@@ -111,7 +111,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 						<ul class="pgds-media-bullets">
 							<?php foreach ( $B['media_bullets'] as $mb ) : ?>
 								<li>
-									<svg class="pgds-media-bullets__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="15" height="12" rx="2" fill="#E8C468"></rect><path d="M17 10l5-3v10l-5-3z" fill="#E8C468"></path></svg>
+									<?php pgds_icon( 'video', array( 'class' => 'pgds-media-bullets__icon', 'size' => 16 ) ); ?>
 									<a href="<?php echo esc_url( get_permalink( $mb ) ); ?>"><?php echo esc_html( get_the_title( $mb ) ); ?></a>
 								</li>
 							<?php endforeach; ?>
@@ -122,10 +122,10 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		</div>
 
 		<div class="pgds-tabpanel" role="tabpanel" id="pgds-panel-ema" aria-labelledby="pgds-tab-ema" hidden>
-			<p style="color:var(--pgds-gilt-pale);"><?php esc_html_e( 'Nội dung Emagazine sẽ cập nhật.', 'pgds' ); ?></p>
+			<p class="pgds-tabpanel__empty"><?php esc_html_e( 'Nội dung Emagazine sẽ cập nhật.', 'pgds' ); ?></p>
 		</div>
 		<div class="pgds-tabpanel" role="tabpanel" id="pgds-panel-info" aria-labelledby="pgds-tab-info" hidden>
-			<p style="color:var(--pgds-gilt-pale);"><?php esc_html_e( 'Nội dung Infographic sẽ cập nhật.', 'pgds' ); ?></p>
+			<p class="pgds-tabpanel__empty"><?php esc_html_e( 'Nội dung Infographic sẽ cập nhật.', 'pgds' ); ?></p>
 		</div>
 	</section>
 	<?php endif; ?>
@@ -133,10 +133,14 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 	<!-- ============ (6+7) CONTENT GRID 1: Buddhist affairs news + sidebar ============ -->
 	<div class="pgds-content-grid">
 		<div>
-			<section class="pgds-section" aria-labelledby="pgds-phatsu-title" style="margin-bottom:0;">
+			<?php // Skip the whole section when it has nothing to show: a heading plus a "Xem thêm" link above empty space reads as a fault, not as a section. ?>
+			<?php if ( ! empty( $B['phatsu_cards'] ) || ! empty( $B['phatsu_list'] ) ) : ?>
+			<section class="pgds-section pgds-section--flush" aria-labelledby="pgds-phatsu-title">
 				<div class="pgds-cat-head">
 					<h2 id="pgds-phatsu-title"><?php esc_html_e( 'Tin Phật sự', 'pgds' ); ?></h2>
-					<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'tin-phat-su', 'category' ) ); ?>"><?php esc_html_e( 'Xem thêm ›', 'pgds' ); ?></a>
+					<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'tin-phat-su', 'category' ) ); ?>">
+						<?php esc_html_e( 'Xem thêm', 'pgds' ); ?><?php pgds_icon( 'chevron', array( 'size' => 14 ) ); ?>
+					</a>
 				</div>
 
 				<?php if ( ! empty( $B['phatsu_cards'] ) ) : ?>
@@ -153,6 +157,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 					</div>
 				<?php endif; ?>
 			</section>
+			<?php endif; ?>
 		</div>
 
 		<aside aria-label="<?php esc_attr_e( 'Thông tin bên lề', 'pgds' ); ?>">
@@ -175,7 +180,8 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 
 				<?php if ( $data['feat'] instanceof WP_Post ) : $f = $data['feat']; ?>
 					<div class="pgds-cat-col__feat">
-						<a href="<?php echo esc_url( get_permalink( $f ) ); ?>">
+						<?php // The image link duplicates the title link below it, so it is hidden from assistive tech and removed from the tab order rather than announced as a second unlabeled link. ?>
+						<a class="pgds-cat-col__feat-media" href="<?php echo esc_url( get_permalink( $f ) ); ?>" tabindex="-1" aria-hidden="true">
 							<?php pgds_art( $f, 'pgds-card', 'pgds-ratio-card' ); ?>
 						</a>
 						<h4><a href="<?php echo esc_url( get_permalink( $f ) ); ?>"><?php echo esc_html( get_the_title( $f ) ); ?></a></h4>
@@ -192,7 +198,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		<div>
 			<?php if ( ! empty( $B['mixed_list'] ) ) : ?>
 				<section class="pgds-section" aria-label="<?php esc_attr_e( 'Tin mới', 'pgds' ); ?>">
-					<div class="pgds-list" style="margin-top:0;">
+					<div class="pgds-list pgds-list--flush">
 						<?php $render_each( 'list-item', $B['mixed_list'] ); ?>
 					</div>
 				</section>
@@ -202,7 +208,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 				<section class="pgds-section" aria-labelledby="pgds-vn-title">
 					<div class="pgds-cat-head">
 						<h2 id="pgds-vn-title">Vietnam Buddhism</h2>
-						<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>">View more ›</a>
+						<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>">View more<?php pgds_icon( 'chevron', array( 'size' => 14 ) ); ?></a>
 					</div>
 					<ul class="pgds-compact">
 						<?php foreach ( $B['vn_list'] as $p ) : ?>
@@ -228,7 +234,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 					<ul class="pgds-teaching">
 						<?php foreach ( $B['teaching'] as $t ) : ?>
 							<li>
-								<span class="pgds-teaching__icon" aria-hidden="true">🎧</span>
+								<span class="pgds-teaching__icon"><?php pgds_icon( 'headphones', array( 'size' => 16 ) ); ?></span>
 								<span><a href="<?php echo esc_url( get_permalink( $t ) ); ?>"><?php echo esc_html( get_the_title( $t ) ); ?></a></span>
 							</li>
 						<?php endforeach; ?>

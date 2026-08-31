@@ -17,8 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $note = $args['post'] ?? null;
 
-$greg_day   = date_i18n( 'd' );
-$greg_sub   = date_i18n( 'Tháng m \n\ă\m Y' );
+$greg_day = date_i18n( 'd' );
+$greg_sub = pgds_month_year_vi();
 
 $lunar_day = $note ? get_post_meta( $note->ID, '_pgds_lunar_day', true ) : '';
 $lunar_sub = $note ? get_post_meta( $note->ID, '_pgds_lunar_sub', true ) : '';

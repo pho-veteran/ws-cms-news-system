@@ -161,6 +161,25 @@ function pgds_video_sitemap_qv( $vars ) {
 add_filter( 'query_vars', 'pgds_video_sitemap_qv' );
 
 /**
+ * Keep /video-sitemap.xml free of the canonical trailing slash.
+ *
+ * With a '/%postname%/' permalink structure, redirect_canonical() 301s
+ * /video-sitemap.xml to /video-sitemap.xml/ . Search engines fetch the URL we
+ * publish, and a sitemap that answers 301 instead of 200 is a needless hop; the
+ * trailing-slash form is also wrong for a file-style path.
+ *
+ * @param string $redirect_url  The URL core wants to redirect to.
+ * @return string|false False to cancel the redirect.
+ */
+function pgds_video_sitemap_no_canonical_redirect( $redirect_url ) {
+	if ( get_query_var( 'pgds_video_sitemap' ) ) {
+		return false;
+	}
+	return $redirect_url;
+}
+add_filter( 'redirect_canonical', 'pgds_video_sitemap_no_canonical_redirect' );
+
+/**
  * Output the video sitemap XML.
  */
 function pgds_render_video_sitemap() {
@@ -192,8 +211,18 @@ function pgds_render_video_sitemap() {
 		if ( ! $vid ) {
 			continue;
 		}
+		// §6.3: a private / removed / age-restricted video is omitted, for the same
+		// reason VideoObject is suppressed for it — submitting a dead video to a
+		// sitemap invites crawl errors.
+		if ( '1' === get_post_meta( $p->ID, '_pgds_video_unavailable', true ) ) {
+			continue;
+		}
 		$thumb = get_post_meta( $p->ID, '_pgds_youtube_poster', true );
 		if ( ! $thumb ) {
+			// Falls back to YouTube's own CDN only when the local poster has not been
+			// generated yet (wp pgds yt-sync downloads it). This is a sitemap
+			// reference, not a hotlink on a rendered page, and a thumbnail_loc is
+			// required for the entry to be valid.
 			$thumb = 'https://i.ytimg.com/vi/' . $vid . '/hqdefault.jpg';
 		}
 		echo "  <url>\n";

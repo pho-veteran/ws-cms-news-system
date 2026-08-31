@@ -16,11 +16,11 @@ pgds_breadcrumb();
 ?>
 <main id="pgds-main" class="pgds-wrap" role="main">
 
-	<div class="pgds-cat-head" style="margin-top:20px;">
+	<div class="pgds-page-head">
 		<h1><?php single_term_title(); ?></h1>
 	</div>
 	<?php if ( term_description() ) : ?>
-		<p class="pgds-list__sapo" style="margin-bottom:16px;"><?php echo wp_kses_post( term_description() ); ?></p>
+		<div class="pgds-page-head__desc"><?php echo wp_kses_post( term_description() ); ?></div>
 	<?php endif; ?>
 
 	<?php
@@ -34,10 +34,10 @@ pgds_breadcrumb();
 	);
 	if ( ! is_wp_error( $children ) && $children ) :
 		?>
-		<nav class="pgds-subnav" aria-label="<?php esc_attr_e( 'Chuyên mục con', 'pgds' ); ?>" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+		<nav class="pgds-subnav" aria-label="<?php esc_attr_e( 'Chuyên mục con', 'pgds' ); ?>">
 			<?php foreach ( $children as $c ) : ?>
 				<a href="<?php echo esc_url( get_term_link( $c ) ); ?>"
-					style="font-size:12.5px;padding:5px 13px;border:1px solid var(--color-border);border-radius:999px;">
+					class="pgds-subnav__item">
 					<?php echo esc_html( $c->name ); ?>
 				</a>
 			<?php endforeach; ?>
@@ -57,7 +57,7 @@ pgds_breadcrumb();
 					if ( 1 === $idx ) {
 						// First post: horizontal lead.
 						get_template_part( 'template-parts/card-lead', null, array( 'post' => get_post(), 'eager' => true ) );
-						echo '<div class="pgds-grid-3" style="margin-top:20px;">';
+						echo '<div class="pgds-grid-3 pgds-grid-3--spaced">';
 						$grid_open = true;
 					} elseif ( $idx >= 2 && $idx <= 4 ) {
 						// Next 3 posts: grid card.
@@ -88,8 +88,8 @@ pgds_breadcrumb();
 				the_posts_pagination(
 					array(
 						'mid_size'  => 1,
-						'prev_text' => __( '‹ Trước', 'pgds' ),
-						'next_text' => __( 'Sau ›', 'pgds' ),
+						'prev_text' => pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ) . __( 'Trước', 'pgds' ),
+						'next_text' => __( 'Sau', 'pgds' ) . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
 						'class'     => 'pgds-pagination',
 					)
 				);

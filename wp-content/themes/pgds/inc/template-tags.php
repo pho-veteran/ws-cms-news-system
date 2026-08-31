@@ -113,7 +113,63 @@ function pgds_cat_label( $post ) {
 }
 
 /**
- * Relative published time (e.g. "2 hours ago").
+ * Vietnamese weekday name for a timestamp.
+ *
+ * Built from the numeric day of week rather than date_i18n( 'l' ) on purpose: the
+ * site renders Vietnamese to readers, but the WordPress locale is frequently en_US
+ * (no vi language pack installed), which would print "Tuesday" in the header of a
+ * Vietnamese newspaper. Deriving the name here makes the output correct regardless
+ * of which locale or language pack the install happens to have.
+ *
+ * @param int $timestamp Unix timestamp.
+ * @return string
+ */
+function pgds_weekday_vi( $timestamp ) {
+	// 'w': 0 = Sunday .. 6 = Saturday.
+	$names = array(
+		'Chủ nhật',
+		'Thứ Hai',
+		'Thứ Ba',
+		'Thứ Tư',
+		'Thứ Năm',
+		'Thứ Sáu',
+		'Thứ Bảy',
+	);
+	$index = (int) date_i18n( 'w', $timestamp );
+	return $names[ $index ] ?? '';
+}
+
+/**
+ * Vietnamese "Thứ Ba, 01/09/2026" for the header date.
+ *
+ * @param int|null $timestamp Unix timestamp; defaults to now (site timezone).
+ * @return string
+ */
+function pgds_date_full_vi( $timestamp = null ) {
+	$timestamp = $timestamp ?? current_datetime()->getTimestamp();
+	return pgds_weekday_vi( $timestamp ) . ', ' . date_i18n( 'd/m/Y', $timestamp );
+}
+
+/**
+ * Vietnamese "Tháng 09 năm 2026" for the calendar widget.
+ *
+ * Every literal letter is backslash-escaped. Unescaped 'T', 'h', 'n' and 'g' are
+ * date() format characters (timezone, 12-hour, month, timezone offset), which is
+ * what produced output like "+0702á92 09 năm 2026".
+ *
+ * @param int|null $timestamp Unix timestamp; defaults to now (site timezone).
+ * @return string
+ */
+function pgds_month_year_vi( $timestamp = null ) {
+	$timestamp = $timestamp ?? current_datetime()->getTimestamp();
+	return date_i18n( '\T\h\á\n\g m \n\ă\m Y', $timestamp );
+}
+
+/**
+ * Relative published time in Vietnamese (e.g. "2 giờ trước"), falling back to a date.
+ *
+ * human_time_diff() is not used because it returns English under an en_US locale,
+ * which yielded mixed-language output like "7 hours trước".
  *
  * @param int|WP_Post $post Post.
  * @return string
@@ -125,25 +181,51 @@ function pgds_time_ago( $post ) {
 	}
 	$ts   = get_post_timestamp( $post );
 	$diff = time() - $ts;
+
+	// Future-dated (scheduled) posts: show the date rather than a negative diff.
+	if ( $diff < 0 ) {
+		return get_the_date( 'd/m/Y', $post );
+	}
+
+	if ( $diff < MINUTE_IN_SECONDS ) {
+		return 'Vừa xong';
+	}
+	if ( $diff < HOUR_IN_SECONDS ) {
+		return (int) floor( $diff / MINUTE_IN_SECONDS ) . ' phút trước';
+	}
 	if ( $diff < DAY_IN_SECONDS ) {
-		return sprintf(
-			/* translators: %s human time diff */
-			__( '%s trước', 'pgds' ),
-			human_time_diff( $ts )
-		);
+		return (int) floor( $diff / HOUR_IN_SECONDS ) . ' giờ trước';
+	}
+	if ( $diff < 2 * DAY_IN_SECONDS ) {
+		return 'Hôm qua';
+	}
+	if ( $diff < 7 * DAY_IN_SECONDS ) {
+		return (int) floor( $diff / DAY_IN_SECONDS ) . ' ngày trước';
 	}
 	return get_the_date( 'd/m/Y', $post );
 }
 
 /**
- * Estimated reading time (minutes) from word count.
+ * Estimated reading time in minutes, from the word count.
+ *
+ * Counts words by splitting on whitespace rather than with str_word_count(), which
+ * only recognises ASCII letters and therefore treats Vietnamese diacritics as word
+ * boundaries — "Phật giáo" counted as four words, not two, systematically
+ * overstating the count on this site.
  *
  * @param int|WP_Post $post Post.
- * @return int
+ * @return int Minutes, minimum 1.
  */
 function pgds_reading_time( $post ) {
-	$post  = get_post( $post );
-	$words = str_word_count( wp_strip_all_tags( $post->post_content ) );
+	$post = get_post( $post );
+	if ( ! $post instanceof WP_Post ) {
+		return 1;
+	}
+
+	$text  = trim( wp_strip_all_tags( $post->post_content ) );
+	$words = '' === $text ? 0 : count( preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY ) );
+
+	// 200 wpm is the conventional estimate for adult prose reading.
 	return max( 1, (int) ceil( $words / 200 ) );
 }
 

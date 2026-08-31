@@ -31,7 +31,11 @@ $colors: (
   'surface-3':    #EFE6CF,
 
   // Supporting text
-  'text-muted':   #7A6E56,  // raised from #8a7f68 to meet AA contrast (>=4.5:1 on paper)
+  // Darkened twice from the layout v12 value: #8a7f68 -> #7A6E56 -> #766A52.
+  // #7A6E56 measured 4.33:1 on --paper, still short of AA for body-size text; the
+  // current value measures 4.59:1. Metadata (dates, categories, counts) uses this at
+  // 11.5-12px, so it must clear the small-text threshold, not the large-text one.
+  'text-muted':   #766A52,
   'text-soft':    #6b5f4a,
   'text-dim':     #9B8F79,
   'text-alt':     #5c5243,
@@ -70,7 +74,7 @@ $cat-colors: (
 // TYPOGRAPHY (SCSS var)
 // ---------------------------------------------------------------------------
 $font-body:    ('Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif);
-$font-display: ('Fraunces', Georgia, 'Times New Roman', serif);
+$font-display: ('Newsreader', Georgia, 'Times New Roman', serif);
 
 // Scale of 9 steps (px)
 $fs-hero: 44px;

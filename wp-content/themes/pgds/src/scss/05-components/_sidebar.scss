@@ -168,7 +168,10 @@
 }
 
 .pgds-teaching__icon {
+  display: flex;
   flex: none;
-  font-size: $fs-sm;
+  // Nudge the icon onto the first line's optical centre; align-items:flex-start on
+  // the row would otherwise hang it above the cap height of the text.
+  margin-top: 1px;
   color: var(--color-accent);
 }

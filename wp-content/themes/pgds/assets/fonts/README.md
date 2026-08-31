@@ -1,22 +1,40 @@
-# Fonts (self-host)
+# Fonts (self-hosted)
 
-Đặt các file `.woff2` (subset `vietnamese,latin`) vào thư mục này:
+The theme self-hosts its two families so production has no third-party font origin
+and LCP stays under our control (proposal §3.1.2). These `.woff2` files, subset to
+`vietnamese`, belong in this directory:
 
 ```
 be-vietnam-pro-400.woff2
 be-vietnam-pro-600.woff2
 be-vietnam-pro-700.woff2
-fraunces-400.woff2
-fraunces-700.woff2
+newsreader-400.woff2
+newsreader-700.woff2
 ```
 
-Cách lấy nhanh (không hotlink Google Fonts ở production):
+## Fetching them
 
-1. Vào https://gwfh.mranftl.com/fonts (google-webfonts-helper)
-2. Chọn **Be Vietnam Pro** (400, 600, 700) và **Fraunces** (400, 700),
-   charset `vietnamese` + `latin`, định dạng `woff2`.
-3. Tải về, đổi tên đúng như trên, copy vào đây.
+```bash
+npm run fonts     # from wp-content/themes/pgds
+```
 
-Thiếu file → theme fallback `system-ui` / `Georgia`, vẫn chạy bình thường.
-`@font-face` khai báo ở `src/scss/03-elements/_fonts.scss`;
-preload 2 file critical ở `inc/enqueue.php`.
+`tools/fetch-fonts.mjs` requests the Google Fonts CSS with a browser User-Agent
+(required — the default UA yields `ttf`, not `woff2`), then picks the file whose
+`unicode-range` covers Vietnamese for each family and weight.
+
+Newsreader is a **variable** font: one file per subset spans the whole 400–700 axis,
+so the same source URL is saved under both `newsreader-400.woff2` and
+`newsreader-700.woff2`. The `@font-face` rules declare static weights and each needs
+a file present, so the duplication is deliberate.
+
+## If the files are absent
+
+The theme falls back to `system-ui` and `Georgia` and still renders correctly, but
+the typographic identity is lost — the display face carries the brand. Treat missing
+font files as a release blocker, not a cosmetic gap.
+
+`@font-face` is declared in `src/scss/03-elements/_fonts.scss`. `inc/enqueue.php`
+preloads the two critical files and skips the preload when a file is unreadable.
+
+The files are gitignored as fetched artifacts; run `npm run fonts` after a fresh
+clone, and in CI before the asset build.

@@ -15,17 +15,17 @@ pgds_breadcrumb();
 ?>
 <main id="pgds-main" class="pgds-wrap" role="main">
 
-	<div class="pgds-cat-head" style="margin-top:20px;">
+	<div class="pgds-page-head">
 		<h1><?php the_archive_title(); ?></h1>
 	</div>
 	<?php if ( get_the_archive_description() ) : ?>
-		<p class="pgds-list__sapo" style="margin-bottom:16px;"><?php the_archive_description(); ?></p>
+		<div class="pgds-page-head__desc"><?php the_archive_description(); ?></div>
 	<?php endif; ?>
 
 	<div class="pgds-content-grid">
 		<div>
 			<?php if ( have_posts() ) : ?>
-				<div class="pgds-list" style="margin-top:0;">
+				<div class="pgds-list pgds-list--flush">
 					<?php
 					while ( have_posts() ) :
 						the_post();
@@ -38,8 +38,8 @@ pgds_breadcrumb();
 				the_posts_pagination(
 					array(
 						'mid_size'  => 1,
-						'prev_text' => __( '‹ Trước', 'pgds' ),
-						'next_text' => __( 'Sau ›', 'pgds' ),
+						'prev_text' => pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ) . __( 'Trước', 'pgds' ),
+						'next_text' => __( 'Sau', 'pgds' ) . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
 						'class'     => 'pgds-pagination',
 					)
 				);

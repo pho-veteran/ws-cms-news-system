@@ -1,0 +1,230 @@
+name: Deploy theme
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pgds-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  lint-php:
+    name: Lint PHP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # PHP runs directly on the GitHub-hosted runner. The Docker-only PHP rule in
+      # CLAUDE.md applies to the local development machine, which has no PHP binary.
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Lint theme and mu-plugin PHP
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wp-content/themes/pgds wp-content/mu-plugins \
+            -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
+
+  lint-js:
+    name: Lint JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: wp-content/themes/pgds/package-lock.json
+
+      - name: Install dependencies
+        working-directory: wp-content/themes/pgds
+        run: npm ci
+
+      - name: Lint JavaScript
+        working-directory: wp-content/themes/pgds
+        run: npm run lint:js
+
+  build:
+    name: Build theme assets
+    needs:
+      - lint-php
+      - lint-js
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: wp-content/themes/pgds/package-lock.json
+
+      - name: Install dependencies
+        working-directory: wp-content/themes/pgds
+        run: npm ci
+
+      - name: Fetch self-hosted fonts
+        working-directory: wp-content/themes/pgds
+        run: npm run fonts
+
+      - name: Build production assets
+        working-directory: wp-content/themes/pgds
+        run: npm run build
+
+      - name: Verify built assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { existsSync, readdirSync, readFileSync } from 'node:fs';
+
+          const dist = 'wp-content/themes/pgds/assets/dist';
+          const manifestPath = `${dist}/manifest.json`;
+
+          if (!existsSync(manifestPath)) {
+            throw new Error('Build did not create assets/dist/manifest.json.');
+          }
+
+          let manifest;
+          try {
+            manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+          } catch (error) {
+            throw new Error(`assets/dist/manifest.json is invalid JSON: ${error.message}`);
+          }
+
+          const files = readdirSync(dist);
+          const required = [
+            ['main CSS', /^main\.[a-f0-9]{8}\.css$/],
+            ['app JavaScript', /^app\.[a-f0-9]{8}\.js$/],
+          ];
+
+          for (const [label, pattern] of required) {
+            if (!files.some((file) => pattern.test(file))) {
+              throw new Error(`Build did not create a hashed ${label} file.`);
+            }
+          }
+
+          for (const key of ['main.css', 'app.js']) {
+            if (typeof manifest[key] !== 'string' || !files.includes(manifest[key])) {
+              throw new Error(`Manifest entry ${key} is missing or does not reference a built file.`);
+            }
+          }
+          NODE
+
+  deploy:
+    name: Deploy to production
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: wp-content/themes/pgds/package-lock.json
+
+      - name: Install dependencies
+        working-directory: wp-content/themes/pgds
+        run: npm ci
+
+      - name: Fetch self-hosted fonts
+        working-directory: wp-content/themes/pgds
+        run: npm run fonts
+
+      - name: Build production assets
+        working-directory: wp-content/themes/pgds
+        run: npm run build
+
+      - name: Configure deploy SSH key
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy runtime theme files
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            --exclude='node_modules/' \
+            --exclude='src/' \
+            --exclude='tools/' \
+            --exclude='build.mjs' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='eslint.config.mjs' \
+            --exclude='README.md' \
+            -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
+            wp-content/themes/pgds/ \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_THEME_PATH}/"
+
+      - name: Reload PHP-FPM and flush FastCGI cache
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PHP_FPM_SERVICE: ${{ secrets.DEPLOY_PHP_FPM_SERVICE }}
+          DEPLOY_FASTCGI_CACHE_DIR: ${{ secrets.DEPLOY_FASTCGI_CACHE_DIR }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "sudo systemctl reload '${DEPLOY_PHP_FPM_SERVICE}' && sudo find '${DEPLOY_FASTCGI_CACHE_DIR}' -type f -delete"
+
+      # Purge the origin before the edge. Purging Cloudflare first can re-cache stale
+      # origin content at the edge, so only purge it after PHP-FPM and FastCGI are fresh.
+      - name: Detect asset changes
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet HEAD^ HEAD -- wp-content/themes/pgds/assets/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Purge Cloudflare when assets changed
+        if: steps.assets.outputs.changed == 'true'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --url "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data '{"purge_everything":true}'

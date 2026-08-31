@@ -46,6 +46,39 @@ class PGDS_Used_Ids {
 }
 
 /**
+ * Query posts by category, then top up from the rest of the site if the category
+ * could not supply enough.
+ *
+ * Why a top-up exists: the front page requests far more posts across its 11 blocks
+ * than any single category holds, and the dedup pass (§4.4) means earlier blocks
+ * consume posts first. Without a top-up, later blocks render empty or near-empty,
+ * which on a 1fr + 320px layout leaves a tall void beside a full sidebar. A short
+ * block is an editorial failure, not a neutral outcome, so it is filled with the
+ * newest unused posts from anywhere on the site.
+ *
+ * The top-up is still deterministic (newest-first, excluding used IDs) so the page
+ * is stable between FastCGI cache fills.
+ *
+ * @param string|string[] $category_slug Category slug (or array).
+ * @param int             $count         Number of posts.
+ * @param array           $extra         Extra WP_Query args.
+ * @param bool            $top_up        Backfill from any category when short.
+ * @return WP_Post[]
+ */
+function pgds_query_posts_filled( $category_slug, $count, $extra = array(), $top_up = true ) {
+	$posts = pgds_query_posts( $category_slug, $count, $extra );
+
+	if ( $top_up && count( $posts ) < $count && ! empty( $category_slug ) ) {
+		$need = $count - count( $posts );
+		// '' = no category restriction. Used IDs (including the ones just marked)
+		// are excluded inside pgds_query_posts(), so this cannot duplicate.
+		$posts = array_merge( $posts, pgds_query_posts( '', $need, $extra ) );
+	}
+
+	return $posts;
+}
+
+/**
  * Query posts by category slug, excluding IDs already used, mark and return.
  *
  * @param string|string[] $category_slug Category slug (or array).
@@ -152,7 +185,7 @@ function pgds_query_popular( $count = 5 ) {
  * @return array{feat: ?WP_Post, mini: WP_Post[]}
  */
 function pgds_query_cat_column( $slug, $mini = 2 ) {
-	$posts = pgds_query_posts( $slug, $mini + 1 );
+	$posts = pgds_query_posts_filled( $slug, $mini + 1 );
 	$feat  = array_shift( $posts );
 	return array(
 		'feat' => $feat,
@@ -193,22 +226,58 @@ function pgds_home_blocks() {
 	// (3) Media block: 1 feature + 4 thumbs (video category), 3 bullets (infographic only).
 	// Bullets query 'infographic-emagazine' SEPARATELY (don't query the parent 'media' to
 	// avoid stealing video posts from the thumbs).
+	// The media block is topped up from the wider 'media' parent rather than the whole
+	// site: a text news post in a video thumbnail grid (with a play badge over it)
+	// would misrepresent the content. If 'media' cannot fill it, the grid adapts its
+	// column count instead.
 	$media_feature = pgds_query_posts( 'video', 1 );
 	$media_thumbs  = pgds_query_posts( 'video', 4 );
+	if ( count( $media_thumbs ) < 4 ) {
+		$media_thumbs = array_merge(
+			$media_thumbs,
+			pgds_query_posts( 'media', 4 - count( $media_thumbs ) )
+		);
+	}
 	$media_bullets = pgds_query_posts( 'infographic-emagazine', 3 );
 
-	// (4) Content grid 1: Buddhist Affairs News, 3 cards + 7 list.
+	// ---------------------------------------------------------------------------
+	// PASS 1 - every category-scoped block takes only posts from its OWN category.
+	//
+	// Ordering matters here (§4.4). Letting an early block top up from the whole
+	// site would consume the posts a later, narrower block depends on: filling
+	// grid 1 site-wide emptied the three-category row completely, which reads as
+	// broken rather than merely short. So category ownership is resolved first and
+	// the site-wide backfill happens in pass 2, over what is genuinely left over.
+	// ---------------------------------------------------------------------------
 	$phatsu_cards = pgds_query_posts( 'tin-phat-su', 3 );
 	$phatsu_list  = pgds_query_posts( 'tin-phat-su', 7 );
 
-	// (5) Three-category.
-	$col_song  = pgds_query_cat_column( 'song-an-lanh', 2 );
-	$col_phat  = pgds_query_cat_column( 'phat-tich', 2 );
-	$col_tot   = pgds_query_cat_column( 'tot-doi-dep-dao', 2 );
+	$col_song = pgds_query_cat_column( 'song-an-lanh', 2 );
+	$col_phat = pgds_query_cat_column( 'phat-tich', 2 );
+	$col_tot  = pgds_query_cat_column( 'tot-doi-dep-dao', 2 );
 
-	// (6) Content grid 2: Vietnam Buddhism first (dedicated block, to avoid
-	// mixed_list "eating" it all), then mixed_list (catch-all for remaining categories).
-	$vn_list    = pgds_query_posts( 'vietnam-buddhism', 3 );
+	$vn_list = pgds_query_posts( 'vietnam-buddhism', 3 );
+
+	// ---------------------------------------------------------------------------
+	// PASS 2 - backfill the blocks whose emptiness is most visible, from whatever
+	// remains. Grid 1 sits beside the tall popular + calendar sidebar, so a short
+	// main column there leaves the largest void on the page; it is filled first.
+	// ---------------------------------------------------------------------------
+	if ( count( $phatsu_cards ) < 3 ) {
+		$phatsu_cards = array_merge(
+			$phatsu_cards,
+			pgds_query_posts( '', 3 - count( $phatsu_cards ) )
+		);
+	}
+	if ( count( $phatsu_list ) < 7 ) {
+		$phatsu_list = array_merge(
+			$phatsu_list,
+			pgds_query_posts( '', 7 - count( $phatsu_list ) )
+		);
+	}
+
+	// mixed_list is the catch-all tail: it takes what nothing else claimed, so it
+	// is queried last and is allowed to come up short without leaving a hole.
 	$mixed_list = pgds_query_posts( '', 5 );
 
 	// (7) Sidebar: popular (may overlap), teaching CPT, lunar CPT.

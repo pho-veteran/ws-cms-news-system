@@ -3,7 +3,7 @@
 // Place .woff2 files (Vietnamese + Latin subsets) in assets/fonts/.
 // Missing files -> system-ui / Georgia fallback; the site still works.
 // Get fonts: use google-webfonts-helper or subset them from Google Fonts.
-//   Be Vietnam Pro: 400, 600, 700 | Fraunces: 400, 700
+//   Be Vietnam Pro: 400, 600, 700 | Newsreader: 400, 700
 // Relative path from assets/dist/main.css -> ../fonts/
 // ============================================================================
 
@@ -30,16 +30,16 @@
 }
 
 @font-face {
-  font-family: 'Fraunces';
+  font-family: 'Newsreader';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/fraunces-400.woff2') format('woff2');
+  src: url('../fonts/newsreader-400.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Fraunces';
+  font-family: 'Newsreader';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../fonts/fraunces-700.woff2') format('woff2');
+  src: url('../fonts/newsreader-700.woff2') format('woff2');
 }

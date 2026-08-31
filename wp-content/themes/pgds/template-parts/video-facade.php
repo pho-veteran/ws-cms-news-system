@@ -4,11 +4,12 @@
  * Poster is stored locally (disk instance), not hotlinked.
  *
  * @param array $args {
- *   video_id: string,
- *   poster:   string (local poster image URL),
- *   dur:      int    (seconds),
- *   title:    string,
- *   caption:  string
+ *   video_id:    string,
+ *   poster:      string (local poster image URL),
+ *   dur:         int    (seconds),
+ *   title:       string,
+ *   caption:     string,
+ *   unavailable: bool   (private / removed / age-restricted -> hide the facade)
  * }
  * @package pgds
  */
@@ -26,6 +27,20 @@ $dur     = isset( $args['dur'] ) ? (int) $args['dur'] : 0;
 $title   = $args['title'] ?? '';
 $caption = $args['caption'] ?? '';
 $dur_str = pgds_format_duration( $dur );
+
+/*
+ * Proposal §6.3: a private, removed, or age-restricted video must hide the facade and
+ * show explanatory text instead. Rendering the play button anyway would promise a
+ * video that cannot play. inc/seo-schema.php already suppresses VideoObject on the
+ * same flag; this is the display half of that rule.
+ */
+if ( ! empty( $args['unavailable'] ) ) {
+	printf(
+		'<p class="pgds-video__unavailable">%s</p>',
+		esc_html__( 'Video không còn khả dụng', 'pgds' )
+	);
+	return;
+}
 ?>
 <figure class="pgds-video" data-pgds="youtube-facade" data-video-id="<?php echo esc_attr( $vid ); ?>">
 	<?php if ( $poster ) : ?>

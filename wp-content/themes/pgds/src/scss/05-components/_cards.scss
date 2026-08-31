@@ -96,6 +96,13 @@
   flex-direction: column;
   height: 100%;
 
+  // The play badge is position:absolute. Without a positioned ancestor here it
+  // escaped to the nearest one and floated above an unrelated card.
+  &__media {
+    position: relative;
+    display: block;
+  }
+
   .pgds-art {
     border-radius: $radius-md;
     margin-bottom: $sp-3;
@@ -147,6 +154,11 @@
 }
 
 // --- Clean list (horizontal list) -------------------------------------------
+// A list that opens a column, with no heading above it to space away from.
+.pgds-list--flush {
+  margin-top: 0;
+}
+
 .pgds-list {
   margin-top: $sp-5;
 }
@@ -222,8 +234,21 @@
     font-weight: $fw-bold;
     letter-spacing: $ls-widest;
     text-transform: uppercase;
+    // KEEP. The design detector flags a 3px coloured border-left as an AI-slop
+    // "side tab", and as a generic default it would be. Here it is the client's own
+    // treatment for the "Tin ảnh" panel in Demo_layout_v12 (`.photo-panel-head`,
+    // `border-left:3px solid var(--gilt-light)`), and the brief pins the demo's
+    // widgets. Removing it would override an approved design with our own taste.
     border-left: 3px solid var(--pgds-gilt-light);
     margin: $sp-3 $sp-3 0;
+  }
+
+  // Replaces the inline style the template used to carry; the caption is absolutely
+  // positioned against this link, so it must establish the containing block.
+  &__link {
+    position: relative;
+    display: flex;
+    flex: 1;
   }
 
   .pgds-art {

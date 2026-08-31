@@ -7,28 +7,37 @@ and `PROPOSAL_02`.
 
 ## 1. Deploy the theme
 
-```bash
-# CI (GitHub Actions on push to main): lint -> build -> rsync -> purge
-# Manual (during the 4-day build):
-cd wp-content/themes/pgds && npm ci && npm run build
-rsync -az --delete wp-content/themes/pgds/ deploy@HOST:/var/www/pgds/wp-content/themes/pgds/
-ssh deploy@HOST 'sudo systemctl reload php8.3-fpm && sudo find /var/cache/nginx/fcgi -type f -delete'
-```
+GitHub Actions deploys pushes to `main` through `.github/workflows/deploy.yml`. The workflow
+runs PHP and JavaScript linting, fetches self-hosted fonts, builds and verifies the hashed
+assets, then deploys only if every gate succeeds. It deploys only the runtime theme files;
+WordPress core, the database, and plugins are never deployed by this pipeline.
 
-Purge order after deploy (proposal §12.1): **origin first, edge second**.
-1. rsync theme → 2. reload php-fpm (resets opcache) → 3. flush FastCGI → 4. purge Cloudflare
-(only when assets changed).
+Configure every repository secret documented in `.github/workflows/README.md` before the
+first deployment. The workflow uses a dedicated key-only deployment account and a pinned SSH
+host key; it does not allowlist GitHub Actions IP ranges.
 
-> **Note:** `.github/workflows/` does not exist yet, so the CI pipeline described above is
-> not wired up. Deployment is currently the manual rsync path, and the rollback below does
-> not auto-deploy.
+The post-deployment order is mandatory (proposal §12.1): **origin first, edge second**.
+
+1. rsync the runtime theme → 2. reload PHP-FPM (resets opcache) → 3. flush FastCGI → 4. purge Cloudflare only when theme assets changed.
+
+Purging Cloudflare before the origin can re-cache stale origin content at the edge.
+Overlapping deployments are serialized by the GitHub Actions concurrency group.
+
+For a break-glass manual deployment, first build the runtime assets and fonts from the theme
+directory, then use the same order and exclusions as `.github/workflows/deploy.yml`. Do not
+rsync `node_modules`, `src`, `tools`, build configuration, package files, ESLint configuration,
+or the theme README.
 
 ## 2. Rollback
 
 ```bash
-git revert <sha> && git push        # ~60s once CI exists; today, re-rsync manually
-# Or rsync the previous build back; the blast radius is one theme directory.
+git revert <sha>
+git push origin main       # triggers the same gated production deployment pipeline
 ```
+
+The blast radius remains one theme directory. If GitHub Actions or the production server is
+unavailable, use the break-glass manual deployment procedure in §1 to restore the prior
+runtime theme version, then follow the same origin-first cache purge order.
 
 ## 3. Manual cache purge
 
@@ -46,7 +55,7 @@ hooks `save_post`.
 2. Detach the static IP from the old instance, attach it to the new one.
 3. `nginx -t && systemctl reload nginx`; verify `X-Cache`, the front page, one post,
    one category.
-4. **Measured RTO: ______ minutes** (fill in during the drill).
+4. **Measured RTO: **\_\_** minutes** (fill in during the drill).
 
 ## 5. Scaling the bundle under high traffic (proposal §8.2)
 
@@ -78,9 +87,9 @@ tar czf /backup/uploads.tgz wp-content/uploads
 # Pull both somewhere safe BEFORE tearing down the infrastructure.
 ```
 
-- Planned decommission date: ______  |  Owner: ______
+- Planned decommission date: **\_\_** | Owner: **\_\_**
 
 ## 9. Rollback owner
 
-- Name: ______  |  Contact: ______  |  Rollback trigger: 5xx above 5% for 5 minutes, or a
+- Name: **\_\_** | Contact: **\_\_** | Rollback trigger: 5xx above 5% for 5 minutes, or a
   blank page.

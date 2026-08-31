@@ -27,24 +27,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php the_custom_logo(); ?>
 		<?php else : ?>
 			<a class="pgds-logo" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
-				<span class="pgds-display" style="font-size:22px;color:var(--color-brand-strong);">
+				<span class="pgds-logo__text">
 					<?php bloginfo( 'name' ); ?>
 				</span>
 			</a>
 		<?php endif; ?>
 
 		<div class="pgds-header__right">
-			<div class="pgds-header__date"><?php echo esc_html( date_i18n( 'l, d/m/Y' ) ); ?></div>
+			<div class="pgds-header__date"><?php echo esc_html( pgds_date_full_vi() ); ?></div>
 
-			<form class="pgds-search" role="search" method="get" action="<?php echo esc_url( home_url( '/' ) ); ?>">
-				<label class="u-sr-only" for="pgds-s"><?php esc_html_e( 'Tìm kiếm tin tức', 'pgds' ); ?></label>
-				<svg class="pgds-search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-					<circle cx="11" cy="11" r="7"></circle><path d="M16 16l4.5 4.5"></path>
-				</svg>
-				<input class="pgds-search__input" type="search" id="pgds-s" name="s"
-					value="<?php echo esc_attr( get_search_query() ); ?>"
-					placeholder="<?php esc_attr_e( 'Tìm kiếm tin tức…', 'pgds' ); ?>">
-			</form>
+			<?php get_search_form(); ?>
 		</div>
 	</div>
 </header>
@@ -53,9 +45,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="pgds-wrap pgds-nav__inner">
 		<button class="pgds-nav__toggle" type="button"
 			data-pgds="nav-toggle" aria-expanded="false" aria-controls="pgds-primary-menu">
-			<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-				<path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-			</svg>
+			<?php pgds_icon( 'menu', array( 'class' => 'pgds-nav__toggle-icon pgds-nav__toggle-icon--menu', 'size' => 18 ) ); ?>
+			<?php pgds_icon( 'close', array( 'class' => 'pgds-nav__toggle-icon pgds-nav__toggle-icon--close', 'size' => 18 ) ); ?>
 			<span><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></span>
 		</button>
 

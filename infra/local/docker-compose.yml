@@ -48,9 +48,12 @@ services:
         define('WP_DEBUG_LOG', true);
         define('WP_DEBUG_DISPLAY', false);
     volumes:
+      # NOTE: the theme, mu-plugins, tools, and scripts are NOT bind-mounted. Bind
+      # mounts resolve on the DOCKER DAEMON's filesystem, which is remote in this
+      # dev environment (DOCKER_HOST=tcp://...), so they mount empty and the theme
+      # appears absent. `./sync.sh` pushes them in over the API instead. Run it
+      # after `docker compose up -d` and after every edit.
       - wp_core:/var/www/html
-      - ../../wp-content/themes/pgds:/var/www/html/wp-content/themes/pgds
-      - ../../wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
 
   wpcli:
     image: wordpress:cli-php8.3
@@ -63,11 +66,10 @@ services:
       WORDPRESS_DB_PASSWORD: wppw
       WORDPRESS_DB_NAME: wordpress
     volumes:
+      # Same reason as the wordpress service: no bind mounts. Everything arrives
+      # through the shared wp_core volume, which ./sync.sh populates. The scripts
+      # live at /var/www/html/.pgds-scripts and tools at /var/www/html/.pgds-tools.
       - wp_core:/var/www/html
-      - ../../wp-content/themes/pgds:/var/www/html/wp-content/themes/pgds
-      - ../../wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
-      - ../../tools:/tools
-      - ./scripts:/scripts
     entrypoint: ["sh"]
     profiles: ["cli"]
 

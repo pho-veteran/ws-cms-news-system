@@ -1,0 +1,127 @@
+// ============================================================================
+// 05-COMPONENTS / PAGE HEAD + EMPTY STATE
+// Shared by search, 404, archive, and category: the h1 plus its supporting line.
+// Replaces per-template inline styles so the four surfaces cannot drift apart.
+// ============================================================================
+@use 'config' as *;
+
+.pgds-page-head {
+  padding-top: $sp-6;
+  // More space below the head than above its supporting line, so the heading binds
+  // to its own metadata rather than floating between two blocks.
+  margin-bottom: $sp-6;
+  border-bottom: 2px solid var(--color-brand);
+  padding-bottom: $sp-3;
+
+  h1 {
+    font-size: $fs-hero;
+    line-height: $lh-tight;
+    color: var(--color-brand-strong);
+    // Avoids a one-word last line on a long Vietnamese query or archive title.
+    text-wrap: balance;
+
+    @include mq-max(md) {
+      // The 44px display size is set for the 1180px container; unchanged it would
+      // consume most of a 360px viewport.
+      font-size: $fs-xl;
+    }
+  }
+
+  &__meta {
+    margin-top: $sp-2;
+    font-size: $fs-2xs;
+    color: var(--color-text-meta);
+  }
+
+  // Term / archive description. A div, not a p: term_description() returns its own
+  // block markup, so nesting it inside a <p> produced invalid HTML.
+  &__desc {
+    margin-top: $sp-2;
+    font-size: $fs-sm;
+    line-height: $lh-relax;
+    color: var(--color-text-muted);
+    max-width: 70ch;
+  }
+}
+
+// --- Child-category chips (category.php) --------------------------------------
+.pgds-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $sp-2;
+  margin-bottom: $sp-5;
+
+  &__item {
+    font-size: $fs-2xs;
+    // Clears the 24px WCAG 2.2 target minimum; the demo's 5px padding did not.
+    padding: $sp-2 $sp-3;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-pill;
+    color: var(--color-brand);
+    background: var(--color-bg-surface);
+    transition: background-color $dur-fast $ease-out, border-color $dur-fast $ease-out;
+
+    &:hover {
+      background: var(--pgds-paper-deep);
+      border-color: var(--color-accent);
+    }
+  }
+}
+
+// --- Empty state -------------------------------------------------------------
+// Used where a query legitimately returns nothing. It names the outcome and offers
+// a route onward, instead of leaving a bare sentence on an empty page.
+.pgds-empty {
+  padding: $sp-8 0 $sp-10;
+  max-width: 52ch;
+
+  &__title {
+    font-size: $fs-xl;
+    line-height: $lh-tight;
+    color: var(--color-brand-strong);
+    margin-bottom: $sp-3;
+  }
+
+  &__body {
+    font-size: $fs-md;
+    line-height: $lh-relax;
+    color: var(--color-text-muted);
+    margin-bottom: $sp-6;
+  }
+
+  &__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $sp-2;
+    list-style: none;
+
+    a {
+      display: inline-block;
+      padding: $sp-2 $sp-4;
+      background: var(--color-bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: $radius-pill;
+      font-size: $fs-xs;
+      font-weight: $fw-medium;
+      color: var(--color-brand);
+      transition: background-color $dur-fast $ease-out, border-color $dur-fast $ease-out;
+
+      &:hover {
+        background: var(--pgds-paper-deep);
+        border-color: var(--color-accent);
+      }
+    }
+  }
+}
+
+// --- 404 ---------------------------------------------------------------------
+.pgds-404 {
+  &__search {
+    margin-bottom: $sp-10;
+  }
+}
+
+// --- Search refine -----------------------------------------------------------
+.pgds-search-refine {
+  margin-bottom: $sp-6;
+}
