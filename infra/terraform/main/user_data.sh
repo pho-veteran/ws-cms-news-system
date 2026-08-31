@@ -123,6 +123,17 @@ chown -R www-data:www-data /var/cache/nginx/fcgi
 chmod 750 /var/cache/nginx/fcgi
 rm -f /etc/nginx/sites-enabled/default
 
+# Placeholder for the §9.4 redirect map. infra/nginx/pgds.conf does
+# `include /etc/nginx/redirects.map` inside a map{} block, and `include` is a HARD
+# dependency: with the file absent nginx refuses to start entirely —
+#   [emerg] open() "/etc/nginx/redirects.map" failed (2: No such file or directory)
+# The map is only generated later, by `wp pgds build-redirects` after the 2,000-post
+# import, so without this touch the very first deploy of the real server block takes
+# the origin down instead of just missing its redirects. An empty map is valid and
+# matches nothing, so creating it early is free.
+touch /etc/nginx/redirects.map
+chmod 644 /etc/nginx/redirects.map
+
 systemctl enable nginx
 
 # ---------------------------------------------------------------------------
