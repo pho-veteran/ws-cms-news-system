@@ -9,6 +9,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/*
+ * Paged requests (/page/2/, /page/3/ ...) hand off to index.php.
+ *
+ * The 11 blocks here are a CURATED front page: the lead comes from
+ * _pgds_feature_rank, the photo panel from _pgds_photo_story, and the dedup pass
+ * assumes one render per request (§4.4). None of that has a "page 2" — WordPress was
+ * re-rendering the identical curated layout at /page/2/ and answering 200, which is
+ * duplicate content under a second URL and offers the reader nothing new.
+ *
+ * index.php is the correct surface for that: a plain reverse-chronological list with
+ * working pagination. /page/99/ already 404s via core's own handling, so only real
+ * pages reach this.
+ */
+if ( is_paged() ) {
+	include get_template_directory() . '/index.php';
+	return;
+}
+
 get_header();
 
 $B = pgds_home_blocks();

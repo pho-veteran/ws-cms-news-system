@@ -14,7 +14,42 @@ get_header();
 ?>
 <main id="pgds-main" class="pgds-wrap" role="main">
 	<div class="pgds-page-head">
-		<h1><?php is_home() ? single_post_title() : esc_html_e( 'Tin tức', 'pgds' ); ?></h1>
+		<?php
+		/*
+		 * The previous form was:
+		 *   is_home() ? single_post_title() : esc_html_e( 'Tin tức', 'pgds' )
+		 * which printed NOTHING on the home branch. single_post_title() echoes only
+		 * when its $display argument is true, and using it as a ternary operand
+		 * discards the value; esc_html_e() in the other branch does echo, so the bug
+		 * only appeared on one path. Result: an empty <h1> on /page/2/, i.e. a page
+		 * with no accessible name at all.
+		 *
+		 * On a paged front page "Tin mới nhất" is also more useful than the site title,
+		 * which the masthead already shows.
+		 */
+		$pgds_index_title = __( 'Tin tức', 'pgds' );
+		if ( is_home() && is_paged() ) {
+			$pgds_index_title = __( 'Tin mới nhất', 'pgds' );
+		} elseif ( is_home() && ! is_front_page() ) {
+			// A dedicated posts page: use its real title.
+			$pgds_posts_page = get_option( 'page_for_posts' );
+			if ( $pgds_posts_page ) {
+				$pgds_index_title = get_the_title( $pgds_posts_page );
+			}
+		}
+		?>
+		<h1><?php echo esc_html( $pgds_index_title ); ?></h1>
+		<?php if ( is_paged() ) : ?>
+			<p class="pgds-page-head__meta">
+				<?php
+				printf(
+					/* translators: %s: page number */
+					esc_html__( 'Trang %s', 'pgds' ),
+					esc_html( number_format_i18n( max( 1, (int) get_query_var( 'paged' ) ) ) )
+				);
+				?>
+			</p>
+		<?php endif; ?>
 	</div>
 
 	<div class="pgds-content-grid">
