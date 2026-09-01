@@ -32,6 +32,18 @@ if ( ! ( defined( 'WP_CLI' ) && WP_CLI ) ) {
 class PGDS_CLI_Command {
 
 	/**
+	 * Media that could not be imported, as human-readable lines.
+	 *
+	 * Kept separate from record errors: a post whose photo failed still imported, so it
+	 * must not count toward §9.2's 2% record stop threshold. §13 gates the two rates
+	 * independently ("Media failure rate < 2%, failure list reviewed"), and §14 requires
+	 * the list itself as a handover deliverable.
+	 *
+	 * @var string[]
+	 */
+	private $media_failures = array();
+
+	/**
 	 * Import posts from a JSON file. Idempotent by _pgds_source_id.
 	 *
 	 * ## OPTIONS
@@ -114,11 +126,46 @@ class PGDS_CLI_Command {
 		$progress->finish();
 
 		$fail_rate = $total > 0 ? ( count( $errors ) / $total ) : 0;
-		file_put_contents( $logfile, implode( "\n", $errors ) );
+
+		/*
+		 * Two logs, because §13 gates two independent rates: the RECORD failure rate
+		 * (§9.2's 2% stop threshold) and the MEDIA failure rate ("Media failure rate < 2%,
+		 * failure list reviewed"). The media list is also a §14 handover deliverable, so it
+		 * is written to its own reviewable file rather than mixed into the error log.
+		 */
+		file_put_contents( $logfile, implode( "\n", $errors ) . "\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+		$media_log   = '';
+		$media_rate  = 0.0;
+		$media_total = 0;
+		foreach ( $data as $rec ) {
+			if ( ! is_array( $rec ) ) {
+				continue;
+			}
+			$media_total += empty( $rec['featured_image_url'] ) ? 0 : 1;
+			$media_total += count( (array) ( $rec['gallery'] ?? array() ) );
+		}
+		if ( $this->media_failures ) {
+			$media_log = str_replace( 'pgds-import-', 'pgds-media-failures-', $logfile );
+			file_put_contents( $media_log, implode( "\n", $this->media_failures ) . "\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		}
+		if ( $media_total > 0 ) {
+			$media_rate = count( $this->media_failures ) / $media_total;
+		}
 
 		WP_CLI::log( '----------------------------------------' );
 		WP_CLI::log( sprintf( 'Created: %d | Skipped (existing): %d | Errors: %d/%d (%.2f%%)', $created, $skipped, count( $errors ), $total, $fail_rate * 100 ) );
+		WP_CLI::log( sprintf( 'Media: %d referenced | failed: %d (%.2f%%)', $media_total, count( $this->media_failures ), $media_rate * 100 ) );
 		WP_CLI::log( "Error log: {$logfile}" );
+		if ( $media_log ) {
+			WP_CLI::log( "Media failure list (§13/§14 deliverable): {$media_log}" );
+		}
+		// Reported as a warning, not an error: these posts imported correctly and the
+		// images can be back-filled with `wp pgds yt-sync`/a re-run, so stopping the whole
+		// migration for them would be wrong. §13 still requires a human to review the list.
+		if ( $media_rate > 0.02 ) {
+			WP_CLI::warning( sprintf( 'Media failure rate %.2f%% exceeds the 2%% §13 gate — review %s before go-live.', $media_rate * 100, $media_log ) );
+		}
 
 		// Stop threshold: 2% (proposal §9.2).
 		if ( $fail_rate > 0.02 ) {
@@ -927,9 +974,45 @@ class PGDS_CLI_Command {
 			wp_set_post_tags( $post_id, (array) $rec['tags'], false );
 		}
 
-		// Featured image (sideload).
+		/*
+		 * Media (§9.1, §13).
+		 *
+		 * Failures are RECORDED, not swallowed. sideload_featured() previously returned
+		 * void on both its error paths, so a media URL that 404'd left the post created
+		 * with no image and no trace: create_post() reported success, the import's error
+		 * rate stayed at 0%, and §13's gate — "Media failure rate < 2%, failure list
+		 * reviewed" — had nothing to review. On a 25-40 GB migration that is the
+		 * difference between knowing 30 images are missing and discovering it from a
+		 * reader.
+		 *
+		 * They are collected separately from record errors on purpose: a post whose photo
+		 * failed still imported correctly, so it must not count as a failed RECORD (that
+		 * would trip the §9.2 2% stop threshold for a recoverable problem). §13 tracks the
+		 * two rates independently, and so does the summary.
+		 */
 		if ( ! empty( $rec['featured_image_url'] ) ) {
-			$this->sideload_featured( $post_id, $rec['featured_image_url'] );
+			$err = $this->sideload_featured( $post_id, $rec['featured_image_url'] );
+			if ( $err ) {
+				$this->media_failures[] = sprintf( 'post %d (%s) featured: %s — %s', $post_id, $rec['source_id'], $rec['featured_image_url'], $err );
+			}
+		}
+
+		/*
+		 * Gallery. Documented in this file's own schema block since the first version
+		 * ("gallery (url[])") and never read: every gallery image in the source data was
+		 * silently dropped. Attached to the post (not set as the thumbnail) so
+		 * [gallery] shortcodes and the media library both resolve, which is what a
+		 * photo-story post needs.
+		 */
+		foreach ( (array) ( $rec['gallery'] ?? array() ) as $gurl ) {
+			if ( ! $gurl ) {
+				continue;
+			}
+			$res = $this->sideload_attachment( $post_id, (string) $gurl );
+			// Returns the attachment ID (int) on success, an error string on failure.
+			if ( ! is_int( $res ) ) {
+				$this->media_failures[] = sprintf( 'post %d (%s) gallery: %s — %s', $post_id, $rec['source_id'], $gurl, (string) $res );
+			}
 		}
 
 		return $post_id;
@@ -953,30 +1036,70 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * Download and attach a featured image.
+	 * Download an image and attach it to a post.
+	 *
+	 * Returns an error STRING rather than void so the caller can record it: §13 gates on
+	 * "Media failure rate < 2%, failure list reviewed", which is impossible if a failed
+	 * download is indistinguishable from a post that had no image.
 	 *
 	 * @param int    $post_id Post ID.
 	 * @param string $url     Image URL.
+	 * @return int|string Attachment ID on success, error message on failure.
 	 */
-	private function sideload_featured( $post_id, $url ) {
+	private function sideload_attachment( $post_id, $url ) {
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
+		if ( ! wp_http_validate_url( $url ) ) {
+			return 'not a valid http(s) URL';
+		}
+
 		$tmp = download_url( $url );
 		if ( is_wp_error( $tmp ) ) {
-			return;
+			return 'download failed: ' . $tmp->get_error_message();
 		}
-		$file_array = array(
-			'name'     => basename( wp_parse_url( $url, PHP_URL_PATH ) ),
-			'tmp_name' => $tmp,
+
+		$name = basename( (string) wp_parse_url( $url, PHP_URL_PATH ) );
+		if ( '' === $name ) {
+			// media_handle_sideload() rejects an empty name; a URL like /photo/?id=1 has no
+			// basename at all, which is common in legacy CMS media routes.
+			$name = 'pgds-import-' . wp_generate_uuid4() . '.jpg';
+		}
+
+		$att_id = media_handle_sideload(
+			array(
+				'name'     => $name,
+				'tmp_name' => $tmp,
+			),
+			$post_id
 		);
-		$att_id = media_handle_sideload( $file_array, $post_id );
 		if ( is_wp_error( $att_id ) ) {
-			@unlink( $tmp );
-			return;
+			// download_url() created the temp file; media_handle_sideload() only cleans it
+			// up on success, so a failure here leaks it into /tmp on a 25-40 GB import.
+			if ( file_exists( $tmp ) ) {
+				wp_delete_file( $tmp );
+			}
+			return 'sideload failed: ' . $att_id->get_error_message();
 		}
-		set_post_thumbnail( $post_id, $att_id );
+
+		return (int) $att_id;
+	}
+
+	/**
+	 * Download an image and set it as the post's featured image.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $url     Image URL.
+	 * @return string Empty on success, error message on failure.
+	 */
+	private function sideload_featured( $post_id, $url ) {
+		$res = $this->sideload_attachment( $post_id, $url );
+		if ( ! is_int( $res ) ) {
+			return (string) $res;
+		}
+		set_post_thumbnail( $post_id, $res );
+		return '';
 	}
 }
 
