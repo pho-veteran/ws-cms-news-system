@@ -67,9 +67,26 @@ if [ -n "$FIRST_ID" ]; then
   $WP post meta update "$FIRST_ID" _pgds_photo_story 1
 fi
 
+# Idempotent, for the same reason as the teaching item below.
+#
+# These two ran unconditionally, so every re-run of this script created ANOTHER copy. The
+# database ended up holding "Giới thiệu" + "gioi-thieu-2" and "Liên hệ" + "lien-he-2" —
+# duplicate pages with their own public URLs, and the footer menu pointing at whichever one
+# happened to be found first. Found while cleaning up probe fixtures, not by any automated
+# check, because a duplicate page renders perfectly well on its own.
 echo "==> Creating basic static pages..."
-$WP post create --post_type=page --post_status=publish --post_title="Giới thiệu" --post_content="Chuyên trang tin tức Phật giáo." >/dev/null || true
-$WP post create --post_type=page --post_status=publish --post_title="Liên hệ" --post_content="toasoan@phatgiaovadoisong.vn" >/dev/null || true
+seed_page() {
+  local title="$1" body="$2" slug="$3"
+  if [ -z "$($WP post list --post_type=page --post_status=any --name="$slug" --field=ID)" ]; then
+    $WP post create --post_type=page --post_status=publish \
+      --post_title="$title" --post_name="$slug" --post_content="$body" >/dev/null || true
+  fi
+}
+
+# Matched on the SLUG, not the title: two pages can share a title (that is how the
+# duplicates arose), whereas the slug is what the URL and the menu resolve against.
+seed_page "Giới thiệu" "Chuyên trang tin tức Phật giáo." "gioi-thieu"
+seed_page "Liên hệ" "toasoan@phatgiaovadoisong.vn" "lien-he"
 
 # WITH a body: pgds_teaching is publicly_queryable, so this has a real single route served
 # by single.php. Created with a title alone it rendered an empty article — heading, meta,

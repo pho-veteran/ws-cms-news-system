@@ -371,9 +371,28 @@ function pgds_breadcrumb( $post = null ) {
 		 * became clear it could never execute.)
 		 */
 	} elseif ( is_page() ) {
-		// Ancestors first, so a nested page shows its real position rather than jumping
-		// from the home page straight to itself.
+		/*
+		 * Ancestors first, so a nested page shows its real position rather than jumping from
+		 * the home page straight to itself — but PUBLISHED ancestors only.
+		 *
+		 * get_post_ancestors() walks post_parent straight out of the database with no
+		 * post_status filter, and get_the_title() performs no read-capability check: for a
+		 * private post it simply prefixes private_title_format and hands back the title.
+		 * Reproduced anonymously on a published child of a private parent:
+		 *
+		 *   Trang chủ › Private: Tài liệu mật › Con của trang mật
+		 *
+		 * So the title of unpublished editorial planning was disclosed to every visitor,
+		 * along with a link that 404s for them. That is a leak of content, not a display
+		 * bug, and escaping does not help — the problem is which posts were included.
+		 *
+		 * Skipping a non-public ancestor keeps the crumb at two items ("Trang chủ › <page>"),
+		 * which still satisfies the guard below.
+		 */
 		foreach ( array_reverse( get_post_ancestors( get_the_ID() ) ) as $ancestor_id ) {
+			if ( 'publish' !== get_post_status( $ancestor_id ) ) {
+				continue;
+			}
 			$items[] = array(
 				'label' => get_the_title( $ancestor_id ),
 				'url'   => get_permalink( $ancestor_id ),
