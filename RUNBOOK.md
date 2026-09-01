@@ -112,8 +112,24 @@ before importing 2,000 posts as well.
 
 - `videos.list` costs 1 unit per call, batching up to 50 IDs per call. Default quota is
   10,000 units/day.
-- The `pgds_fetch_yt_meta` cron runs once daily to fetch `duration` and `title`. Fallback:
-  use the stored meta; never overwrite it with an empty value.
+- The `pgds_fetch_yt_meta` WP-Cron event runs once daily at **03:40 site-local time**
+  (`Asia/Ho_Chi_Minh`) to fetch `duration` and `title`. Registered by
+  `wp-content/themes/pgds/inc/cron.php`; it calls the same code as `wp pgds yt-sync`, so
+  there is one implementation of the §6.4 rules. Fallback: use the stored meta; never
+  overwrite it with an empty value.
+- Because `DISABLE_WP_CRON` is set (see `infra/wp-config-hardening.sample.php`), the event
+  only fires when system cron runs `wp cron event run --due-now`. **If that crontab entry
+  is missing, this job silently never runs.** Verify with:
+
+  ```bash
+  wp cron event list --fields=hook,next_run_gmt,recurrence | grep pgds_fetch_yt_meta
+  # force one run:
+  wp cron event run pgds_fetch_yt_meta
+  ```
+
+- The job requires `PGDS_YT_API_KEY` in `wp-config.php`. Without it the event still fires
+  but returns immediately rather than doing partial work — check the log for
+  `PGDS_YT_API_KEY is not defined` if durations stop updating.
 - Private or removed videos: set the `_pgds_video_unavailable=1` meta to hide the facade and
   drop the schema.
 

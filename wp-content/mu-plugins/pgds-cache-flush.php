@@ -51,8 +51,59 @@ function pgds_flush_page_cache() {
 	}
 }
 
+/**
+ * save_post gate: flush only when a reader-visible post actually changed.
+ *
+ * §5.4 requires "Hook only save_post, not autosaves/revisions", and the comment below
+ * used to claim exactly that — but the callback was attached with zero accepted arguments
+ * and performed no checks, so it could not distinguish anything. Every autosave (the block
+ * editor fires one roughly every 10 seconds while an editor types) and every revision
+ * write triggered a full recursive delete of the FastCGI cache.
+ *
+ * The consequence is not stale content, it is the opposite: one editor with an open draft
+ * repeatedly empties the page cache for the whole site, so anonymous visitors get
+ * uncached responses from a 2 GB origin. That is the exact load §5 exists to prevent.
+ *
+ * Three gates, each covering a case observed in the editor's request flow:
+ *   1. DOING_AUTOSAVE / wp_is_post_autosave() — the periodic editor autosave.
+ *   2. wp_is_post_revision() — the revision row saved alongside the real post.
+ *   3. auto-draft / inherit status — a post that no reader can see yet, so no cached page
+ *      can be describing it.
+ *
+ * @param int     $post_id Post ID.
+ * @param WP_Post $post    Post object.
+ * @return void
+ */
+function pgds_flush_page_cache_on_save( $post_id, $post = null ) {
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return;
+	}
+	if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+
+	$post = $post instanceof WP_Post ? $post : get_post( $post_id );
+	if ( ! $post instanceof WP_Post ) {
+		return;
+	}
+	// 'inherit' is a revision/attachment-child status; 'auto-draft' is a post the editor
+	// has not written yet. Neither is reachable by a reader, so no cache entry is affected.
+	if ( in_array( $post->post_status, array( 'auto-draft', 'inherit' ), true ) ) {
+		return;
+	}
+	// Non-public types (pgds_lunar_note) never render a cacheable page of their own, but
+	// they DO appear in the front-page sidebar, so they still need the flush. Only skip
+	// types WordPress hides entirely from the front end.
+	$type = get_post_type_object( $post->post_type );
+	if ( $type && ! empty( $type->exclude_from_search ) && empty( $type->public ) && 'pgds_lunar_note' !== $post->post_type ) {
+		return;
+	}
+
+	pgds_flush_page_cache();
+}
+
 // Hook only events where content actually changes (not autosaves/revisions).
-add_action( 'save_post', 'pgds_flush_page_cache', 10, 0 );
+add_action( 'save_post', 'pgds_flush_page_cache_on_save', 10, 2 );
 add_action( 'deleted_post', 'pgds_flush_page_cache' );
 add_action( 'edited_term', 'pgds_flush_page_cache' );
 add_action( 'wp_update_nav_menu', 'pgds_flush_page_cache' );

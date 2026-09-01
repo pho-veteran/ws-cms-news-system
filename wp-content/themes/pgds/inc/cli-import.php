@@ -806,6 +806,31 @@ class PGDS_CLI_Command {
 		if ( empty( $rec['primary_cat'] ) ) {
 			return 'missing primary_cat';
 		}
+
+		/*
+		 * Categories must already exist in the target vocabulary (§4.1).
+		 *
+		 * Previously only "is it non-empty" was checked, and create_post() then called
+		 * pgds_ensure_category() on whatever slug it was given — so an unmapped source
+		 * category, or a typo, silently created a NEW category instead of failing. That
+		 * defeats the §9.1 requirement for an explicit mapping table and it is invisible
+		 * afterwards: the nav and the front-page blocks are built from the fixed set, so
+		 * the posts land in a term no reader can navigate to.
+		 *
+		 * Reported through the normal error channel, so an unmapped category counts toward
+		 * the 2% dry-run stop threshold (§9.2) and the operator sees it BEFORE importing
+		 * 2,000 posts. This is precisely what "Fix the mapping and run again" refers to.
+		 */
+		$known = pgds_category_slugs();
+		if ( ! in_array( (string) $rec['primary_cat'], $known, true ) ) {
+			return sprintf( 'unknown primary_cat "%s" (not in the §4.1 category set — add a mapping)', (string) $rec['primary_cat'] );
+		}
+		foreach ( (array) ( $rec['cats'] ?? array() ) as $cslug ) {
+			if ( ! in_array( (string) $cslug, $known, true ) ) {
+				return sprintf( 'unknown category "%s" (not in the §4.1 category set — add a mapping)', (string) $cslug );
+			}
+		}
+
 		return '';
 	}
 

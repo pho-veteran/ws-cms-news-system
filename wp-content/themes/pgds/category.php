@@ -48,8 +48,23 @@ pgds_breadcrumb();
 		<div>
 			<?php if ( have_posts() ) : ?>
 				<?php
-				$idx = 0;
+				/*
+				 * Layout: post 1 is a horizontal lead, posts 2-4 are a 3-up grid, the rest
+				 * are a list. Each wrapper is opened LAZILY, when a post that belongs in it
+				 * actually arrives, and closed from the same flag afterwards.
+				 *
+				 * The previous version opened the list wrapper as soon as post 4 rendered,
+				 * but only closed it when `$idx >= 5`. A category holding exactly FOUR posts
+				 * therefore emitted an unclosed <div>: measured on a purpose-built 4-post
+				 * category, <main> contained 39 opening and 38 closing div tags. Browsers
+				 * repair it, but the repair nests the pagination and the sidebar inside the
+				 * list, and it is invalid markup on a route that §13 requires to "render
+				 * correctly". 1-, 2- and 3-post categories were fine, which is why it
+				 * survived: the fixtures had no category in the 3-5 range.
+				 */
+				$idx       = 0;
 				$grid_open = false;
+				$list_open = false;
 				while ( have_posts() ) :
 					the_post();
 					$idx++;
@@ -57,20 +72,23 @@ pgds_breadcrumb();
 					if ( 1 === $idx ) {
 						// First post: horizontal lead.
 						get_template_part( 'template-parts/card-lead', null, array( 'post' => get_post(), 'eager' => true ) );
-						echo '<div class="pgds-grid-3 pgds-grid-3--spaced">';
-						$grid_open = true;
-					} elseif ( $idx >= 2 && $idx <= 4 ) {
-						// Next 3 posts: grid card.
+					} elseif ( $idx <= 4 ) {
+						// Posts 2-4: 3-up grid.
+						if ( ! $grid_open ) {
+							echo '<div class="pgds-grid-3 pgds-grid-3--spaced">';
+							$grid_open = true;
+						}
 						get_template_part( 'template-parts/card-secondary', null, array( 'post' => get_post(), 'variant' => 'full', 'bordered' => true ) );
-						if ( 4 === $idx ) {
+					} else {
+						// Post 5 onwards: list. Closing the grid here rather than at post 4
+						// means the grid is closed exactly once, whatever the post count.
+						if ( $grid_open ) {
 							echo '</div>';
 							$grid_open = false;
-							echo '<div class="pgds-list">';
 						}
-					} else {
-						// Remaining posts: list.
-						if ( 5 === $idx && ! $grid_open ) {
-							// list already opened above
+						if ( ! $list_open ) {
+							echo '<div class="pgds-list">';
+							$list_open = true;
 						}
 						get_template_part( 'template-parts/list-item', null, array( 'post' => get_post() ) );
 					}
@@ -79,7 +97,7 @@ pgds_breadcrumb();
 				if ( $grid_open ) {
 					echo '</div>';
 				}
-				if ( $idx >= 5 ) {
+				if ( $list_open ) {
 					echo '</div>'; // close .pgds-list
 				}
 				?>

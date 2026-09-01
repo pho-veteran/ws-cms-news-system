@@ -13,6 +13,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Every canonical category slug, flattened.
+ *
+ * The import's target vocabulary. §9.1 requires "Source-category -> target-category
+ * mapping (an explicit table)", and without a closed list there was nothing for a mapping
+ * to be checked against: `import` called pgds_ensure_category() on whatever slug appeared
+ * in the JSON, so a source category nobody had mapped — or a plain typo — silently CREATED
+ * a new category. The nav, the front-page blocks (§4.4) and the three-column section (§9 of
+ * the layout) are all built from this fixed set, so an extra term is invisible on the site
+ * while quietly holding articles no reader can reach through navigation.
+ *
+ * Derived from pgds_category_tree() rather than duplicated, so the two cannot drift.
+ *
+ * @return string[] Slugs, parents and children together.
+ */
+function pgds_category_slugs() {
+	$slugs = array();
+	foreach ( pgds_category_tree() as $parent_slug => $node ) {
+		$slugs[] = $parent_slug;
+		foreach ( array_keys( (array) ( $node['children'] ?? array() ) ) as $child_slug ) {
+			$slugs[] = $child_slug;
+		}
+	}
+	return $slugs;
+}
+
+/**
  * Category tree matching the 7-item nav (proposal §4.1).
  * parent-slug => array( child-slug => label ), key 'label' is for the parent itself.
  *

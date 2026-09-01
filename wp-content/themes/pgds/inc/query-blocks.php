@@ -155,26 +155,83 @@ function pgds_query_featured( $rank_from, $rank_to, $count, $fallback_cat = '' )
 }
 
 /**
- * Most viewed posts (sidebar). Prioritizes comment_count, falls back to most recent.
- * Allowed to overlap with other content on the page (reference list).
+ * Most read posts (sidebar). Prioritises comment_count, falls back to most recent.
  *
- * @param int $count Number of posts.
+ * Participates in the §4.4 deduplication pass, which lists the sidebar as its final step
+ * ("curated slots -> media block -> content grid 1 -> three-category block -> content
+ * grid 2 -> sidebar") under the rule "a post must not appear twice".
+ *
+ * This query used to opt out, with the comment "Allowed to overlap with other content on
+ * the page (reference list)". Measured on the rendered front page, that made the widget
+ * completely redundant: of 40 distinct posts on the page, exactly 5 appeared in more than
+ * one region, and ALL FIVE were the popular widget's own entries —
+ *
+ *   an-chay-dung-cach-fixture-2        [feature-grid, popular]
+ *   dai-le-phat-dan-pl-2570            [feature-grid, popular]
+ *   khoa-an-cu-kiet-ha-3-mien          [feature-grid, popular]
+ *   toan-canh-dai-le-phat-dan-video    [feature-grid, popular]
+ *   dai-le-phat-dan-pl-2570-fixture-1  [phatsu, popular]
+ *
+ * i.e. 5 of 5 slots repeated a headline already visible higher up the same screen. Every
+ * other region was clean. A "most read" box that shows only what the reader has just
+ * scrolled past costs a sidebar slot and surfaces nothing.
+ *
+ * Excluding used IDs would normally shorten the list, so the query asks for extra rows and
+ * filters, then tops up: the widget still renders exactly $count items.
+ *
+ * @param int  $count Number of posts.
+ * @param bool $dedup Exclude posts already used on this request. Front page passes true;
+ *                    single/category sidebars have no competing blocks, so the tracker is
+ *                    empty there and the flag makes no difference.
  * @return WP_Post[]
  */
-function pgds_query_popular( $count = 5 ) {
+function pgds_query_popular( $count = 5, $dedup = true ) {
+	$used = $dedup ? PGDS_Used_Ids::all() : array();
+
+	$base = array(
+		'post_type'      => 'post',
+		'post_status'    => 'publish',
+		'no_found_rows'  => true,
+		'orderby'        => array(
+			'comment_count' => 'DESC',
+			'date'          => 'DESC',
+		),
+	);
+
 	$q = new WP_Query(
-		array(
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'posts_per_page' => $count,
-			'no_found_rows'  => true,
-			'orderby'        => array(
-				'comment_count' => 'DESC',
-				'date'          => 'DESC',
-			),
+		array_merge(
+			$base,
+			array(
+				'posts_per_page' => $count,
+				'post__not_in'   => $used,
+			)
 		)
 	);
-	return $q->posts;
+	$posts = $q->posts;
+
+	/*
+	 * Top up when the front page has consumed so many posts that fewer than $count remain
+	 * unused. A short "most read" list reads as a fault rather than as an honest ranking,
+	 * and on a small site the exclusion set can easily exceed the post count — so the
+	 * fallback allows repeats rather than rendering three items in a five-item box. Ranking
+	 * order is preserved: the deduplicated rows come first.
+	 */
+	if ( count( $posts ) < $count ) {
+		$have = wp_list_pluck( $posts, 'ID' );
+		$fill = new WP_Query(
+			array_merge(
+				$base,
+				array(
+					'posts_per_page' => $count - count( $posts ),
+					'post__not_in'   => $have,
+				)
+			)
+		);
+		$posts = array_merge( $posts, $fill->posts );
+	}
+
+	PGDS_Used_Ids::mark( $posts );
+	return $posts;
 }
 
 /**

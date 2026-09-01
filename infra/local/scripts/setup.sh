@@ -49,10 +49,15 @@ $WP eval 'if (function_exists("pgds_seed_categories")) { pgds_seed_categories();
 echo "==> Flushing rewrite rules (video-sitemap.xml)..."
 $WP rewrite flush --hard
 
-echo "==> Importing sample data (dry run first)..."
-$WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200 --dry-run || true
+# The dry run is a GATE, not a formality (proposal §9.2: "dry run failure rate > 2%
+# means stop; do not import"). `|| true` on this line defeated it entirely: the importer
+# correctly exits non-zero above 2%, and the script then ran the real import anyway.
+# That made the one safety check in the migration path decorative — exactly the "start
+# importing while D0 is incomplete" risk §15 rates High.
+echo "==> Importing sample data (dry run first — a failure here stops the script)..."
+$WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200 --dry-run
 echo "==> Performing the actual import..."
-$WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200 || true
+$WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200
 
 echo "==> Marking the first post as Featured News (lead) so the homepage has data..."
 FIRST_ID=$($WP post list --post_type=post --posts_per_page=1 --field=ID --orderby=date --order=DESC)
