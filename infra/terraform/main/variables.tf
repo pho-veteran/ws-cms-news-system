@@ -33,11 +33,28 @@ variable "bundle_id" {
     ELIGIBILITY. Proposal 02 §8.2 treated get-bundles as proof that small_3_0 was
     available; that check was necessary but not sufficient.
 
-    The default is deliberately left at small_3_0 rather than lowered to micro_3_0:
-    Proposal 02 §2 excludes 1GB because it cannot run WordPress + MariaDB + Redis
-    ("Excluded for technical reasons, not price"), and §4.1's RAM budget needs
-    ~1.17GB before serving traffic. Shipping 1GB would trade a visible blocker for
-    silent swapping under load. Raise the cap via AWS Support, then apply unchanged.
+    The default is deliberately left at small_3_0 rather than lowered to micro_3_0 —
+    but NOT for the reason §2 gives. §2 says 1GB "cannot run WordPress + MariaDB +
+    Redis" and §4.1 budgets ~1.17GB. Both are estimates, and the RAM one is measurably
+    wrong. Measured on the live origin (2026-09-01), 300 requests at 25 concurrent with
+    the FastCGI cache bypassed so every request reached PHP:
+
+      idle                    459 MB used
+      peak under load         584 MB used, all 6 php-fpm children busy
+      swap used                 0 MB
+      core stack RSS          172 MB (mariadb 110, php-fpm 35, nginx 15, redis 12)
+
+    584 MB fits 1GB. Caveat that matters: the DB was 4.6MB and Redis held 1.45MB, so the
+    256MB InnoDB buffer pool and 160MB Redis ceiling were nearly empty. At full load the
+    §4.1 allocation is the right planning figure even though the measurement is lower.
+
+    The actual disqualifier for micro_3_0 is DISK, which no amount of tuning changes:
+    micro_3_0 ships 40GB total, and §4.2 expects 25-40GB of media alone plus the OS, the
+    database and the FastCGI cache. small_3_0's 60GB is what the media sizing assumed
+    (§4.2: "25-40 GB of media fits the 60GB bundle"). 40GB would run out during import.
+
+    So: raise the cap via AWS Support and apply unchanged, or stay on the EC2 fallback,
+    where the 60GB gp3 volume is sized independently of the instance.
   EOT
   type        = string
   default     = "small_3_0"
@@ -154,11 +171,30 @@ variable "compute_backend" {
     egress that EC2 bills separately.
 
     Set "ec2" only when Lightsail cannot deliver a 2 GB instance. On account
-    334156771769 that is the case today: CreateInstances refuses every bundle above
-    micro_3_0 (1 GB) in all regions tested, and §2 rules out 1 GB because it cannot
-    run WordPress + MariaDB + Redis. The EC2 fallback costs roughly $31/mo against
-    Lightsail's $12/mo, which exceeds the $100 operational cap in §8.1 over six
-    months — an explicit, reported regression, not a silent one. See ec2.tf.
+    334156771769 that is the case, re-confirmed 2026-09-01: CreateInstances still returns
+    InvalidInputException "your account can not create an instance using this Lightsail
+    plan size" for small_3_0, while micro_3_0 creates successfully — so the ceiling is
+    real and it is micro_3_0. micro_3_0 is rejected on DISK, not RAM: 40 GB against
+    §4.2's 25-40 GB of media plus OS, database and cache. See bundle_id above, which
+    records the RAM measurement that disproves §2's stated reason.
+
+    Cost, from the Pricing API for ap-southeast-1 rather than estimated:
+
+      t4g.small  730 h/mo x 6 @ $0.0212/h  = $92.86
+      gp3 60 GB          x 6 mo @ $0.096/GB = $34.56
+      Elastic IP 730 h/mo x 6 @ $0.005/h   = $21.90
+      ----------------------------------------------
+      six-month gross                       = $149.32  (~$24.89/mo)
+
+    versus $72.00 for Lightsail small_3_0. That is over §8.1's $100 figure and under the
+    $200 credits, leaving $50.68 of margin and ~$0 net cash outlay.
+
+    This is NOT a blocked state. §8.1 resolves the $100 itself: "$85 gross against $200
+    credits is ample margin — it is no longer a design-blocking constraint. Retain the
+    $100 cap as operational discipline to detect unexpected costs." It is a monitoring
+    threshold, and budgets.tf implements that discipline at $50 while adding thresholds
+    sized to the real projection. The binding constraint is the credit balance, which
+    $149.32 respects. See ec2.tf.
   EOT
   type        = string
   default     = "lightsail"
@@ -201,26 +237,39 @@ variable "ec2_root_volume_gb" {
 
 variable "monthly_run_rate_budget" {
   description = <<-EOT
-    Monthly run-rate budget in USD, for anomaly detection rather than for tracking the
-    lifetime cap (the lifetime $50/$85 thresholds in budgets.tf do that).
+    Monthly run-rate budget in USD, for anomaly detection rather than for tracking
+    cumulative spend (the lifetime thresholds in budgets.tf do that).
 
     Sized ABOVE the expected run rate so it signals something unexpected instead of
     firing every month on normal operation — the alert-fatigue trap §8.4 describes.
 
-    Expected: ~$12/mo on Lightsail, ~$31/mo on the EC2 fallback (ec2.tf). The default
-    of 45 leaves headroom over EC2's ~$31 while still catching a runaway: the volatile
-    component is egress at $0.12/GB beyond the first 100 GB free, and nothing in the
-    architecture caps it. At $45 the alarm trips at roughly 220 GB/month of egress,
-    which is well above the ~150 GB the traffic in §5.2 implies.
+    Expected run rate, from the Pricing API for ap-southeast-1 on 2026-09-01 rather than
+    from an estimate:
 
-    Lower this to ~20 after switching back to Lightsail, or the budget stops being a
-    meaningful signal.
+      t4g.small  730 h @ $0.0212/h  = $15.48/mo
+      gp3 60 GB        @ $0.096/GB  =  $5.76/mo
+      Elastic IP 730 h @ $0.005/h   =  $3.65/mo
+      ---------------------------------------------
+      measured                       = $24.89/mo
+
+    (An earlier revision of this file said "~$31/mo" for EC2. That was an estimate and it
+    was wrong; the figure above is queried.)
+
+    The default of 40 leaves ~$15 of headroom over the measured $24.89 — enough that a
+    normal month never alerts, tight enough that the volatile component shows up. That
+    component is egress at $0.12/GB beyond the first 100 GB free, which nothing in the
+    architecture caps: at $40 the alarm trips at roughly 125 GB/month of billable egress,
+    against the ~150 GB total the traffic in §5.2 implies (most of which Cloudflare serves,
+    so it never reaches the origin).
+
+    Lower this to ~20 if the origin ever moves back to Lightsail, or the budget stops
+    being a meaningful signal.
   EOT
   type        = string
-  default     = "45"
+  default     = "40"
 
   validation {
     condition     = can(tonumber(var.monthly_run_rate_budget)) && tonumber(var.monthly_run_rate_budget) > 0
-    error_message = "monthly_run_rate_budget must be a positive number expressed as a string, e.g. \"45\"."
+    error_message = "monthly_run_rate_budget must be a positive number expressed as a string, e.g. \"40\"."
   }
 }
