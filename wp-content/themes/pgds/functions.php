@@ -31,6 +31,7 @@ $pgds_modules = array(
 	'inc/cron.php',          // scheduled jobs (daily YouTube metadata sync, §6.4)
 	'inc/seo-schema.php',    // VideoObject + NewsMediaOrganization + video sitemap
 	'inc/admin-ux.php',      // admin columns, editorial UX
+	'inc/customizer.php',    // editorial/legal footer info (§13 go-live gate)
 	'inc/cli-import.php',    // WP-CLI import (only loaded when WP_CLI)
 );
 
