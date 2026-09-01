@@ -53,6 +53,39 @@ function pgds_sapo( $post ) {
 }
 
 /**
+ * Is the sapo EDITORIAL, or auto-generated from the body?
+ *
+ * pgds_sapo() falls back to get_the_excerpt(), which WordPress generates from the first ~55
+ * words of post_content when no manual excerpt exists. That fallback is right in a card, a
+ * list item or a schema description — those show the sapo INSTEAD of the body, so a
+ * generated summary is exactly what is wanted.
+ *
+ * It is wrong on a single article, where the sapo is printed directly above the full text:
+ * the lead paragraph then repeats, word for word, the sentence immediately beneath it.
+ * Observed on the pgds_teaching route once those posts got real bodies — the lead read
+ * "Tứ Vô Lượng Tâm là bốn tâm rộng lớn không bờ bến: Từ là mong người khác được an vui,
+ * Bi là vui trước…" and the first body paragraph began with the same words.
+ *
+ * A sapo is editorial when someone typed it: the `_pgds_sapo` meta field (§4.3), or a
+ * hand-written post_excerpt. Anything else is a machine summary and single.php skips it.
+ *
+ * @param int|WP_Post $post Post.
+ * @return bool
+ */
+function pgds_has_editorial_sapo( $post ) {
+	$post = get_post( $post );
+	if ( ! $post ) {
+		return false;
+	}
+	if ( '' !== trim( (string) get_post_meta( $post->ID, '_pgds_sapo', true ) ) ) {
+		return true;
+	}
+	// post_excerpt is empty unless an editor wrote one; the auto-generated summary is
+	// produced by get_the_excerpt() at render time and never stored.
+	return '' !== trim( (string) $post->post_excerpt );
+}
+
+/**
  * Primary category: _pgds_primary_cat meta, falls back to the first category.
  *
  * @param int|WP_Post $post Post.
@@ -276,18 +309,85 @@ function pgds_breadcrumb( $post = null ) {
 	$items = array();
 	$items[] = array( 'label' => __( 'Trang chủ', 'pgds' ), 'url' => home_url( '/' ) );
 
+	/*
+	 * Every branch must add at least one item beyond "Trang chủ".
+	 *
+	 * The guard used to be is_singular( 'post' ), which is narrower than the set of routes
+	 * that call this function. pgds_teaching singles (5 published, publicly queryable),
+	 * author archives and date archives all fell through every branch and rendered a
+	 * breadcrumb containing exactly one item — a <nav aria-label="Đường dẫn"> whose entire
+	 * content is a link to the page the reader is already able to reach from the masthead.
+	 * That is worse than no breadcrumb: it is an announced landmark with nothing in it.
+	 */
 	if ( is_singular( 'post' ) ) {
 		$term = pgds_primary_cat( $post ?: get_post() );
 		if ( $term ) {
 			$items[] = array( 'label' => $term->name, 'url' => get_term_link( $term ) );
 		}
 		$items[] = array( 'label' => get_the_title( $post ?: get_post() ), 'url' => '' );
+	} elseif ( is_singular() && ! is_page() && ! is_attachment() ) {
+		/*
+		 * Any other single: pgds_teaching today, and anything added later without having to
+		 * remember to touch this function. The post type's own label is the intermediate
+		 * crumb ("Lời Phật dạy"), linked to its archive when it has one and plain text when
+		 * it does not — pgds_teaching is has_archive => false, so it is plain text rather
+		 * than a link to a 404.
+		 *
+		 * `! is_page()` matters: is_singular() is TRUE for pages, so without it this branch
+		 * shadowed the is_page() branch below and rendered WordPress's internal English
+		 * label as a section — "Trang chủ › Pages › Giới thiệu" on a Vietnamese news site.
+		 * Attachments are excluded for the same reason: core 301s them to the file, so the
+		 * crumb would describe a page nobody can land on.
+		 */
+		$queried = $post ?: get_post();
+		$type    = $queried ? get_post_type_object( $queried->post_type ) : null;
+		if ( $type ) {
+			$archive = get_post_type_archive_link( $type->name );
+			$items[] = array(
+				'label' => $type->labels->name,
+				'url'   => $archive ? $archive : '',
+			);
+		}
+		$items[] = array( 'label' => get_the_title( $queried ), 'url' => '' );
 	} elseif ( is_category() || is_tax() || is_tag() ) {
 		$items[] = array( 'label' => single_term_title( '', false ), 'url' => '' );
+	} elseif ( is_author() ) {
+		/* translators: %s: author display name */
+		$items[] = array( 'label' => sprintf( __( 'Tác giả: %s', 'pgds' ), get_the_author() ), 'url' => '' );
+	} elseif ( is_year() || is_month() || is_day() ) {
+		// Reuses the archive title so the crumb and the <h1> cannot disagree, and so the
+		// Vietnamese month formatting (pgds_month_year_vi) is not duplicated here.
+		$items[] = array( 'label' => wp_strip_all_tags( get_the_archive_title() ), 'url' => '' );
+	} elseif ( is_post_type_archive() ) {
+		$items[] = array( 'label' => wp_strip_all_tags( post_type_archive_title( '', false ) ), 'url' => '' );
 	} elseif ( is_search() ) {
 		$items[] = array( 'label' => __( 'Tìm kiếm', 'pgds' ), 'url' => '' );
+		/*
+		 * No is_404() branch on purpose. 404.php does not call this function, and it should
+		 * not: the page already carries "Không tìm thấy trang" as its <h1>, so the crumb
+		 * would only repeat it — and a breadcrumb asserts a position in the hierarchy, which
+		 * a URL that does not exist has none of. The 404 offers search and recent posts as
+		 * the way forward instead. (An is_404() branch was written here and removed once it
+		 * became clear it could never execute.)
+		 */
 	} elseif ( is_page() ) {
+		// Ancestors first, so a nested page shows its real position rather than jumping
+		// from the home page straight to itself.
+		foreach ( array_reverse( get_post_ancestors( get_the_ID() ) ) as $ancestor_id ) {
+			$items[] = array(
+				'label' => get_the_title( $ancestor_id ),
+				'url'   => get_permalink( $ancestor_id ),
+			);
+		}
 		$items[] = array( 'label' => get_the_title(), 'url' => '' );
+	}
+
+	/*
+	 * A single-item breadcrumb is not a breadcrumb. If no branch matched — a route this
+	 * function has not been taught about — render nothing rather than an empty landmark.
+	 */
+	if ( count( $items ) < 2 ) {
+		return;
 	}
 
 	echo '<nav class="pgds-breadcrumb" aria-label="' . esc_attr__( 'Đường dẫn', 'pgds' ) . '"><div class="pgds-wrap"><ol>';

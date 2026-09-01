@@ -71,8 +71,36 @@ echo "==> Creating basic static pages..."
 $WP post create --post_type=page --post_status=publish --post_title="Giới thiệu" --post_content="Chuyên trang tin tức Phật giáo." >/dev/null || true
 $WP post create --post_type=page --post_status=publish --post_title="Liên hệ" --post_content="toasoan@phatgiaovadoisong.vn" >/dev/null || true
 
+# WITH a body: pgds_teaching is publicly_queryable, so this has a real single route served
+# by single.php. Created with a title alone it rendered an empty article — heading, meta,
+# then prev/next with nothing between. See the same fix in seed-media.sh.
+# Idempotent, and WITH a body.
+#
+# Two defects here, both found by opening the rendered route:
+#
+#   1. No existence check. `wp post create` ran unconditionally, so every re-run of this
+#      script added another copy — the database held TWO "Buông bỏ chấp niệm" posts. The
+#      sidebar block then listed the same teaching twice, and each duplicate had its own
+#      public URL competing with the original.
+#   2. No --post_content. pgds_teaching is publicly_queryable, so each item has a real
+#      single route served by single.php; with an empty body it rendered a bare shell —
+#      heading, meta line, then prev/next with nothing between.
+#
+# Same seed_teaching pattern as seed-media.sh: create when absent, backfill an empty body,
+# never overwrite a body someone has written.
 echo "==> Creating one Buddhist teaching item..."
-$WP post create --post_type=pgds_teaching --post_status=publish --post_title="Buông bỏ chấp niệm để tâm an nhiên" >/dev/null || true
+PGDS_TEACHING_TITLE="Buông bỏ chấp niệm để tâm an nhiên"
+PGDS_TEACHING_BODY="<p>“Người thả được gánh nặng xuống mới biết vai mình vốn nhẹ.”</p>
+<p>Chấp niệm là việc giữ mãi một ý nghĩ, một mong muốn hay một vết thương và không cho nó đi qua. Buông bỏ không có nghĩa là quên, cũng không phải bỏ mặc — mà là thôi dùng sức để níu giữ điều đã qua.</p>
+<p>Thực hành cụ thể: khi một ý nghĩ cũ trở lại, chỉ cần nhận biết “đây là ý nghĩ cũ”, không tranh luận với nó, không nuôi thêm. Nó sẽ tự nhạt dần như mọi hiện tượng khác.</p>"
+
+PGDS_TEACHING_ID="$($WP post list --post_type=pgds_teaching --title="$PGDS_TEACHING_TITLE" --field=ID | head -1)"
+if [ -z "$PGDS_TEACHING_ID" ]; then
+  $WP post create --post_type=pgds_teaching --post_status=publish \
+    --post_title="$PGDS_TEACHING_TITLE" --post_content="$PGDS_TEACHING_BODY" >/dev/null || true
+elif [ -z "$($WP post get "$PGDS_TEACHING_ID" --field=post_content | tr -d '[:space:]')" ]; then
+  $WP post update "$PGDS_TEACHING_ID" --post_content="$PGDS_TEACHING_BODY" >/dev/null || true
+fi
 
 echo ""
 echo "==> COMPLETE. Open http://localhost:8080  (admin/admin123 at /wp-admin)"

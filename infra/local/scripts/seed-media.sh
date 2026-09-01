@@ -84,14 +84,47 @@ $WP post meta update "$lunar" _pgds_lunar_sub "Tháng 7 Bính Ngọ" >/dev/null
 $WP post meta update "$lunar" _pgds_menh "Sơn đầu hỏa" >/dev/null
 $WP post meta update "$lunar" _pgds_gio "Dần (3h-5h), Thìn (7h-9h), Tỵ (9h-11h)" >/dev/null
 
+# Teachings are seeded WITH a body.
+#
+# They were previously created with --post_title only. pgds_teaching is public and
+# publicly_queryable with 5 published items, so each one has a real single route served by
+# single.php — and with an empty post_content those routes rendered a bare shell: heading,
+# meta line, then straight to prev/next with nothing between. The sidebar block that reads
+# these only needs titles, which is why the gap survived: the front page looked correct
+# while five reachable pages were empty.
+#
+# The bodies below are short on purpose. A "Lời Phật dạy" entry is a passage plus a brief
+# gloss, not an article, and single.php already gives it the article measure and typography.
 echo "==> Seeding the remaining teachings so the sidebar block is full..."
-for t in "Nhân quả và cách sống thiện lành mỗi ngày" \
-         "Tứ Vô Lượng Tâm: Từ - Bi - Hỷ - Xả trong đời sống" \
-         "Giữ tâm bình thản trước mọi biến động cuộc đời"; do
-  if [ -z "$($WP post list --post_type=pgds_teaching --title="$t" --field=ID)" ]; then
-    $WP post create --post_type=pgds_teaching --post_status=publish --post_title="$t" >/dev/null
+seed_teaching() {
+  local title="$1" body="$2"
+  if [ -z "$($WP post list --post_type=pgds_teaching --title="$title" --field=ID)" ]; then
+    $WP post create --post_type=pgds_teaching --post_status=publish \
+      --post_title="$title" --post_content="$body" >/dev/null
+  else
+    # Backfill an existing empty body without touching one someone has written.
+    local id
+    id="$($WP post list --post_type=pgds_teaching --title="$title" --field=ID | head -1)"
+    if [ -n "$id" ] && [ -z "$($WP post get "$id" --field=post_content | tr -d '[:space:]')" ]; then
+      $WP post update "$id" --post_content="$body" >/dev/null
+    fi
   fi
-done
+}
+
+seed_teaching "Nhân quả và cách sống thiện lành mỗi ngày" \
+"<p>“Không làm các điều ác, thành tựu các việc lành, giữ tâm ý trong sạch — đó là lời chư Phật dạy.”</p>
+<p>Nhân quả không phải sự trừng phạt từ bên ngoài, mà là quy luật tự nhiên của hành động và kết quả. Mỗi lời nói, mỗi việc làm đều gieo một hạt giống; điều ta gặp hôm nay phần lớn là hoa trái của những hạt giống đã gieo từ trước.</p>
+<p>Vì vậy, sống thiện lành không cần chờ dịp lớn. Một lời nói bớt sắc, một việc giúp người trong tầm tay, một phút giữ tâm không khởi niệm oán — đều là gieo hạt.</p>"
+
+seed_teaching "Tứ Vô Lượng Tâm: Từ - Bi - Hỷ - Xả trong đời sống" \
+"<p>Tứ Vô Lượng Tâm là bốn tâm rộng lớn không bờ bến: <strong>Từ</strong> là mong người khác được an vui, <strong>Bi</strong> là mong người khác thoát khỏi khổ, <strong>Hỷ</strong> là vui trước hạnh phúc của người, <strong>Xả</strong> là tâm bình đẳng, không phân biệt thân sơ.</p>
+<p>Bốn tâm này nương nhau. Từ và Bi mà thiếu Xả dễ thành thiên vị, chỉ thương người gần mình. Hỷ mà thiếu Bi dễ thành hời hợt trước nỗi khổ của người khác.</p>
+<p>Thực hành không bắt đầu từ điều lớn lao, mà từ việc quan sát tâm mình trong những phản ứng thường ngày: khi nghe tin ai đó thành công, khi gặp người mình không ưa.</p>"
+
+seed_teaching "Giữ tâm bình thản trước mọi biến động cuộc đời" \
+"<p>“Như tảng đá vững vàng không bị gió lay, người có tâm an định không bị khen chê làm dao động.”</p>
+<p>Bình thản không phải là lạnh nhạt hay chối bỏ cảm xúc. Đó là khả năng nhận biết điều đang xảy ra mà không lập tức bị nó cuốn đi — thấy cơn giận đang khởi lên và biết rằng mình không phải là cơn giận đó.</p>
+<p>Cuộc đời vốn có được mất, hợp tan. Điều ta có thể tập là không thêm vào đó lớp khổ thứ hai do chính tâm mình dựng lên.</p>"
 
 echo "==> Flushing caches..."
 $WP cache flush >/dev/null 2>&1 || true

@@ -29,7 +29,18 @@ while ( have_posts() ) :
 					<?php pgds_cat_label( $post_id ); ?>
 					<h1 class="pgds-article__title"><?php the_title(); ?></h1>
 
-					<?php $sapo = pgds_sapo( $post_id ); ?>
+					<?php
+					/*
+					 * Only an EDITORIAL sapo, never the auto-generated excerpt.
+					 *
+					 * pgds_sapo() falls back to get_the_excerpt(), which WordPress builds
+					 * from the opening words of the body. Printed here — directly above the
+					 * full text — that made the lead paragraph repeat the sentence beneath
+					 * it verbatim. Correct in a card (which shows the sapo instead of the
+					 * body), wrong on the article itself.
+					 */
+					$sapo = pgds_has_editorial_sapo( $post_id ) ? pgds_sapo( $post_id ) : '';
+					?>
 					<?php if ( $sapo ) : ?>
 						<p class="pgds-article__sapo"><?php echo esc_html( $sapo ); ?></p>
 					<?php endif; ?>

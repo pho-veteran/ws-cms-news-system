@@ -38,4 +38,37 @@ docker compose down -v       # drop volumes too (start clean next time)
   immediately. CSS/JS changes still need a rebuild.
 - The Redis object cache is installed via the `redis-cache` plugin, which needs network
   access on first run.
+
+### This stack has ONE of the four §8 plugins — do not verify schema here
+
+`setup.sh` installs only `redis-cache`. The origin runs all four from Proposal 02 §8:
+
+| Plugin | Local | Origin |
+|---|---|---|
+| `redis-cache` | yes | yes |
+| `autodescription` (The SEO Framework) | **no** | yes |
+| `two-factor` | **no** | yes |
+| `wp-mail-smtp` | **no** | yes |
+
+That matters for one specific check. §7 splits schema ownership: `NewsArticle`,
+`BreadcrumbList` and `WebSite` belong to the SEO plugin, while the theme emits only
+`VideoObject` and `NewsMediaOrganization`. The §13 gate is "confirm that **no schema is
+emitted twice**" — and that is **unfalsifiable locally**, because the plugin that owns half
+the output is absent. A local page showing one `VideoObject` block proves nothing about
+duplication.
+
+Verify it against the origin instead:
+
+```bash
+ssh ubuntu@<origin> \
+  "curl -s -H 'Cookie: wordpress_logged_in_probe=1' http://127.0.0.1/<a-post-slug>/" \
+  | grep -o 'application/ld+json'
+```
+
+Measured on the origin 2026-09-01: 2 blocks — `WebSite` + `WebPage` (plugin) and
+`VideoObject` (theme), no type repeated. The `wordpress_logged_in_*` cookie is required or
+FastCGI serves a cached copy and the response says nothing about the current code.
+
+The theme's own `NewsArticle` output stays behind `PGDS_EMIT_ARTICLE_SCHEMA` precisely so
+this split cannot collide; see `inc/seo-schema.php`.
 - YouTube posters: `wp pgds yt-sync` pulls thumbnails and durations locally.
