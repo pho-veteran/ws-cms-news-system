@@ -159,4 +159,43 @@ systemctl restart ssh || systemctl restart sshd
 # ---------------------------------------------------------------------------
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
+# ---------------------------------------------------------------------------
+# 10. Scheduled jobs (/etc/cron.d/pgds).
+#
+# This file previously existed ONLY on the running origin, hand-created after
+# provisioning. RUNBOOK §7 documented the schedules as if they were part of the build,
+# but nothing in the repository created them — so rebuilding the instance from this
+# script silently produced a host with no database backups (§6.1), no RAM/disk
+# monitoring (§7), and no WP-Cron driver. The backups are the serious one: their absence
+# is invisible until a restore is attempted.
+#
+# Written unconditionally here so the schedule is a property of the build. The scripts
+# themselves are deployed separately (rsync from infra/scripts/, see RUNBOOK §7); cron
+# tolerates a missing target with a log line rather than failing, and the alternative —
+# no schedule at all — is worse.
+#
+# Times are deliberately off-the-hour and staggered: the 2 GB origin cannot absorb a
+# database dump, an image-processing sync and a traffic spike at once (§4.1).
+# ---------------------------------------------------------------------------
+install -d -m 0755 /etc/cron.d
+cat > /etc/cron.d/pgds <<'CRON'
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+
+# Database backup -> S3, twice daily (§6.1).
+17 3,15 * * * root /usr/local/sbin/pgds-db-backup.sh >/dev/null 2>&1
+
+# RAM / disk / swap thresholds + service liveness (§7). Replaces the CloudWatch agent.
+*/10 * * * * root /usr/local/sbin/pgds-health-alert.sh >/dev/null 2>&1
+
+# WP-Cron driver. REQUIRED: wp-config.php sets DISABLE_WP_CRON (see
+# infra/wp-config-hardening.sample.php), and even without it the FastCGI page cache means
+# anonymous requests never reach PHP, so the default request-triggered WP-Cron almost
+# never fires. Without this line the theme's daily pgds_fetch_yt_meta job (§6.4) — and
+# every core job like wp_scheduled_delete — silently never runs.
+*/5 * * * * www-data cd /var/www/pgds && /usr/local/bin/wp cron event run --due-now --quiet >/dev/null 2>&1
+CRON
+chmod 0644 /etc/cron.d/pgds
+
 echo "pgds LEMP bootstrap complete." > /var/log/pgds-user-data-done.log

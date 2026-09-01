@@ -31,7 +31,23 @@ define( 'DISABLE_WP_CRON', true );
 define( 'WP_REDIS_HOST', '127.0.0.1' );
 define( 'WP_REDIS_PORT', 6379 );
 define( 'WP_REDIS_MAXTTL', 43200 );
-define( 'WP_CACHE_KEY_SALT', 'pgds:' );
+/*
+ * WP_CACHE_KEY_SALT is deliberately NOT defined here.
+ *
+ * WordPress's own generated salts block already defines it, above wherever this snippet
+ * gets pasted. Adding a second define() does not override the first — PHP keeps the FIRST
+ * definition and emits "Constant WP_CACHE_KEY_SALT already defined" on every request that
+ * loads WP-CLI. Observed on the live origin: two definitions in wp-config.php, and the
+ * intended 'pgds:' value at the later line was simply ignored, so the visible effect of
+ * this line was a warning and nothing else.
+ *
+ * The generated random salt already achieves the only thing the prefix was for — keeping
+ * this install's keys distinct from anything else sharing the Redis instance — and does it
+ * better, since it is unique per install rather than a shared literal.
+ *
+ * If a readable prefix is genuinely wanted, EDIT the existing define() in the salts block
+ * rather than adding one here.
+ */
 
 // --- FastCGI cache directory for the mu-plugin flush ---
 define( 'PGDS_FCGI_CACHE_DIR', '/var/cache/nginx/fcgi' );
