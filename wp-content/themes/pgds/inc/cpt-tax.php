@@ -40,50 +40,67 @@ function pgds_category_slugs() {
 
 /**
  * Category tree matching the 7-item nav (proposal §4.1).
- * parent-slug => array( child-slug => label ), key 'label' is for the parent itself.
+ * parent-slug => array( 'label', 'description', 'children' => array( child-slug => label ) ).
+ *
+ * Descriptions exist because category.php and archive.php both render
+ * `.pgds-page-head__desc` from term_description(), and NO term had a description — so a
+ * category landing page was a bare list of headlines under a heading, which reads as a
+ * search result rather than a curated section. On a news site the section intro is what
+ * tells a reader what they have arrived at, and it is also the text a search engine shows
+ * for the section. Verified the styling was already correct and only the content was
+ * missing: 490px measure (70ch), 24px below the heading, no overflow at 360px.
+ *
+ * Children are intentionally left without descriptions: they are narrow leaf topics whose
+ * parent already explains the area, and a description per leaf would be filler.
  *
  * @return array
  */
 function pgds_category_tree() {
 	return array(
 		'tin-phat-su'      => array(
-			'label'    => 'Tin Phật sự',
-			'children' => array(
+			'label'       => 'Tin Phật sự',
+			'description' => 'Tin tức về hoạt động Phật sự của Giáo hội, các tự viện và cộng đồng Phật tử trên cả nước.',
+			'children'    => array(
 				'tin-giao-hoi'   => 'Tin Giáo hội',
 				'su-kien-le-hoi' => 'Sự kiện – Lễ hội',
 			),
 		),
 		'song-an-lanh'     => array(
-			'label'    => 'Sống an lành',
-			'children' => array(
-				'am-thuc-chay' => 'Ẩm thực chay',
+			'label'       => 'Sống an lành',
+			'description' => 'Ăn chay, thiền tập và lối sống xanh — những thực hành giúp đời sống thường ngày trở nên nhẹ nhàng hơn.',
+			'children'    => array(
+				'am-thuc-chay'  => 'Ẩm thực chay',
 				'loi-song-xanh' => 'Lối sống xanh',
 			),
 		),
 		'phat-tich'        => array(
-			'label'    => 'Phật tích',
-			'children' => array(
-				'chua-am'             => 'Chùa – Am',
+			'label'       => 'Phật tích',
+			'description' => 'Chùa, am và các di tích — danh thắng Phật giáo: kiến trúc, lịch sử và giá trị văn hoá của từng ngôi cổ tự.',
+			'children'    => array(
+				'chua-am'            => 'Chùa – Am',
 				'di-tich-danh-thang' => 'Di tích – Danh thắng',
 			),
 		),
 		'media'            => array(
-			'label'    => 'Media',
-			'children' => array(
+			'label'       => 'Media',
+			'description' => 'Video, infographic và emagazine: những câu chuyện Phật giáo kể bằng hình ảnh và âm thanh.',
+			'children'    => array(
 				'video'                 => 'Video',
 				'infographic-emagazine' => 'Infographic – Emagazine',
 			),
 		),
 		'tot-doi-dep-dao'  => array(
-			'label'    => 'Tốt đời – đẹp đạo',
-			'children' => array(
+			'label'       => 'Tốt đời – đẹp đạo',
+			'description' => 'Người tốt việc tốt và các hoạt động thiện nguyện — tinh thần từ bi thể hiện qua việc làm cụ thể.',
+			'children'    => array(
 				'nguoi-tot-viec-tot' => 'Người tốt việc tốt',
 				'thien-nguyen'       => 'Thiện nguyện',
 			),
 		),
 		'vietnam-buddhism' => array(
-			'label'    => 'Vietnam Buddhism',
-			'children' => array(),
+			'label'       => 'Vietnam Buddhism',
+			'description' => 'Vietnamese Buddhism for international readers: heritage, practice and community life.',
+			'children'    => array(),
 		),
 	);
 }
@@ -158,7 +175,7 @@ add_action( 'init', 'pgds_register_cpt_tax' );
 function pgds_seed_categories() {
 	$created = array();
 	foreach ( pgds_category_tree() as $slug => $node ) {
-		$parent_id = pgds_ensure_category( $slug, $node['label'], 0 );
+		$parent_id        = pgds_ensure_category( $slug, $node['label'], 0, $node['description'] ?? '' );
 		$created[ $slug ] = $parent_id;
 		if ( ! empty( $node['children'] ) ) {
 			foreach ( $node['children'] as $child_slug => $child_label ) {
@@ -172,22 +189,35 @@ function pgds_seed_categories() {
 /**
  * Create category if it doesn't exist, return term_id.
  *
- * @param string $slug   Slug.
- * @param string $label  Display name.
- * @param int    $parent Parent term.
+ * Idempotent by slug. When the term already exists, a description is backfilled but an
+ * existing one is never overwritten: re-running the seeder on a live site must not silently
+ * replace copy an editor has since rewritten. Only the empty case is filled, which is what
+ * makes this safe to run against production after adding descriptions to the tree.
+ *
+ * @param string $slug        Slug.
+ * @param string $label       Display name.
+ * @param int    $parent      Parent term.
+ * @param string $description Optional term description (§4.1 section intro).
  * @return int
  */
-function pgds_ensure_category( $slug, $label, $parent = 0 ) {
+function pgds_ensure_category( $slug, $label, $parent = 0, $description = '' ) {
 	$existing = get_term_by( 'slug', $slug, 'category' );
 	if ( $existing instanceof WP_Term ) {
+		// Backfill only. '' means "the editor has not written one", not "the editor cleared it"
+		// — the latter is indistinguishable, and erring toward filling an empty section intro
+		// is better than leaving a category page with no explanation of itself.
+		if ( '' !== $description && '' === trim( (string) $existing->description ) ) {
+			wp_update_term( $existing->term_id, 'category', array( 'description' => $description ) );
+		}
 		return (int) $existing->term_id;
 	}
 	$res = wp_insert_term(
 		$label,
 		'category',
 		array(
-			'slug'   => $slug,
-			'parent' => $parent,
+			'slug'        => $slug,
+			'parent'      => $parent,
+			'description' => $description,
 		)
 	);
 	if ( is_wp_error( $res ) ) {
