@@ -208,9 +208,29 @@ resource "aws_instance" "app" {
   }
 
   lifecycle {
-    # The AMI parameter resolves to a new ID on each Ubuntu release. Without this,
-    # every plan after an upstream release would propose destroying the live origin.
-    ignore_changes = [ami]
+    /*
+     * ami: the SSM parameter resolves to a new ID on each Ubuntu release. Without this,
+     * every plan after an upstream release would propose destroying the live origin.
+     *
+     * user_data: cloud-init runs it ONCE, at first boot. Terraform nonetheless treats a
+     * change to it as requiring a stop/start of the instance — the plan showed exactly
+     * that after §10 (the cron block) was added to the script:
+     *
+     *   ~ resource "aws_instance" "app" {
+     *       ~ public_ip  = "3.1.122.66" -> (known after apply)
+     *       ~ user_data  = <<-EOT ...
+     *
+     * That is production downtime in exchange for re-running nothing: the already-booted
+     * instance would not execute the new text either way. The Elastic IP survives a
+     * stop/start so the address would be preserved, but the outage would be real.
+     *
+     * The consequence to be explicit about: editing user_data.sh no longer affects a
+     * RUNNING instance at all. Changes there apply to the next instance built from it, so
+     * anything needed on the current origin must also be applied directly — the §10 cron
+     * block was installed over SSH for exactly this reason. A rebuild is what makes the
+     * script authoritative again.
+     */
+    ignore_changes = [ami, user_data]
   }
 }
 

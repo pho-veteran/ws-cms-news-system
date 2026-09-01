@@ -235,6 +235,29 @@ variable "ec2_root_volume_gb" {
   }
 }
 
+variable "alarm_notification_email" {
+  description = <<-EOT
+    Address subscribed to the pgds-alarms SNS topic (alarms.tf).
+
+    Empty by default, deliberately. AWS sends a confirmation link the subscriber must
+    click, so an unconfirmed subscription delivers nothing — and pointing it at a
+    placeholder would make monitoring LOOK configured while silently dropping every
+    alarm, which is worse than an obviously empty setting.
+
+    SNS is used rather than SES because SNS email confirms by its own link and does not
+    require a verified SES identity, which in turn would require DNS on a domain this
+    account does not control. The alarms record state and are visible in the console
+    with or without a subscriber.
+  EOT
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.alarm_notification_email == "" || can(regex("^[^@ ]+@[^@ ]+\\.[^@ ]+$", var.alarm_notification_email))
+    error_message = "alarm_notification_email must be empty or a single valid email address."
+  }
+}
+
 variable "monthly_run_rate_budget" {
   description = <<-EOT
     Monthly run-rate budget in USD, for anomaly detection rather than for tracking
