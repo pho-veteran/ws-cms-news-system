@@ -299,7 +299,20 @@ end of the training document so the newsroom sees them:
 1. **Cloudflare token** — scoped `Zone:Read`, `Zone Settings:Edit`, `Cache Rules:Edit`. No CLI
    to install; `infra/scripts/pgds-cloudflare-setup.sh` uses `curl` only. Run it with
    `--dry-run` first.
-2. **Alert email** — set `alarm_notification_email`, apply, then click AWS's confirmation
-   link. SNS-based, so it needs neither SES nor a verified domain.
+2. **Alert email** — **done 2026-09-01.** Both `alarm_notification_email` and
+   `budget_notification_emails` are set to the operator's mailbox and applied. The four
+   budgets deliver immediately; the SNS subscription sits in `PendingConfirmation` until
+   the recipient clicks AWS's confirmation email once. Verify with:
+
+   ```bash
+   aws sns list-subscriptions-by-topic --region ap-southeast-1 \
+     --topic-arn arn:aws:sns:ap-southeast-1:334156771769:pgds-alarms \
+     --query 'Subscriptions[].{p:Protocol,e:Endpoint,arn:SubscriptionArn}'
+   ```
+
+   `arn: PendingConfirmation` means the link has not been clicked yet. Note the address
+   lives in `infra/terraform/main/terraform.tfvars`, which is **gitignored** — so it is
+   not recoverable from the repo. Re-set it after any fresh clone before applying, or the
+   variable's empty default silently creates no subscription at all.
 3. **Footer legal text** — Appearance → Customize → Thông tin toà soạn (§13 gate; explicitly
    not a technical decision).
