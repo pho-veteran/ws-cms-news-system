@@ -193,6 +193,19 @@ class PGDS_CLI_Command {
 	 *
 	 * [--force]
 	 * : Re-download posters even when one already exists.
+	 *
+	 * [--limit=<n>]
+	 * : Process at most N posts, least-recently-modified first, so repeated runs rotate
+	 * through the library. 0 or omitted = no limit. The daily cron job passes a limit; an
+	 * operator running this by hand normally should not.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Everything, watched by a human.
+	 *     wp pgds yt-sync
+	 *
+	 *     # A bounded slice, as the scheduled job runs it.
+	 *     wp pgds yt-sync --limit=200
 	 */
 	public function yt_sync( $args, $assoc_args ) {
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -202,26 +215,94 @@ class PGDS_CLI_Command {
 		$force   = isset( $assoc_args['force'] );
 		$only    = isset( $assoc_args['post'] ) ? (int) $assoc_args['post'] : 0;
 		$api_key = defined( 'PGDS_YT_API_KEY' ) ? PGDS_YT_API_KEY : '';
+		/*
+		 * --limit exists because this is now also a SCHEDULED job (inc/cron.php, §6.4).
+		 *
+		 * Unbounded is defensible when a human types the command and watches it; unattended
+		 * at 03:40 it is not. The first run after the §9 import faces ~2,000 posters to
+		 * fetch, each a download_url() + media_handle_sideload(), on a 2 GB origin, while
+		 * pgds-db-backup.sh runs from `17 3 * * *`. An OOM kill there is invisible: nobody
+		 * reads the output, and the only symptom is durations that quietly stop updating.
+		 *
+		 * 0 = no limit, preserving the previous behaviour for an operator running it by hand.
+		 */
+		$limit = isset( $assoc_args['limit'] ) ? max( 0, (int) $assoc_args['limit'] ) : 0;
 
 		$query_args = array(
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
-			'posts_per_page' => -1,
+			'posts_per_page' => $limit > 0 ? $limit : -1,
 			'no_found_rows'  => true,
 			'meta_query'     => array( array( 'key' => '_pgds_youtube_id', 'compare' => 'EXISTS' ) ),
 		);
 		if ( $only ) {
 			$query_args = array( 'post_type' => 'post', 'p' => $only, 'post_status' => 'any' );
 		}
-		$posts = get_posts( $query_args );
+
+		if ( $limit > 0 && ! $only ) {
+			/*
+			 * Rotate on an explicit cursor, in TWO queries: never-synced first, then
+			 * least-recently-synced.
+			 *
+			 * Two failed approaches, both measured rather than reasoned about:
+			 *
+			 *   1. orderby 'modified' — update_post_meta() does NOT touch post_modified
+			 *      (checked: identical before and after), so every run re-selected the same N
+			 *      posts and the rest of the library was never synced. Four successive
+			 *      `--limit=2` runs left coverage stuck at 2/9.
+			 *   2. A single query with an OR meta_query and named-clause orderby
+			 *      ('never' DESC, 'synced' ASC) — the NOT EXISTS clause does not sort as
+			 *      intended: with limit 3 it returned 4,7,8 where 8 was the ONLY unsynced post
+			 *      and came last.
+			 *
+			 * Two plain queries are unambiguous and cheap (the second only runs when the first
+			 * is short), and the ordering is expressed by execution order rather than by SQL
+			 * the meta_query builder has to get right.
+			 */
+			$fresh = get_posts(
+				array(
+					'post_type'      => 'post',
+					'post_status'    => 'publish',
+					'posts_per_page' => $limit,
+					'no_found_rows'  => true,
+					'meta_query'     => array(
+						array( 'key' => '_pgds_youtube_id', 'compare' => 'EXISTS' ),
+						array( 'key' => '_pgds_yt_synced', 'compare' => 'NOT EXISTS' ),
+					),
+				)
+			);
+
+			$posts = $fresh;
+			if ( count( $posts ) < $limit ) {
+				$stale = get_posts(
+					array(
+						'post_type'      => 'post',
+						'post_status'    => 'publish',
+						'posts_per_page' => $limit - count( $posts ),
+						'no_found_rows'  => true,
+						'post__not_in'   => wp_list_pluck( $posts, 'ID' ),
+						'meta_key'       => '_pgds_yt_synced', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+						'orderby'        => 'meta_value_num',
+						'order'          => 'ASC',
+						'meta_query'     => array(
+							array( 'key' => '_pgds_youtube_id', 'compare' => 'EXISTS' ),
+						),
+					)
+				);
+				$posts = array_merge( $posts, $stale );
+			}
+		} else {
+			$posts = get_posts( $query_args );
+		}
 
 		if ( ! $posts ) {
 			WP_CLI::warning( 'No posts have _pgds_youtube_id.' );
 			return;
 		}
 
-		$ids   = array();
-		$done  = 0;
+		$ids       = array();
+		$done      = 0;
+		$processed = 0;
 		foreach ( $posts as $p ) {
 			$vid = get_post_meta( $p->ID, '_pgds_youtube_id', true );
 			if ( ! $vid ) {
@@ -259,6 +340,25 @@ class PGDS_CLI_Command {
 						WP_CLI::warning( "{$vid}: unable to download thumbnail." );
 					}
 				}
+			}
+
+			/*
+			 * Clear the object cache periodically, matching media_variants().
+			 *
+			 * This loop materialises full WP_Post objects and calls media_handle_sideload()
+			 * per post, each of which generates every registered image size. Without this the
+			 * accumulated attachment metadata is what pushes a 2 GB origin into swap — the
+			 * same reason media_variants() clears every 50 iterations. It matters more here
+			 * now that the job also runs unattended from cron (§6.4).
+			 */
+			// Rotation cursor for --limit (see the meta_query above). Written for every post
+			// the loop reaches, including skips, so a post whose poster already exists still
+			// moves to the back of the queue instead of being re-selected every night.
+			update_post_meta( $p->ID, '_pgds_yt_synced', time() );
+
+			++$processed;
+			if ( 0 === $processed % 25 ) {
+				\WP_CLI\Utils\wp_clear_object_cache();
 			}
 		}
 

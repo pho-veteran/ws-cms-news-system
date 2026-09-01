@@ -129,7 +129,19 @@ function pgds_run_yt_sync() {
 		return;
 	}
 
+	/*
+	 * Bounded, because this runs unattended.
+	 *
+	 * yt_sync() is otherwise a `posts_per_page => -1` query that calls download_url() +
+	 * media_handle_sideload() per post. The first run after the §9 import would face ~2,000
+	 * posters on a 2 GB origin at 03:40, overlapping the 03:17 database backup; an OOM kill
+	 * there is silent, and the only symptom is durations that stop updating.
+	 *
+	 * 200/night ordered least-recently-modified-first works through 2,000 posts in ten
+	 * nights and then keeps rotating, which is well inside the 10,000 unit/day quota (§6.4
+	 * batches 50 IDs per unit, so 200 posts costs 4 units).
+	 */
 	$cmd = new PGDS_CLI_Command();
-	$cmd->yt_sync( array(), array() );
+	$cmd->yt_sync( array(), array( 'limit' => 200 ) );
 }
 add_action( PGDS_YT_SYNC_HOOK, 'pgds_run_yt_sync' );
