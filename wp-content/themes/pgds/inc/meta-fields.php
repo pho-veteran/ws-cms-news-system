@@ -66,6 +66,12 @@ function pgds_register_meta() {
 		// pgds_meta_fields(), which drives the editor meta box. An editable field would
 		// invite an editor to type a title the next sync silently overwrites.
 		'_pgds_youtube_title' => 'string',
+		// Attachment ID of the poster downloaded by yt-sync, stored alongside the URL in
+		// _pgds_youtube_poster. Same rationale as _pgds_youtube_title: written by the sync,
+		// never by hand, so it is typed and REST-visible but is not an editor field. The
+		// facade prefers the ID because wp_get_attachment_image() can then emit the real
+		// width/height and a srcset, which a bare URL cannot.
+		'_pgds_youtube_poster_id' => 'integer',
 		'_pgds_is_featured'  => 'boolean',
 		'_pgds_feature_rank' => 'integer',
 		'_pgds_photo_story'  => 'boolean',

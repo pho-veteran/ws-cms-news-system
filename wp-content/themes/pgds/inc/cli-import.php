@@ -197,6 +197,11 @@ class PGDS_CLI_Command {
 						);
 						if ( ! is_wp_error( $att_id ) ) {
 							update_post_meta( $p->ID, '_pgds_youtube_poster', wp_get_attachment_image_url( $att_id, 'pgds-lead' ) );
+							// Store the ID as well as the URL: the facade renders through
+							// wp_get_attachment_image() when it has an ID, which yields the
+							// attachment's real width/height plus srcset. A bare URL can only
+							// be emitted with guessed dimensions.
+							update_post_meta( $p->ID, '_pgds_youtube_poster_id', (int) $att_id );
 							$done++;
 							WP_CLI::log( "✓ {$vid}: poster downloaded." );
 						} else {
@@ -419,36 +424,202 @@ class PGDS_CLI_Command {
 	}
 
 	/**
-	 * Regenerate image variants + WebP.
+	 * Regenerate image variants (§9.3). Sub-sizes are written as WebP.
+	 *
+	 * The WebP conversion itself lives in pgds_webp_output_format() (inc/setup.php) on
+	 * core's `image_editor_output_format`, so it applies to editor uploads as well as to
+	 * this command — a command-only conversion would leave every future upload as JPEG.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--regenerate]
-	 * : Regenerate all attachments.
+	 * : Rebuild variants for attachments that already have complete metadata. Without
+	 * this flag only attachments MISSING a variant are processed, which is what makes
+	 * the command safe to re-run after a partial pass.
+	 *
+	 * [--dry-run]
+	 * : Report what would be processed and exit without writing files.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Fill in whatever is missing (safe to repeat after an interrupted run).
+	 *     nice -n 19 wp pgds media-variants
+	 *
+	 *     # Rebuild everything, e.g. after changing pgds_image_sizes().
+	 *     nice -n 19 wp pgds media-variants --regenerate
+	 *
+	 * @param array $args       Positional args.
+	 * @param array $assoc_args Associative args.
 	 */
 	public function media_variants( $args, $assoc_args ) {
+		$regenerate = ! empty( $assoc_args['regenerate'] );
+		$dry_run    = ! empty( $assoc_args['dry-run'] );
+
 		WP_CLI::log( 'Run with nice -n 19 and reduce pm.max_children to 2 for this operation (proposal §9.3).' );
+
 		$q = new WP_Query(
 			array(
 				'post_type'      => 'attachment',
 				'post_status'    => 'inherit',
 				'post_mime_type' => 'image',
 				'posts_per_page' => -1,
+				'no_found_rows'  => true,
 				'fields'         => 'ids',
 			)
 		);
 		$ids = $q->posts;
-		$progress = \WP_CLI\Utils\make_progress_bar( 'Regenerate', count( $ids ) );
+		if ( ! $ids ) {
+			WP_CLI::success( 'No image attachments found.' );
+			return;
+		}
+
+		/*
+		 * Partition first, then work.
+		 *
+		 * --regenerate was previously DECLARED and never READ: the command rebuilt every
+		 * attachment either way. On the 2,000-post import in §9 that is the difference
+		 * between topping up a handful of missing sizes and re-encoding the entire media
+		 * library on a 2 GB origin the proposal already warns will swap during image work
+		 * (§9.3) — and it made an interrupted run expensive to resume, so an operator's
+		 * natural reaction (re-run it) was the worst available option.
+		 */
+		$missing = array();
+		$intact  = array();
+		$gone    = array();
+		$specs   = pgds_image_sizes();
+		$wanted  = array_keys( $specs );
+
 		foreach ( $ids as $id ) {
-			$file = get_attached_file( $id );
-			if ( $file && file_exists( $file ) ) {
-				$meta = wp_generate_attachment_metadata( $id, $file );
+			// Partitioned on the SAME path the work loop will read, so an attachment can
+			// never be counted as processable and then fail for lack of a source file.
+			$file = pgds_original_upload_path( $id );
+			if ( ! $file ) {
+				$gone[] = $id;
+				continue;
+			}
+			$meta  = wp_get_attachment_metadata( $id );
+			$sizes = isset( $meta['sizes'] ) && is_array( $meta['sizes'] ) ? $meta['sizes'] : array();
+
+			/*
+			 * A registered size is legitimately absent when the SOURCE is smaller than the
+			 * target, because core does not upscale. Treating that as missing would make
+			 * the command re-encode those attachments on every single run, forever. So a
+			 * size only counts as missing when the original is actually big enough for it.
+			 */
+			$lacking = false;
+			foreach ( $wanted as $size ) {
+				if ( isset( $sizes[ $size ] ) ) {
+					continue;
+				}
+				$spec = $specs[ $size ];
+				$w    = isset( $meta['width'] ) ? (int) $meta['width'] : 0;
+				$h    = isset( $meta['height'] ) ? (int) $meta['height'] : 0;
+				if ( $w >= $spec[0] && $h >= $spec[1] ) {
+					$lacking = true;
+					break;
+				}
+			}
+
+			if ( $lacking ) {
+				$missing[] = $id;
+			} else {
+				$intact[] = $id;
+			}
+		}
+
+		$targets = $regenerate ? array_merge( $missing, $intact ) : $missing;
+
+		WP_CLI::log(
+			sprintf(
+				'Attachments: %d total, %d missing a variant, %d complete, %d with no file on disk.',
+				count( $ids ),
+				count( $missing ),
+				count( $intact ),
+				count( $gone )
+			)
+		);
+		if ( $gone ) {
+			WP_CLI::warning( sprintf( '%d attachment(s) have no file on disk and were skipped: %s', count( $gone ), implode( ', ', array_slice( $gone, 0, 20 ) ) ) );
+		}
+
+		if ( ! $targets ) {
+			WP_CLI::success( 'Nothing to do. Pass --regenerate to rebuild variants that are already present.' );
+			return;
+		}
+
+		if ( $dry_run ) {
+			WP_CLI::success( sprintf( 'Dry run: would process %d attachment(s).', count( $targets ) ) );
+			return;
+		}
+
+		// wp_generate_attachment_metadata() lives in wp-admin/includes/image.php, which is
+		// NOT loaded for a plain `wp` invocation. yt_sync() requires it for the same reason.
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$done      = 0;
+		$processed = 0;
+		$failed    = array();
+		$progress = \WP_CLI\Utils\make_progress_bar( $regenerate ? 'Rebuilding all variants' : 'Filling missing variants', count( $targets ) );
+
+		foreach ( $targets as $id ) {
+			/*
+			 * Source from the PRESERVED ORIGINAL, not from get_attached_file().
+			 *
+			 * Because pgds_webp_output_format() converts the generated full size,
+			 * `_wp_attached_file` ends up pointing at the WebP, so get_attached_file()
+			 * returns an already-lossy file. Re-encoding that produces generational loss,
+			 * measured on this very command:
+			 *
+			 *   before: 2308 bytes  md5 38dff48e...
+			 *   after : 2328 bytes  md5 7f32480f...   (same size, re-encoded from WebP)
+			 *
+			 * The bytes change on every pass and quality only ever degrades. Nothing warns
+			 * about it and the images still render, so a few --regenerate runs over the
+			 * 2,000-post library (§9) would quietly soften every photo on the site.
+			 *
+			 * Resolved by pgds_original_upload_path(), NOT by wp_get_original_image_path()
+			 * alone: that helper depends on metadata['original_image'], and regenerating
+			 * from the WebP DELETES that key, so after one bad pass the pointer back to the
+			 * PNG is gone and the helper starts returning the WebP itself. Recovery has to
+			 * work from a signal the conversion cannot destroy — see that function.
+			 *
+			 * Verified recovery on a flattened attachment: sourcing the PNG restored
+			 * original_image=pgds-seed-18-3.png and reproduced the pristine variant
+			 * (2308 bytes, md5 38dff48e) that the degraded chain had grown to 2328.
+			 */
+			$file = pgds_original_upload_path( $id );
+			$meta = wp_generate_attachment_metadata( $id, $file );
+			// wp_generate_attachment_metadata() returns WP_Error when the editor cannot
+			// load the file (truncated upload, unsupported variant). Reported rather than
+			// written, so a bad file cannot blank out working metadata.
+			if ( is_wp_error( $meta ) || empty( $meta ) ) {
+				$failed[] = $id;
+			} else {
 				wp_update_attachment_metadata( $id, $meta );
+				++$done;
 			}
 			$progress->tick();
+			/*
+			 * Long -1 queries accumulate object cache entries; on the 2 GB origin this is
+			 * the difference between finishing and being OOM-killed partway.
+			 *
+			 * Keyed on ITERATIONS, not successes. Keying it on $done meant a run where the
+			 * image editor could not load its sources — a truncated rsync, or a host whose
+			 * library lacks the WebP delegate — left $done at 0 for the whole loop, so the
+			 * cache was never cleared on exactly the run that iterates every attachment and
+			 * needs it most.
+			 */
+			++$processed;
+			if ( 0 === $processed % 50 ) {
+				\WP_CLI\Utils\wp_clear_object_cache();
+			}
 		}
 		$progress->finish();
-		WP_CLI::success( 'Regeneration complete for ' . count( $ids ) . ' images.' );
+
+		if ( $failed ) {
+			WP_CLI::warning( sprintf( '%d attachment(s) failed: %s', count( $failed ), implode( ', ', array_slice( $failed, 0, 20 ) ) ) );
+		}
+		WP_CLI::success( sprintf( 'Processed %d attachment(s).', $done ) );
 	}
 
 	/**
@@ -521,6 +692,40 @@ class PGDS_CLI_Command {
 				continue;
 			}
 
+			/*
+			 * MAP-FILE INJECTION GUARD.
+			 *
+			 * _pgds_old_url comes from the import JSON (§9) and is stored unsanitized, so it
+			 * is attacker-influenced data that this command writes into a file nginx then
+			 * loads as CONFIGURATION. Quoting the key is not sufficient, because the value
+			 * may contain a quote of its own and nginx separates map entries with ';', not
+			 * with newlines — so a single line can carry a second, complete rule.
+			 *
+			 * Demonstrated against this very command. An `_pgds_old_url` of
+			 *   /legacy-a"  http://evil.test/;<LF>"/"  http://evil.test/pwned;
+			 * produced, in the generated map:
+			 *   "/legacy-a"  http://evil.test/;_"/"  http://evil.test/pwned;"   http://…
+			 * i.e. an attacker-controlled rule for "/" that 301s THE HOME PAGE off-site.
+			 * (The LF itself is neutralised — parse_url rewrites control characters to '_' —
+			 * but the quote alone is enough, so relying on that is not a defence.)
+			 *
+			 * Fixed by whitelisting instead of escaping: a legacy URL is a path and optional
+			 * query, and every character legal in those is in the set below (RFC 3986
+			 * unreserved + sub-delims + ':@/?', minus the quote, backslash, and whitespace
+			 * that give the map parser its structure). Anything else is refused and reported
+			 * rather than escaped, because a rule nobody can read is worse than a missing
+			 * one an operator is told about.
+			 */
+			if ( ! preg_match( '#^/[A-Za-z0-9._~!$&\'()*+,;=:@/?%-]*$#', $key ) ) {
+				$skipped[] = sprintf(
+					'post %d: old URL contains characters not allowed in an nginx map key; refused (%s)',
+					$p->ID,
+					// Rendered safe for the terminal: the point is to show WHICH post is bad.
+					preg_replace( '/[^\x20-\x7E]/', '?', substr( $key, 0, 80 ) )
+				);
+				continue;
+			}
+
 			$new = get_permalink( $p );
 			if ( ! $new ) {
 				$skipped[] = sprintf( 'post %d: no permalink', $p->ID );
@@ -538,6 +743,18 @@ class PGDS_CLI_Command {
 				$skipped[] = sprintf( 'post %d: duplicate old URL "%s" (already mapped by post %d)', $p->ID, $key, $seen[ $key ] );
 				continue;
 			}
+			/*
+			 * Same whitelist on the VALUE side. $new is a get_permalink() result rather than
+			 * raw import data, so it is far better constrained — but it still derives from
+			 * post_name, and the value is written unquoted, where whitespace or ';' would
+			 * terminate the entry early. Validated rather than trusted, since the cost of
+			 * being wrong is the same nginx config file.
+			 */
+			if ( ! preg_match( '#^https?://[A-Za-z0-9._~!$&\'()*+,;=:@/?%\#-]+$#', $new ) ) {
+				$skipped[] = sprintf( 'post %d: permalink is not a plain http(s) URL; refused', $p->ID );
+				continue;
+			}
+
 			$seen[ $key ] = $p->ID;
 
 			// Quoted key: ?, = and & are special to the map parser unquoted.

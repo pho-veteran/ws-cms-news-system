@@ -29,6 +29,28 @@ $caption = $args['caption'] ?? '';
 $dur_str = pgds_format_duration( $dur );
 
 /*
+ * Fall back to the post's featured image when no synced poster exists.
+ *
+ * The poster comes from `wp pgds yt-sync`, which needs network access and (for duration)
+ * an API key. Until it has run — which includes the entire §9 import window, and any post
+ * whose sync failed — `_pgds_youtube_poster` is empty and the facade rendered an EMPTY
+ * placeholder div: on this install all 9 video posts had a featured image and every one
+ * showed a blank cream box as the largest element on the article, with the caption
+ * "Nguồn: …" floating over nothing. It also cost the page its LCP image entirely.
+ *
+ * The featured image is the right fallback rather than hotlinking i.ytimg.com: §6.2
+ * requires the poster be served locally, and the editorial thumbnail is already the image
+ * chosen to represent this story. Sized 'pgds-lead' to match the 16:9 facade box.
+ */
+$poster_id = isset( $args['poster_id'] ) ? (int) $args['poster_id'] : 0;
+if ( ! $poster_id && '' === $poster ) {
+	$fallback_id = $args['fallback_post'] ?? get_the_ID();
+	if ( $fallback_id && has_post_thumbnail( $fallback_id ) ) {
+		$poster_id = (int) get_post_thumbnail_id( $fallback_id );
+	}
+}
+
+/*
  * Proposal §6.3: a private, removed, or age-restricted video must hide the facade and
  * show explanatory text instead. Rendering the play button anyway would promise a
  * video that cannot play. inc/seo-schema.php already suppresses VideoObject on the
@@ -43,7 +65,30 @@ if ( ! empty( $args['unavailable'] ) ) {
 }
 ?>
 <figure class="pgds-video" data-pgds="youtube-facade" data-video-id="<?php echo esc_attr( $vid ); ?>">
-	<?php if ( $poster ) : ?>
+	<?php if ( $poster_id ) : ?>
+		<?php
+		/*
+		 * Rendered through wp_get_attachment_image() so the poster gets the attachment's
+		 * REAL width/height plus srcset. The previous hardcoded width="1280" height="720"
+		 * did not match any registered size (pgds-lead is 960x600), so the declared aspect
+		 * ratio was wrong and the browser reserved the wrong box.
+		 *
+		 * Not lazy-loaded: on a video article this is the LCP element, above the fold.
+		 */
+		echo wp_get_attachment_image(
+			$poster_id,
+			'pgds-lead',
+			false,
+			array(
+				'class'         => 'pgds-video__poster',
+				'alt'           => $title,
+				'decoding'      => 'async',
+				'loading'       => 'eager',
+				'fetchpriority' => 'high',
+			)
+		);
+		?>
+	<?php elseif ( $poster ) : ?>
 		<img class="pgds-video__poster" src="<?php echo esc_url( $poster ); ?>"
 			width="1280" height="720" loading="lazy" decoding="async"
 			alt="<?php echo esc_attr( $title ); ?>">

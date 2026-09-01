@@ -27,6 +27,133 @@ function pgds_image_sizes() {
 }
 
 /**
+ * Emit the generated image variants as WebP.
+ *
+ * §9.4 asks `media-variants` to produce "variants + WebP", and §6.2's markup serves the
+ * video poster as `/wp-content/uploads/yt/<id>-640.webp`. Nothing in the theme produced a
+ * single WebP file: every one of the seven sizes in pgds_image_sizes() was written in the
+ * upload's own format, so the nginx rule that already matches `\.webp$` (infra/nginx §5.4)
+ * had nothing to serve and the poster URL in the proposal could not exist.
+ *
+ * Done through core's own `image_editor_output_format` rather than a shunt that writes a
+ * second file alongside each JPEG. Core applies the mapping inside
+ * WP_Image_Editor::get_output_format(), which means:
+ *
+ *   - it rewrites the sub-size EXTENSION too, so `_wp_attachment_metadata` records
+ *     `...-480x300.webp` and wp_get_attachment_image_url() / srcset return the WebP URL
+ *     with no further work — including the poster URL cli-import.php stores;
+ *   - the uploaded file itself is never overwritten. Core keeps it and records it in
+ *     `metadata['original_image']`, so wp_get_original_image_path() still returns the
+ *     JPEG/PNG. Note that `_wp_attached_file` IS repointed at the generated WebP, which
+ *     is why media_variants() re-encodes from wp_get_original_image_path() rather than
+ *     from get_attached_file() — see the generational-loss note there;
+ *   - it is guarded by $this->supports_mime_type(), so a host whose image library lacks a
+ *     WebP delegate silently keeps the source format instead of failing the upload.
+ *
+ * That last point is not hypothetical. On the verification stack Imagick is present but
+ * has NO WebP delegate, while GD does, and WordPress selects GD:
+ *
+ *   Imagick class: yes          Imagick editor webp: no
+ *   GD imagewebp(): yes         GD editor webp: yes     -> Editor: WP_Image_Editor_GD
+ *
+ * so the same install would have quietly produced zero WebP had this been implemented by
+ * calling Imagick directly.
+ *
+ * AVIF is deliberately not used. nginx matches it, but encode cost on the 2 GB / 2 vCPU
+ * origin is several times WebP's for a bulk regeneration of 2,000 posts' media (§9.4
+ * already has to be niced to avoid swap), and WebP is universally supported by the
+ * browsers in §2's matrix.
+ *
+ * @param array  $formats   Source mime => destination mime.
+ * @param string $filename  Path to the image (unused; mapping is format-based).
+ * @param string $mime_type Source mime type.
+ * @return array
+ */
+function pgds_webp_output_format( $formats, $filename = '', $mime_type = '' ) {
+	// Merged, not replaced: core maps HEIC/HEIF to JPEG here since 6.7 and dropping that
+	// would break iPhone uploads, which is most of what a reporter sends in from an event.
+	return array_merge(
+		(array) $formats,
+		array(
+			'image/jpeg' => 'image/webp',
+			'image/png'  => 'image/webp',
+		)
+	);
+}
+add_filter( 'image_editor_output_format', 'pgds_webp_output_format', 10, 3 );
+
+/**
+ * Resolve the true uploaded file for an attachment, never a generated WebP.
+ *
+ * Regenerating variants must read the ORIGINAL upload. Reading the generated WebP instead
+ * re-encodes lossy-from-lossy: measured on this install, one extra pass moved a variant
+ * from 2308 bytes (md5 38dff48e) to 2328 bytes (md5 7f32480f), and every later pass
+ * degrades it further. Nothing errors and the images still render, so the damage is silent.
+ *
+ * Why not wp_get_original_image_path() on its own: it reads
+ * `metadata['original_image']`, which core writes ONLY in
+ * _wp_image_meta_replace_original() — i.e. only when it converts or scales the full size.
+ * Regenerating from the WebP produces no conversion, so the key is dropped, and from then
+ * on the helper cheerfully returns the WebP as the "original". Observed exactly that:
+ *
+ *   original_image: ABSENT
+ *   wp_get_original_image_path(): .../pgds-seed-18-3.webp
+ *
+ * so a self-healing regeneration cannot rely on it. `post_mime_type` is the durable
+ * signal: it keeps describing the UPLOAD (`image/png`) even after `_wp_attached_file` has
+ * been repointed at the WebP, because the conversion never touches the attachment post.
+ *
+ * Resolution order:
+ *   1. metadata['original_image'] when present — authoritative, set by core.
+ *   2. Otherwise, if post_mime_type disagrees with the attached file's extension, look for
+ *      a sibling with the extension post_mime_type implies. This is the recovery path for
+ *      an attachment already flattened by a bad pass.
+ *   3. The attached file, for attachments that were never converted.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return string Absolute path, or '' when nothing readable exists.
+ */
+function pgds_original_upload_path( $attachment_id ) {
+	$attached = (string) get_attached_file( $attachment_id );
+	$meta     = wp_get_attachment_metadata( $attachment_id );
+
+	// 1. Core's own record of the untouched upload.
+	if ( ! empty( $meta['original_image'] ) ) {
+		$candidate = (string) wp_get_original_image_path( $attachment_id );
+		if ( $candidate && file_exists( $candidate ) ) {
+			return $candidate;
+		}
+	}
+
+	// 2. Recovery: post_mime_type still names the upload's real format.
+	$mime = (string) get_post_mime_type( $attachment_id );
+	if ( $attached && $mime ) {
+		$ext = pathinfo( $attached, PATHINFO_EXTENSION );
+		// wp_get_mime_types() maps 'jpg|jpeg|jpe' => 'image/jpeg', so a source JPEG has to
+		// try each alternative rather than assume one spelling.
+		$wanted = array();
+		foreach ( wp_get_mime_types() as $pattern => $pattern_mime ) {
+			if ( $pattern_mime === $mime ) {
+				$wanted = explode( '|', $pattern );
+				break;
+			}
+		}
+		if ( $wanted && ! in_array( strtolower( $ext ), $wanted, true ) ) {
+			$base = preg_replace( '/\.' . preg_quote( $ext, '/' ) . '$/i', '', $attached );
+			foreach ( $wanted as $try ) {
+				$candidate = $base . '.' . $try;
+				if ( file_exists( $candidate ) ) {
+					return $candidate;
+				}
+			}
+		}
+	}
+
+	// 3. Never converted, or the original is genuinely gone.
+	return $attached && file_exists( $attached ) ? $attached : '';
+}
+
+/**
  * Theme supports + register image sizes + nav menus.
  */
 function pgds_setup() {

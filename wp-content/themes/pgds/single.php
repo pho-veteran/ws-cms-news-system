@@ -58,6 +58,10 @@ while ( have_posts() ) :
 						array(
 							'video_id'    => $vid,
 							'poster'      => $poster ? $poster : '',
+							// Preferred over the URL when present (yt-sync stores both), so
+							// the poster carries real dimensions and a srcset. When neither
+							// exists the part falls back to the featured image.
+							'poster_id'   => (int) get_post_meta( $post_id, '_pgds_youtube_poster_id', true ),
 							'dur'         => $dur,
 							/*
 							 * Prefer the video's OWN title (synced by `wp pgds yt-sync`)
