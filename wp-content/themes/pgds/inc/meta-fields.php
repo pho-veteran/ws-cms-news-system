@@ -77,15 +77,37 @@ function pgds_register_meta() {
 		'_pgds_photo_story'  => 'boolean',
 		'_pgds_source'       => 'string',
 	);
+	/*
+	 * Per-key sanitize callbacks.
+	 *
+	 * These keys are `show_in_rest`, so the REST route is a WRITE path independent of both
+	 * the meta box (which sanitises in pgds_save_meta()) and the importer. Registered with
+	 * no sanitize_callback, that path stored whatever it was given — and `_pgds_sapo` reaches
+	 * the VideoObject description in JSON-LD, which was the vector for the script-breakout
+	 * fixed in pgds_print_jsonld(). Every write path now sanitises for its own type, so no
+	 * single encoder mistake is exploitable again.
+	 *
+	 * `_pgds_sapo` uses sanitize_textarea_field (it is multi-line and must keep newlines);
+	 * the rest are single-line text or numeric.
+	 */
+	$sanitizers = array(
+		'_pgds_sapo'    => 'sanitize_textarea_field',
+		'string'        => 'sanitize_text_field',
+		'integer'       => 'absint',
+		'boolean'       => 'rest_sanitize_boolean',
+	);
+
 	foreach ( $types as $key => $type ) {
+		$sanitize = $sanitizers[ $key ] ?? ( $sanitizers[ $type ] ?? 'sanitize_text_field' );
 		register_post_meta(
 			'post',
 			$key,
 			array(
-				'type'          => $type,
-				'single'        => true,
-				'show_in_rest'  => true,
-				'auth_callback' => function () {
+				'type'              => $type,
+				'single'            => true,
+				'show_in_rest'      => true,
+				'sanitize_callback' => $sanitize,
+				'auth_callback'     => function () {
 					return current_user_can( 'edit_posts' );
 				},
 			)

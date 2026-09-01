@@ -27,8 +27,30 @@ if ( ! defined( 'PGDS_FCGI_CACHE_DIR' ) ) {
  * For the current scale, deleting everything is appropriate: one command, no leftovers, no mapping logic needed.
  */
 function pgds_flush_page_cache() {
-	$dir = PGDS_FCGI_CACHE_DIR;
-	if ( ! is_dir( $dir ) || ! is_writable( $dir ) ) {
+	/*
+	 * Resolve and sanity-check the target before deleting anything recursively.
+	 *
+	 * PGDS_FCGI_CACHE_DIR is overridable from wp-config.php, and the only previous guards
+	 * were is_dir() and is_writable(). A typo — or a constant defined in the wrong order —
+	 * pointing at, say, /var/www/pgds/wp-content means the next publish silently deletes the
+	 * site: every filesystem error here is suppressed and the catch only logs under WP_DEBUG,
+	 * so there would be no signal at all. These checks cost one realpath() per flush.
+	 */
+	$dir = realpath( PGDS_FCGI_CACHE_DIR );
+	if ( ! $dir || ! is_dir( $dir ) || ! is_writable( $dir ) ) {
+		return;
+	}
+	// Refuse a filesystem root or a near-root path, and refuse anything that looks like a
+	// WordPress install rather than a dedicated cache directory.
+	if ( substr_count( $dir, DIRECTORY_SEPARATOR ) < 2
+		|| $dir === realpath( ABSPATH )
+		|| $dir === realpath( WP_CONTENT_DIR )
+		|| file_exists( $dir . '/wp-config.php' )
+		|| file_exists( $dir . '/wp-load.php' )
+	) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[pgds] refusing to flush: ' . $dir . ' does not look like a dedicated FastCGI cache directory.' );
+		}
 		return;
 	}
 	try {
@@ -70,45 +92,52 @@ function pgds_flush_page_cache() {
 }
 
 /**
- * save_post gate: flush only when a reader-visible post actually changed.
+ * Flush only when a post that IS or WAS publicly visible changed.
  *
- * §5.4 requires "Hook only save_post, not autosaves/revisions", and the comment below
- * used to claim exactly that — but the callback was attached with zero accepted arguments
- * and performed no checks, so it could not distinguish anything. Every autosave (the block
- * editor fires one roughly every 10 seconds while an editor types) and every revision
- * write triggered a full recursive delete of the FastCGI cache.
+ * §5.4 requires "Hook only save_post, not autosaves/revisions". The original callback was
+ * attached to `save_post` with zero accepted arguments and performed no checks, so it could
+ * not distinguish anything despite a comment claiming it did: every autosave (the block
+ * editor fires one roughly every 10 seconds while an editor types) and every revision write
+ * recursively deleted the whole FastCGI cache.
  *
- * The consequence is not stale content, it is the opposite: one editor with an open draft
- * repeatedly empties the page cache for the whole site, so anonymous visitors get
- * uncached responses from a 2 GB origin. That is the exact load §5 exists to prevent.
+ * The consequence is not stale content, it is the opposite — one editor with an open draft
+ * repeatedly empties the page cache for the entire site, so anonymous visitors are served
+ * from PHP by a 2 GB origin. That is the exact load §5 exists to prevent, and it is
+ * reachable by a Contributor, the lowest role holding `edit_posts`, simply by holding Save
+ * Draft or looping `POST /wp-json/wp/v2/posts` with `status=draft`.
  *
- * Three gates, each covering a case observed in the editor's request flow:
- *   1. DOING_AUTOSAVE / wp_is_post_autosave() — the periodic editor autosave.
- *   2. wp_is_post_revision() — the revision row saved alongside the real post.
- *   3. auto-draft / inherit status — a post that no reader can see yet, so no cached page
- *      can be describing it.
+ * Hooked on `transition_post_status` rather than `save_post` because the correct signal
+ * needs BOTH statuses. A status list checked on `save_post` alone gets unpublishing wrong:
+ * publish -> draft arrives with the new status `draft`, which any "skip drafts" rule
+ * discards — leaving the unpublished article live in the cache, which is the worst possible
+ * direction for a news site to fail in. `transition_post_status` fires for every save,
+ * including publish -> publish, so it is a strict superset of what `save_post` gave us.
  *
- * @param int     $post_id Post ID.
- * @param WP_Post $post    Post object.
+ * @param string  $new_status Status after the save.
+ * @param string  $old_status Status before the save.
+ * @param WP_Post $post       Post object.
  * @return void
  */
-function pgds_flush_page_cache_on_save( $post_id, $post = null ) {
+function pgds_flush_page_cache_on_transition( $new_status, $old_status, $post ) {
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 		return;
 	}
-	if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
-		return;
-	}
-
-	$post = $post instanceof WP_Post ? $post : get_post( $post_id );
 	if ( ! $post instanceof WP_Post ) {
 		return;
 	}
-	// 'inherit' is a revision/attachment-child status; 'auto-draft' is a post the editor
-	// has not written yet. Neither is reachable by a reader, so no cache entry is affected.
-	if ( in_array( $post->post_status, array( 'auto-draft', 'inherit' ), true ) ) {
+	if ( wp_is_post_autosave( $post ) || wp_is_post_revision( $post ) ) {
 		return;
 	}
+
+	/*
+	 * Nothing cached can reference a post that was never public and still is not. This
+	 * covers draft/pending/future/auto-draft edits (no flush) while still flushing both
+	 * directions of a visibility change: publishing AND unpublishing or trashing.
+	 */
+	if ( 'publish' !== $new_status && 'publish' !== $old_status ) {
+		return;
+	}
+
 	// Non-public types (pgds_lunar_note) never render a cacheable page of their own, but
 	// they DO appear in the front-page sidebar, so they still need the flush. Only skip
 	// types WordPress hides entirely from the front end.
@@ -120,8 +149,9 @@ function pgds_flush_page_cache_on_save( $post_id, $post = null ) {
 	pgds_flush_page_cache();
 }
 
-// Hook only events where content actually changes (not autosaves/revisions).
-add_action( 'save_post', 'pgds_flush_page_cache_on_save', 10, 2 );
+// Content changes only: transition_post_status sees both statuses, so autosaves, revisions
+// and purely-private edits are excluded while publish AND unpublish both flush.
+add_action( 'transition_post_status', 'pgds_flush_page_cache_on_transition', 10, 3 );
 add_action( 'deleted_post', 'pgds_flush_page_cache' );
 add_action( 'edited_term', 'pgds_flush_page_cache' );
 add_action( 'wp_update_nav_menu', 'pgds_flush_page_cache' );

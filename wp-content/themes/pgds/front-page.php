@@ -139,12 +139,51 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 			</div>
 		</div>
 
-		<div class="pgds-tabpanel" role="tabpanel" id="pgds-panel-ema" aria-labelledby="pgds-tab-ema" hidden>
-			<p class="pgds-tabpanel__empty"><?php esc_html_e( 'Nội dung Emagazine sẽ cập nhật.', 'pgds' ); ?></p>
-		</div>
-		<div class="pgds-tabpanel" role="tabpanel" id="pgds-panel-info" aria-labelledby="pgds-tab-info" hidden>
-			<p class="pgds-tabpanel__empty"><?php esc_html_e( 'Nội dung Infographic sẽ cập nhật.', 'pgds' ); ?></p>
-		</div>
+		<?php
+		/*
+		 * Tabs 2 and 3 previously held "Nội dung Emagazine sẽ cập nhật." — but the tabs are
+		 * fully operable (media-tabs.js implements the real WAI-ARIA pattern), so two of the
+		 * three tabs on the page's largest interactive component were dead ends. Rendered
+		 * with the same thumbnail grid as the video tab so the three panels are visually
+		 * consistent, minus the play badge: these are articles, not videos, and a play
+		 * affordance over an infographic would promise something that cannot happen.
+		 *
+		 * A panel with genuinely no posts keeps an explanatory line rather than collapsing
+		 * to nothing, so the tab does not look broken.
+		 */
+		$pgds_media_panels = array(
+			'ema'  => array(
+				'id'    => 'pgds-panel-ema',
+				'tab'   => 'pgds-tab-ema',
+				'posts' => $B['media_tabs']['emagazine'] ?? array(),
+				'empty' => __( 'Chưa có nội dung Emagazine.', 'pgds' ),
+			),
+			'info' => array(
+				'id'    => 'pgds-panel-info',
+				'tab'   => 'pgds-tab-info',
+				'posts' => $B['media_tabs']['infographic'] ?? array(),
+				'empty' => __( 'Chưa có nội dung Infographic.', 'pgds' ),
+			),
+		);
+		foreach ( $pgds_media_panels as $pgds_panel ) :
+			?>
+			<div class="pgds-tabpanel" role="tabpanel" id="<?php echo esc_attr( $pgds_panel['id'] ); ?>" aria-labelledby="<?php echo esc_attr( $pgds_panel['tab'] ); ?>" hidden>
+				<?php if ( ! empty( $pgds_panel['posts'] ) ) : ?>
+					<div class="pgds-grid-4">
+						<?php foreach ( $pgds_panel['posts'] as $pgds_mp ) : ?>
+							<a class="pgds-media-thumb" href="<?php echo esc_url( get_permalink( $pgds_mp ) ); ?>">
+								<?php pgds_art( $pgds_mp, 'pgds-thumb', 'pgds-ratio-thumb' ); ?>
+								<span class="pgds-media-thumb__title"><?php echo esc_html( get_the_title( $pgds_mp ) ); ?></span>
+							</a>
+						<?php endforeach; ?>
+					</div>
+				<?php else : ?>
+					<p class="pgds-tabpanel__empty"><?php echo esc_html( $pgds_panel['empty'] ); ?></p>
+				<?php endif; ?>
+			</div>
+			<?php
+		endforeach;
+		?>
 	</section>
 	<?php endif; ?>
 

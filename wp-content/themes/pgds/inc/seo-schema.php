@@ -110,11 +110,38 @@ add_action( 'wp_head', 'pgds_schema_article', 22 );
 /**
  * Print JSON-LD safely.
  *
+ * JSON_HEX_TAG is what makes this safe, and JSON_UNESCAPED_SLASHES is what made it unsafe.
+ *
+ * json_encode() never escapes `<` or `>` on its own. What normally prevents a string from
+ * closing the surrounding <script> block is the DEFAULT slash escaping: `</script>` becomes
+ * `<\/script>`, which the HTML parser does not recognise as an end tag. Passing
+ * JSON_UNESCAPED_SLASHES switched that single protection off.
+ *
+ * Reproduced end to end. Setting `_pgds_sapo` to
+ *
+ *   x</script><script>alert(1)</script>
+ *
+ * on a post with a video rendered, verbatim in <head>:
+ *
+ *   ..."description":"x</script><script>alert(1)</script>","thumbnailUrl":[...
+ *
+ * i.e. live, executing markup — for every visitor including logged-in administrators. The
+ * reachable source is the import (§9): validate_record() does not inspect `sapo` and
+ * create_post() stored it verbatim, so a single crafted record in the source JSON was
+ * enough. The editor UI was never affected, because sanitize_textarea_field() strips tags
+ * on save — which is precisely why this could not be found by using the admin.
+ *
+ * Fixed at both ends: the meta is sanitised on import (see create_post()), and the encoder
+ * now hex-escapes tag and ampersand characters so no future value can break out regardless
+ * of how it was stored. JSON_UNESCAPED_SLASHES is dropped as well; readable URLs in the
+ * markup are not worth being one careless string away from XSS. JSON_UNESCAPED_UNICODE is
+ * kept so Vietnamese headlines stay legible rather than becoming \uXXXX escapes.
+ *
  * @param array $data Data.
  */
 function pgds_print_jsonld( $data ) {
 	echo "\n" . '<script type="application/ld+json">'
-		. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
+		. wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP )
 		. '</script>' . "\n";
 }
 

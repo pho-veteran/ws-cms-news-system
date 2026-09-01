@@ -155,6 +155,37 @@ function pgds_query_featured( $rank_from, $rank_to, $count, $fallback_cat = '' )
 }
 
 /**
+ * Posts carrying a given tag, for the media block's Emagazine / Infographic tabs.
+ *
+ * Deliberately does NOT consult or update PGDS_Used_Ids. Only one media panel is visible at
+ * a time (the other two carry the `hidden` attribute), so a post shown here cannot be seen
+ * twice by a reader — while excluding already-used posts would let the earlier blocks empty
+ * these panels and put the "sẽ cập nhật" dead end back.
+ *
+ * @param string $tag   Tag slug.
+ * @param int    $count Number of posts.
+ * @return WP_Post[]
+ */
+function pgds_query_tagged_posts( $tag, $count ) {
+	if ( ! $tag ) {
+		return array();
+	}
+	$q = new WP_Query(
+		array(
+			'post_type'           => 'post',
+			'post_status'         => 'publish',
+			'posts_per_page'      => $count,
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+			'tag'                 => $tag,
+			'orderby'             => 'date',
+			'order'               => 'DESC',
+		)
+	);
+	return $q->posts;
+}
+
+/**
  * Most read posts (sidebar). Prioritises comment_count, falls back to most recent.
  *
  * Participates in the §4.4 deduplication pass, which lists the sidebar as its final step
@@ -297,6 +328,30 @@ function pgds_home_blocks() {
 	}
 	$media_bullets = pgds_query_posts( 'infographic-emagazine', 3 );
 
+	/*
+	 * Tabs 2 and 3 of the media block.
+	 *
+	 * The panels existed but held the literal text "Nội dung Emagazine sẽ cập nhật." /
+	 * "Nội dung Infographic sẽ cập nhật.". Because media-tabs.js implements the real
+	 * WAI-ARIA tabs pattern, both tabs were fully operable — so two of the three tabs on
+	 * the front page's largest interactive component led to a dead end. The client's demo
+	 * shows all three as content groups, and §2.2 specifies "3 tabs".
+	 *
+	 * Split by TAG, not by category: §4.1 fixes the taxonomy at one combined
+	 * `infographic-emagazine` child, and the seed data already distinguishes the two with
+	 * `infographic` and `emagazine` tags. Adding categories would contradict §4.1 (and the
+	 * import now refuses slugs outside that set), so the tag is the available signal.
+	 *
+	 * Not deduplicated against the video tab on purpose: a post only ever renders in ONE
+	 * visible panel (the other two are `hidden`), so excluding these from the tracker
+	 * would let the earlier tabs consume the posts these panels need and leave a visible
+	 * panel empty again. The §4.4 rule is about what a reader can see twice.
+	 */
+	$media_tabs = array(
+		'emagazine'   => pgds_query_tagged_posts( 'emagazine', 4 ),
+		'infographic' => pgds_query_tagged_posts( 'infographic', 4 ),
+	);
+
 	// ---------------------------------------------------------------------------
 	// PASS 1 - every category-scoped block takes only posts from its OWN category.
 	//
@@ -361,6 +416,7 @@ function pgds_home_blocks() {
 		'media_feature' => $media_feature[0] ?? null,
 		'media_thumbs'  => $media_thumbs,
 		'media_bullets' => $media_bullets,
+		'media_tabs'    => $media_tabs,
 		'phatsu_cards'  => $phatsu_cards,
 		'phatsu_list'   => $phatsu_list,
 		'columns'       => array(

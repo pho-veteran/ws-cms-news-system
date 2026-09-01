@@ -844,6 +844,33 @@ class PGDS_CLI_Command {
 		if ( ! is_array( $rec ) ) {
 			return 'not an object';
 		}
+
+		/*
+		 * Type check before anything else.
+		 *
+		 * Every other check here is empty() or a membership test, and empty() is FALSE for a
+		 * non-empty array — so `"sapo": ["x"]` passed validation and was stored as
+		 * serialized array meta. The damage then surfaces on the front end, not in the CLI
+		 * run: pgds_sapo() returns the array, and wp_trim_words() in card-lead.php raises a
+		 * TypeError under PHP 8. That is a 500 on the front page and on every category
+		 * archive that renders the card, from one malformed record in the source JSON.
+		 */
+		foreach ( array( 'source_id', 'title', 'slug', 'sapo', 'body_html', 'published_at', 'primary_cat', 'source', 'author', 'featured_image_url', 'youtube_url', 'old_url' ) as $scalar_key ) {
+			if ( isset( $rec[ $scalar_key ] ) && ! is_scalar( $rec[ $scalar_key ] ) ) {
+				return sprintf( 'field "%s" must be a scalar, got %s', $scalar_key, gettype( $rec[ $scalar_key ] ) );
+			}
+		}
+		foreach ( array( 'cats', 'tags', 'gallery' ) as $list_key ) {
+			if ( isset( $rec[ $list_key ] ) && ! is_array( $rec[ $list_key ] ) ) {
+				return sprintf( 'field "%s" must be an array, got %s', $list_key, gettype( $rec[ $list_key ] ) );
+			}
+			foreach ( (array) ( $rec[ $list_key ] ?? array() ) as $item ) {
+				if ( ! is_scalar( $item ) ) {
+					return sprintf( 'field "%s" must contain only scalars', $list_key );
+				}
+			}
+		}
+
 		if ( empty( $rec['source_id'] ) ) {
 			return 'missing source_id';
 		}
@@ -948,16 +975,26 @@ class PGDS_CLI_Command {
 			return $post_id;
 		}
 
-		// Meta.
-		update_post_meta( $post_id, '_pgds_source_id', (string) $rec['source_id'] );
+		/*
+		 * Meta.
+		 *
+		 * Sanitised on the way in, matching what the editor's own save path does
+		 * (pgds_save_meta() applies sanitize_textarea_field / sanitize_text_field). Storing
+		 * `sapo` verbatim was one half of a stored XSS: pgds_sapo() feeds it into the
+		 * VideoObject description, and the JSON-LD encoder passed JSON_UNESCAPED_SLASHES, so
+		 * a `sapo` containing `</script><script>…</script>` rendered as live markup in
+		 * <head>. See pgds_print_jsonld() for the reproduction. The encoder is fixed too;
+		 * this is the other end, so imported meta matches editor-entered meta.
+		 */
+		update_post_meta( $post_id, '_pgds_source_id', sanitize_text_field( (string) $rec['source_id'] ) );
 		if ( ! empty( $rec['sapo'] ) ) {
-			update_post_meta( $post_id, '_pgds_sapo', $rec['sapo'] );
+			update_post_meta( $post_id, '_pgds_sapo', sanitize_textarea_field( (string) $rec['sapo'] ) );
 		}
 		if ( $primary_id ) {
 			update_post_meta( $post_id, '_pgds_primary_cat', $primary_id );
 		}
 		if ( ! empty( $rec['source'] ) ) {
-			update_post_meta( $post_id, '_pgds_source', $rec['source'] );
+			update_post_meta( $post_id, '_pgds_source', sanitize_text_field( (string) $rec['source'] ) );
 		}
 		if ( ! empty( $rec['old_url'] ) ) {
 			update_post_meta( $post_id, '_pgds_old_url', $rec['old_url'] );
