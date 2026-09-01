@@ -83,8 +83,19 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 	</section>
 
 	<!-- ============ (4) DIVIDER ============ -->
+	<?php
+	/*
+	 * fill uses the token, not a literal.
+	 *
+	 * This was `fill="#EAE1CC"` — the same value the `paper-deep` token holds, duplicated
+	 * where no token change can reach it. §3 requires "All production colors use the tokens
+	 * below; components must not use hard-coded colors", and the practical failure is that
+	 * retheming would leave this divider stranded at the old colour while the six other
+	 * users of --pgds-paper-deep moved.
+	 */
+	?>
 	<div class="pgds-divider" aria-hidden="true">
-		<svg viewBox="0 0 1180 22" preserveAspectRatio="none"><path d="M0 0 Q 590 22 1180 0 L1180 22 L0 22 Z" fill="#EAE1CC"></path></svg>
+		<svg viewBox="0 0 1180 22" preserveAspectRatio="none"><path d="M0 0 Q 590 22 1180 0 L1180 22 L0 22 Z" fill="var(--pgds-paper-deep)"></path></svg>
 	</div>
 
 	<!-- ============ (5) MEDIA BLOCK ============ -->
