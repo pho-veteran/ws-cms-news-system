@@ -203,14 +203,45 @@ jobs:
 
       # Purge the origin before the edge. Purging Cloudflare first can re-cache stale
       # origin content at the edge, so only purge it after PHP-FPM and FastCGI are fresh.
+      # Detect asset changes from the SOURCES, not from assets/.
+      #
+      # `git diff -- wp-content/themes/pgds/assets/` could not work: assets/dist/* is
+      # gitignored (see .gitignore), so exactly ONE file is tracked under assets/ —
+      # fonts/README.md. The condition was therefore false on essentially every deploy and
+      # the edge purge below never ran, which is the one step that makes a new
+      # [contenthash] filename reachable through Cloudflare.
+      #
+      # The sources that determine the built output are the SCSS/JS under src/, the build
+      # script, and the dependency lockfile (a dart-sass or esbuild bump changes the
+      # output). Comparing those is also more accurate than comparing the artefacts: the
+      # hash changes if and only if the input did.
+      #
+      # `git diff --quiet` exits 1 when there are differences, which `set -e` would treat
+      # as a failure, hence the explicit `if`.
       - name: Detect asset changes
         id: assets
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet HEAD^ HEAD -- wp-content/themes/pgds/assets/; then
+          SOURCES=(
+            "wp-content/themes/pgds/src"
+            "wp-content/themes/pgds/build.mjs"
+            "wp-content/themes/pgds/package-lock.json"
+            "wp-content/themes/pgds/assets/fonts"
+          )
+          # A first commit on a branch has no HEAD^; treat that as "assets changed" so the
+          # purge errs toward correctness rather than serving a stale edge.
+          if ! git rev-parse --verify --quiet HEAD^ >/dev/null; then
+            echo "no HEAD^ (initial or shallow); assuming assets changed"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --quiet HEAD^ HEAD -- "${SOURCES[@]}"; then
+            echo "asset sources unchanged; skipping edge purge"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
+            echo "asset sources changed:"
+            git diff --name-only HEAD^ HEAD -- "${SOURCES[@]}"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
