@@ -261,3 +261,31 @@ tar czf /backup/uploads.tgz wp-content/uploads
 
 - Name: **\_\_** | Contact: **\_\_** | Rollback trigger: 5xx above 5% for 5 minutes, or a
   blank page.
+
+## 10. Handover documents (§14)
+
+| Deliverable | Where |
+|---|---|
+| Deploy / rollback / purge / restore / resize / quota / exit plan | this file |
+| Local setup, asset build, running the import | `wp-content/themes/pgds/README.md` |
+| Local stack, and why schema must NOT be verified there | `infra/local/README.md` |
+| One-hour editor training | **`docs/EDITOR_TRAINING.md`** |
+| Terraform stacks, backends, plan-size cap | `infra/terraform/README.md` |
+| CI/CD gates and required secrets | `.github/workflows/README.md` |
+
+`docs/EDITOR_TRAINING.md` is written in Vietnamese because its readers are the newsroom's
+editors — the same audience as the admin field labels. It documents all 8 fields of the
+"Thông tin PGDS" meta box, the four featured slots, the video workflow, and the
+"edits are visible immediately" cache behaviour. Field names in it are copied from
+`inc/meta-fields.php`; if a label changes there, update that document too.
+
+Still outstanding, each needing a person rather than more code — all three are listed at the
+end of the training document so the newsroom sees them:
+
+1. **Cloudflare token** — scoped `Zone:Read`, `Zone Settings:Edit`, `Cache Rules:Edit`. No CLI
+   to install; `infra/scripts/pgds-cloudflare-setup.sh` uses `curl` only. Run it with
+   `--dry-run` first.
+2. **Alert email** — set `alarm_notification_email`, apply, then click AWS's confirmation
+   link. SNS-based, so it needs neither SES nor a verified domain.
+3. **Footer legal text** — Appearance → Customize → Thông tin toà soạn (§13 gate; explicitly
+   not a technical decision).
