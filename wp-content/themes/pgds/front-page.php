@@ -295,8 +295,27 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 			<?php endif; ?>
 		</div>
 
-		<aside aria-label="<?php esc_attr_e( 'Lời Phật dạy', 'pgds' ); ?>">
-			<?php if ( ! empty( $B['teaching'] ) ) : ?>
+		<?php
+		/*
+		 * The guard wraps the <aside>, not the other way round.
+		 *
+		 * With the conditional INSIDE the element, a site that has no pgds_teaching posts
+		 * still emitted `<aside aria-label="Lời Phật dạy">` containing nothing. Measured on
+		 * the live site, whose origin database has 0 teachings:
+		 *
+		 *   {"label":"Lời Phật dạy","w":320,"h":0,"kids":0,"text":0}
+		 *
+		 * i.e. a complementary ARIA landmark that a screen reader announces by name and then
+		 * has nothing to read out — the same defect class as the one-item breadcrumb fixed in
+		 * pgds_breadcrumb(). It also leaves a zero-height grid child, so the column's spacing
+		 * comes from an element with no content.
+		 *
+		 * Found only by auditing the PRODUCTION site: locally the seed data always supplies
+		 * teachings, so the empty branch never rendered in any earlier audit.
+		 */
+		if ( ! empty( $B['teaching'] ) ) :
+			?>
+			<aside aria-label="<?php esc_attr_e( 'Lời Phật dạy', 'pgds' ); ?>">
 				<section class="pgds-side-block" aria-labelledby="pgds-teaching-title">
 					<h3 class="pgds-side-block__title" id="pgds-teaching-title"><?php esc_html_e( 'Lời Phật dạy', 'pgds' ); ?></h3>
 					<ul class="pgds-teaching">
@@ -308,8 +327,10 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 						<?php endforeach; ?>
 					</ul>
 				</section>
-			<?php endif; ?>
-		</aside>
+			</aside>
+			<?php
+		endif;
+		?>
 	</div>
 
 </main>

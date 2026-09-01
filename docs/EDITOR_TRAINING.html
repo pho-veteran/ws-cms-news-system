@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giờ đầu tiên trong toà soạn</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* ---- Tokens: complete light palette on bare :root ---------------------- */
+  :root {
+    --paper:      #F6F6F3;
+    --card:       #FFFFFF;
+    --ink:        #1A1D24;
+    --ink-soft:   #454A57;
+    --muted:      #6B7180;
+    --rule:       #DEDEd8;
+    --rule-soft:  #EAEAE4;
+    --ochre:      #9C5B12;
+    --ochre-bg:   #F6EEE2;
+    --jade:       #2C6350;
+    --jade-bg:    #E7F0EC;
+    --code-bg:    #EFEFEA;
+    --shadow:     0 1px 2px rgba(26,29,36,.05), 0 8px 24px -16px rgba(26,29,36,.18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:     #14161B;
+      --card:      #1B1E25;
+      --ink:       #ECECE6;
+      --ink-soft:  #C2C5CE;
+      --muted:     #8D93A1;
+      --rule:      #2E323B;
+      --rule-soft: #24272E;
+      --ochre:     #E8A65A;
+      --ochre-bg:  #2A2118;
+      --jade:      #7DBFA5;
+      --jade-bg:   #17241F;
+      --code-bg:   #23262E;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #14161B;
+    --card:      #1B1E25;
+    --ink:       #ECECE6;
+    --ink-soft:  #C2C5CE;
+    --muted:     #8D93A1;
+    --rule:      #2E323B;
+    --rule-soft: #24272E;
+    --ochre:     #E8A65A;
+    --ochre-bg:  #2A2118;
+    --jade:      #7DBFA5;
+    --jade-bg:   #17241F;
+    --code-bg:   #23262E;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+  /* ---- Masthead ---------------------------------------------------------- */
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.75rem; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .6875rem; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ochre); margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: "Bitter", Georgia, serif;
+    font-weight: 700; font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 1.08; letter-spacing: -.02em;
+    margin: 0; text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 1.0625rem; color: var(--ink-soft);
+    max-width: 42ch; margin: 1rem 0 0;
+  }
+
+  .facts {
+    display: flex; flex-wrap: wrap; gap: 0 2.5rem;
+    margin: 1.75rem 0 0; padding: 0; list-style: none;
+  }
+  .facts div { display: flex; flex-direction: column; gap: .125rem; }
+  .facts dt {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .625rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .facts dd {
+    margin: 0; font-weight: 600; font-size: .9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Timed segments --------------------------------------------------- */
+  .plan { display: flex; flex-direction: column; gap: 0; margin-top: 3rem; }
+
+  .seg {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 0 2rem;
+    padding: 2.25rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  .seg:first-child { border-top: none; padding-top: .5rem; }
+
+  .clock {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: .8125rem; font-weight: 500;
+    color: var(--ochre); padding-top: .3rem;
+    white-space: nowrap;
+  }
+  .clock span { display: block; color: var(--muted); font-size: .6875rem; margin-top: .2rem; }
+
+  /*
+   * min-width: 0 on the grid child.
+   *
+   * A grid item defaults to min-width: auto, so it refuses to shrink below its content's
+   * intrinsic size. The field table sets min-width: 34rem to stay readable, so at 360px the
+   * item stayed 544px wide, its `overflow-x: auto` container never got the chance to scroll,
+   * and the whole PAGE scrolled sideways instead — measured hScroll: true on mobile while
+   * desktop was clean. min-width: 0 lets the item narrow and hands the overflow back to
+   * .scroll, where it belongs.
+   */
+  .seg > div { min-width: 0; }
+
+  .seg h2 {
+    font-family: "Bitter", Georgia, serif;
+    font-size: 1.375rem; font-weight: 600; line-height: 1.25;
+    margin: 0 0 .75rem; text-wrap: balance;
+  }
+  .seg > div > p { margin: 0 0 1rem; max-width: 64ch; }
+  .seg > div > p:last-child { margin-bottom: 0; }
+
+  /* ---- Steps ------------------------------------------------------------ */
+  ol.steps { margin: 0 0 1rem; padding-left: 1.35rem; max-width: 64ch; }
+  ol.steps li { margin-bottom: .5rem; }
+  ol.steps li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  ul.plain { margin: 0 0 1rem; padding-left: 1.15rem; max-width: 64ch; }
+  ul.plain li { margin-bottom: .4rem; }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .8125em; background: var(--code-bg);
+    padding: .1em .35em; border-radius: 3px;
+    color: var(--ink-soft); word-break: break-word;
+  }
+  strong { font-weight: 600; }
+
+  /* ---- Callouts --------------------------------------------------------- */
+  .note {
+    border-left: 3px solid var(--jade);
+    background: var(--jade-bg);
+    padding: .875rem 1.125rem;
+    margin: 1.25rem 0; max-width: 64ch;
+    font-size: .9375rem;
+  }
+  .note.warn { border-left-color: var(--ochre); background: var(--ochre-bg); }
+  .note p { margin: 0; }
+  .note p + p { margin-top: .5rem; }
+  .note b {
+    display: block; font-size: .6875rem; letter-spacing: .1em;
+    text-transform: uppercase; margin-bottom: .3rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--jade); font-weight: 500;
+  }
+  .note.warn b { color: var(--ochre); }
+
+  /* ---- Field table ------------------------------------------------------ */
+  .scroll { overflow-x: auto; margin: 1.25rem 0; }
+  table {
+    border-collapse: collapse; width: 100%;
+    min-width: 34rem; font-size: .875rem;
+    background: var(--card); box-shadow: var(--shadow);
+  }
+  caption {
+    text-align: left; font-size: .8125rem; color: var(--muted);
+    padding-bottom: .5rem;
+  }
+  th, td { text-align: left; padding: .625rem .875rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .625rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+    border-bottom: 1px solid var(--rule);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 500; }
+  .who {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .6875rem; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .who.you  { color: var(--ochre); }
+  .who.auto { color: var(--muted); }
+
+  /* ---- Checklist -------------------------------------------------------- */
+  .check { list-style: none; padding: 0; margin: 1rem 0 0; max-width: 64ch; }
+  .check li {
+    display: grid; grid-template-columns: 1.25rem 1fr; gap: .75rem;
+    padding: .5rem 0; border-bottom: 1px solid var(--rule-soft);
+    font-size: .9375rem;
+  }
+  .check li:last-child { border-bottom: none; }
+  .check li::before {
+    content: ""; width: 1rem; height: 1rem; margin-top: .25rem;
+    border: 1.5px solid var(--muted); border-radius: 3px;
+  }
+
+  /* ---- Open items ------------------------------------------------------- */
+  .open {
+    margin-top: 3.5rem; padding-top: 2rem;
+    border-top: 2px solid var(--ink);
+  }
+  .open h2 {
+    font-family: "Bitter", Georgia, serif;
+    font-size: 1.125rem; font-weight: 600; margin: 0 0 .25rem;
+  }
+  .open > p { color: var(--ink-soft); font-size: .9375rem; margin: 0 0 1.5rem; max-width: 64ch; }
+  .open dl { display: flex; flex-direction: column; gap: 1rem; margin: 0; }
+  .open dt { font-weight: 600; font-size: .9375rem; }
+  .open dd {
+    margin: .2rem 0 0; font-size: .9375rem;
+    color: var(--ink-soft); max-width: 64ch;
+  }
+
+  footer {
+    margin-top: 3.5rem; padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    font-size: .8125rem; color: var(--muted);
+  }
+
+  @media (max-width: 34rem) {
+    .seg { grid-template-columns: 1fr; gap: .5rem; }
+    .clock { padding-top: 0; }
+    .clock span { display: inline; margin-left: .5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Tập huấn biên tập · PGDS</p>
+    <h1>Giờ đầu tiên trong toà soạn</h1>
+    <p class="standfirst">Sáu chặng, đúng một giờ. Hết giờ bạn đã tự đăng được một bài hoàn chỉnh, đưa nó lên trang chủ và gắn video.</p>
+    <dl class="facts">
+      <div><dt>Thời lượng</dt><dd>60 phút</dd></div>
+      <div><dt>Dành cho</dt><dd>Biên tập viên</dd></div>
+      <div><dt>Cần trước</dt><dd>Tài khoản + mật khẩu</dd></div>
+      <div><dt>Không cần</dt><dd>Kiến thức kỹ thuật</dd></div>
+    </dl>
+  </header>
+
+  <div class="plan">
+
+    <section class="seg">
+      <div class="clock">0:00<span>5 phút</span></div>
+      <div>
+        <h2>Đăng nhập và nhìn quanh</h2>
+        <p>Vào địa chỉ trang quản trị, thêm <code>/wp-admin</code> vào sau tên miền. Đăng nhập bằng tài khoản toà soạn cấp cho bạn.</p>
+        <ul class="plain">
+          <li><strong>Bài viết</strong> — nơi bạn làm việc gần như toàn bộ thời gian.</li>
+          <li><strong>Lời Phật dạy</strong> — mục riêng cho các đoạn kinh, lời dạy ngắn hiển thị ở cột bên.</li>
+          <li><strong>Lịch vạn niên</strong> — dữ liệu cho ô lịch âm ở cột bên. Thường chỉ cập nhật một lần.</li>
+        </ul>
+        <div class="note">
+          <b>Ghi nhớ</b>
+          <p>Chuyên mục đã được thiết lập sẵn: 6 chuyên mục lớn và 10 chuyên mục con. <strong>Đừng tạo chuyên mục mới</strong> — trang chủ và menu được dựng từ đúng danh sách này, nên một chuyên mục lạ sẽ không xuất hiện ở đâu cả.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="seg">
+      <div class="clock">0:05<span>10 phút</span></div>
+      <div>
+        <h2>Đăng bài đầu tiên</h2>
+        <ol class="steps">
+          <li><strong>Bài viết → Viết bài mới.</strong></li>
+          <li>Nhập tiêu đề. Đây cũng là tiêu đề hiển thị trên card ở trang chủ, nên viết đủ nghĩa khi đứng một mình.</li>
+          <li>Viết nội dung. Mỗi đoạn là một khối; nhấn Enter để sang đoạn mới.</li>
+          <li>Bên phải, chọn <strong>Chuyên mục</strong> — ít nhất một.</li>
+          <li>Đặt <strong>Ảnh đại diện</strong>. Ảnh này dùng cho card, cho ảnh mở đầu bài, và làm ảnh nền cho video nếu bài có video.</li>
+          <li>Nhấn <strong>Đăng</strong>.</li>
+        </ol>
+        <div class="note warn">
+          <b>Ảnh đại diện không phải tuỳ chọn</b>
+          <p>Card không có ảnh sẽ để lại một ô trống trong lưới trang chủ. Hệ thống không tự tìm ảnh thay thế.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="seg">
+      <div class="clock">0:15<span>15 phút</span></div>
+      <div>
+        <h2>Khối “Thông tin PGDS”</h2>
+        <p>Cuộn xuống <strong>phía dưới vùng soạn nội dung</strong> — không phải cột bên phải. Khối này gồm 8 trường điều khiển cách bài xuất hiện trên trang.</p>
+        <div class="scroll">
+          <table>
+            <caption>8 trường, theo đúng thứ tự bạn thấy trên màn hình.</caption>
+            <thead>
+              <tr><th scope="col">Trường</th><th scope="col">Dùng để làm gì</th><th scope="col">Ai điền</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Sa-pô</td><td>Đoạn dẫn hiển thị trên card, trong danh sách, và làm đoạn mở đầu bài.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Chuyên mục chính</td><td>Quyết định đường dẫn (breadcrumb) và nhãn chuyên mục trên card.</td><td class="who you">Bạn</td></tr>
+              <tr><td>YouTube ID</td><td>Gắn một video cho bài. Xem chặng 0:40.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Thời lượng video</td><td>Số phút hiện trên góc ảnh video.</td><td class="who auto">Tự động</td></tr>
+              <tr><td>Tin nổi bật</td><td>Bật để bài được xét vào khối nổi bật đầu trang chủ.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Thứ tự slot nổi bật</td><td><strong>1</strong> = bài lead lớn nhất. <strong>2–4</strong> = ba bài nhỏ bên cạnh.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Tin ảnh</td><td>Bật để bài hiện trong panel “Tin ảnh” bên phải khối nổi bật.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Nguồn tin</td><td>Hiện ở cuối bài và dưới ảnh video. Ghi khi bài dẫn lại từ nơi khác.</td><td class="who you">Bạn</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note warn">
+          <b>Sa-pô là trường đáng viết tay nhất</b>
+          <p>Nếu bỏ trống, card sẽ tự lấy mấy chục chữ đầu của bài — thường cắt giữa câu — và trang bài sẽ <strong>không có đoạn dẫn nào</strong>. Một sa-pô viết riêng, khoảng 25–35 chữ, tóm ý và không lặp lại câu mở đầu.</p>
+        </div>
+        <p>Trường <strong>Thời lượng video</strong> để hệ thống tự điền mỗi đêm. Nếu bạn nhập tay, lần cập nhật kế tiếp sẽ ghi đè.</p>
+      </div>
+    </section>
+
+    <section class="seg">
+      <div class="clock">0:30<span>10 phút</span></div>
+      <div>
+        <h2>Đưa bài lên trang chủ</h2>
+        <p>Khối nổi bật đầu trang chủ có bốn chỗ, và bạn là người quyết định bài nào vào chỗ nào.</p>
+        <ol class="steps">
+          <li>Bật <strong>Tin nổi bật</strong>.</li>
+          <li>Đặt <strong>Thứ tự slot</strong>: <code>1</code> cho bài lead, <code>2</code>, <code>3</code>, <code>4</code> cho ba bài nhỏ.</li>
+          <li>Cập nhật bài.</li>
+        </ol>
+        <div class="note">
+          <b>Đổi bài lead</b>
+          <p>Muốn thay bài lead, hãy hạ bài cũ xuống số khác hoặc tắt <strong>Tin nổi bật</strong> của nó trước. Nếu hai bài cùng đặt số 1, chỉ một bài lên được và bài còn lại biến mất khỏi khối.</p>
+        </div>
+        <p><strong>Tin ảnh</strong> là một panel riêng, không liên quan đến bốn slot trên. Bật cho những bài mà bức ảnh chính là nội dung.</p>
+        <p>Mỗi bài chỉ xuất hiện <strong>một lần</strong> trên trang chủ. Nếu bạn bật cả nổi bật và tin ảnh cho cùng một bài, hệ thống chọn vị trí đầu tiên và bỏ vị trí sau — đây là chủ ý, để trang chủ không lặp bài.</p>
+      </div>
+    </section>
+
+    <section class="seg">
+      <div class="clock">0:40<span>10 phút</span></div>
+      <div>
+        <h2>Gắn video</h2>
+        <p>Mỗi bài có <strong>một</strong> video chính. Không phải nhúng video vào giữa nội dung — chỉ cần điền mã.</p>
+        <ol class="steps">
+          <li>Mở video trên YouTube, sao chép <strong>toàn bộ đường dẫn</strong>.</li>
+          <li>Dán vào trường <strong>YouTube ID</strong>. Hệ thống tự cắt lấy phần mã.</li>
+          <li>Cập nhật bài.</li>
+        </ol>
+        <p>Trang bài sẽ hiện ảnh nền kèm nút phát. Video chỉ tải khi người đọc bấm vào — nhờ vậy trang mở nhanh và không gắn cookie theo dõi khi chưa cần.</p>
+        <div class="note">
+          <b>Ảnh nền video</b>
+          <p>Hệ thống tự tải ảnh từ YouTube về máy chủ mỗi đêm. Trong lúc chờ, ảnh đại diện của bài được dùng tạm — nên bài có video vẫn cần ảnh đại diện.</p>
+        </div>
+        <div class="note warn">
+          <b>Nếu video bị xoá hoặc chuyển sang riêng tư</b>
+          <p>Hệ thống phát hiện và tự ẩn nút phát, thay bằng dòng “Video không còn khả dụng”. Bạn không phải làm gì — nhưng nếu thấy dòng đó, nghĩa là video nguồn đã mất và nên thay bài.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="seg">
+      <div class="clock">0:50<span>7 phút</span></div>
+      <div>
+        <h2>“Sửa là thấy ngay”</h2>
+        <p>Trang được lưu đệm để tải nhanh, nhưng điều đó không làm bạn thấy nội dung cũ.</p>
+        <ul class="plain">
+          <li><strong>Khi bạn đang đăng nhập</strong>, bạn luôn thấy phiên bản mới nhất — kể cả bản nháp, qua nút <strong>Xem trước</strong>.</li>
+          <li><strong>Với người đọc</strong>, bộ đệm được xoá tự động mỗi lần bạn đăng hoặc cập nhật một bài đã đăng. Không cần bấm gì thêm.</li>
+          <li><strong>Lưu nháp thì không xoá đệm</strong> — vì bản nháp chưa có trên trang. Đúng như mong đợi.</li>
+        </ul>
+        <div class="note">
+          <b>Nếu người đọc báo vẫn thấy bản cũ</b>
+          <p>Nhờ họ tải lại trang bỏ qua bộ đệm trình duyệt (Ctrl+F5, hoặc Cmd+Shift+R trên máy Mac). Nếu vẫn còn, báo người phụ trách kỹ thuật — đừng đăng lại bài, vì việc đó không giải quyết được nguyên nhân.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="seg">
+      <div class="clock">0:57<span>3 phút</span></div>
+      <div>
+        <h2>Tự kiểm trước khi đăng</h2>
+        <p>Chạy qua danh sách này cho bài đầu tiên bạn tự đăng một mình.</p>
+        <ul class="check">
+          <li>Tiêu đề đọc được khi đứng riêng, không cần ngữ cảnh.</li>
+          <li>Sa-pô viết tay, không lặp câu mở đầu của bài.</li>
+          <li>Đã đặt ảnh đại diện.</li>
+          <li>Đã chọn chuyên mục, và chọn cả chuyên mục chính.</li>
+          <li>Nếu có video: đã dán đường dẫn YouTube.</li>
+          <li>Nếu dẫn lại: đã ghi nguồn tin.</li>
+          <li>Đã xem trước trên điện thoại, không chỉ trên máy tính.</li>
+        </ul>
+      </div>
+    </section>
+
+  </div>
+
+  <section class="open">
+    <h2>Hai việc còn chờ quyết định</h2>
+    <p>Không thuộc phần tập huấn, nhưng cần một người trong toà soạn nhận trách nhiệm trước ngày phát hành.</p>
+    <dl>
+      <div>
+        <dt>Tên miền và cấu hình biên (Cloudflare)</dt>
+        <dd>Cần một mã truy cập (API token) cho tên miền của toà soạn. Toàn bộ phần cấu hình đã viết sẵn và chạy được ngay khi có mã.</dd>
+      </div>
+      <div>
+        <dt>Địa chỉ email nhận cảnh báo</dt>
+        <dd>Hệ thống theo dõi máy chủ đã hoạt động và đang ghi nhật ký. Để cảnh báo gửi được vào hộp thư, cần một địa chỉ email và một lần bấm xác nhận từ chính hộp thư đó.</dd>
+      </div>
+      <div>
+        <dt>Thông tin pháp lý ở chân trang</dt>
+        <dd>Giấy phép hoạt động, cơ quan chủ quản, tổng biên tập, địa chỉ, điện thoại, email. Điền tại <strong>Giao diện → Tuỳ biến → Thông tin toà soạn</strong>. Cần được duyệt trước khi phát hành.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <footer>
+    Tài liệu tập huấn nội bộ — chuyên trang Phật giáo và Đời sống. Mọi tên trường trong tài liệu khớp đúng với nhãn hiển thị trên màn hình quản trị.
+  </footer>
+
+</div>
+
+</body>
+</html>
