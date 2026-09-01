@@ -397,6 +397,35 @@ add_filter( 'get_the_archive_title', 'pgds_archive_title' );
  * Checked on the real query rather than the permalink string, so it also covers feeds
  * and any other route that resolves to the same object.
  */
+/**
+ * Is this request a theme-registered custom endpoint rather than a real front-end route?
+ *
+ * Such a request looks identical to a soft-404 from the outside: its query matches no
+ * archive and no singular, so WordPress falls back to the HOME query. The distinguishing
+ * fact is that the theme deliberately registered a query var for it via the `query_vars`
+ * filter and pointed a rewrite rule at it.
+ *
+ * Derived from the registered vars rather than a hardcoded list, so an endpoint added later
+ * is covered without having to remember to edit pgds_block_private_cpt().
+ *
+ * @return bool
+ */
+function pgds_is_custom_endpoint() {
+	// Vars core knows about anyway; anything the theme added arrives on top of these.
+	$core_vars = ( new WP() )->public_query_vars;
+
+	foreach ( (array) apply_filters( 'query_vars', array() ) as $var ) {
+		if ( in_array( $var, $core_vars, true ) ) {
+			continue;
+		}
+		if ( '' !== (string) get_query_var( $var ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 function pgds_block_private_cpt() {
 	if ( is_admin() || is_robots() || is_feed() ) {
 		return;
@@ -435,6 +464,29 @@ function pgds_block_private_cpt() {
 	 * not the home path".
 	 */
 	if ( is_home() || is_front_page() ) {
+		/*
+		 * A custom endpoint is NOT a soft-404, even though it looks exactly like one here.
+		 *
+		 * /video-sitemap.xml (§7) is served by a rewrite rule to
+		 * `index.php?pgds_video_sitemap=1`. That query matches no archive or singular, so
+		 * WordPress falls back to the HOME query — is_home() is true and the path is not the
+		 * home path, which is precisely the signal this guard 404s on. Both callbacks sit on
+		 * template_redirect at priority 10 and this one is registered first, so it fired
+		 * before pgds_render_video_sitemap() ever ran:
+		 *
+		 *   /video-sitemap.xml -> 404 (text/html)
+		 *
+		 * i.e. a guard added to fix one soft-404 silently broke a §7 deliverable, and the
+		 * sitemap code itself was perfectly correct. Found by requesting the URL, not by
+		 * reading either function.
+		 *
+		 * Checked against the registered query vars rather than a hardcoded list, so any
+		 * future endpoint added via query_vars + a rewrite rule is covered automatically.
+		 */
+		if ( pgds_is_custom_endpoint() ) {
+			return;
+		}
+
 		$path = trim( (string) wp_parse_url( add_query_arg( array() ), PHP_URL_PATH ), '/' );
 
 		// Genuinely the home page: empty path, or a /page/N/ pagination path.

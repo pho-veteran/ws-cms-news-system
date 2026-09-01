@@ -268,3 +268,57 @@ function pgds_render_video_sitemap() {
 	exit;
 }
 add_action( 'template_redirect', 'pgds_render_video_sitemap' );
+
+/**
+ * Advertise the video sitemap in robots.txt.
+ *
+ * §7 makes the video sitemap a deliverable, but nothing pointed a crawler at it: robots.txt
+ * listed only core's `wp-sitemap.xml`, and /video-sitemap.xml is not referenced from any
+ * page. A sitemap nobody can discover does the job of no sitemap at all — the entries are
+ * only found if the URL is submitted by hand in Search Console.
+ *
+ * Appended rather than replacing the output, so core's own `Sitemap:` line and any line the
+ * SEO plugin adds both survive. Emitted only when there is at least one eligible video: a
+ * `Sitemap:` directive pointing at an empty urlset is a crawl error rather than a hint.
+ *
+ * @param string $output Existing robots.txt body.
+ * @param bool   $public Whether the site is set to be indexed.
+ * @return string
+ */
+function pgds_robots_video_sitemap( $output, $public ) {
+	if ( ! $public ) {
+		// Discouraged-from-indexing sites get core's minimal output; do not add to it.
+		return $output;
+	}
+
+	$q = new WP_Query(
+		array(
+			'post_type'      => 'post',
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'no_found_rows'  => true,
+			'fields'         => 'ids',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => '_pgds_youtube_id',
+					'compare' => 'EXISTS',
+				),
+				// Mirrors the sitemap body, which omits unavailable videos (§6.3). Without
+				// this, a site whose only videos are all private would advertise an empty
+				// sitemap.
+				array(
+					'key'     => '_pgds_video_unavailable',
+					'compare' => 'NOT EXISTS',
+				),
+			),
+		)
+	);
+
+	if ( ! $q->posts ) {
+		return $output;
+	}
+
+	return $output . "\nSitemap: " . esc_url_raw( home_url( '/video-sitemap.xml' ) ) . "\n";
+}
+add_filter( 'robots_txt', 'pgds_robots_video_sitemap', 10, 2 );
