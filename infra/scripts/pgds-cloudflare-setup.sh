@@ -156,7 +156,7 @@ RULES=$(cat <<'JSON'
   },
   {
     "description": "pgds rule 2 - cache static assets at the edge, 1 month TTL (Proposal 02 5.3)",
-    "expression": "(http.request.uri.path matches \"\\\\.(css|js|woff2|woff|ttf|webp|avif|jpg|jpeg|png|gif|svg|ico)$\")",
+    "expression": "(http.request.uri.path.extension in {\"css\" \"js\" \"woff2\" \"woff\" \"ttf\" \"webp\" \"avif\" \"jpg\" \"jpeg\" \"png\" \"gif\" \"svg\" \"ico\"})",
     "action": "set_cache_settings",
     "action_parameters": {
       "cache": true,
@@ -211,13 +211,23 @@ check_setting() { # id expected human
 check_setting ssl '"strict"' 'SSL mode'
 check_setting always_use_https '"on"' 'Always Use HTTPS'
 
-RULE_COUNT=$(cf GET "/zones/${ZONE_ID}/rulesets?phase=http_request_cache_settings" \
+# Read the ENTRYPOINT ruleset, not the phase LIST.
+#
+# The list endpoint (/rulesets?phase=...) returns each ruleset's metadata only — id, kind,
+# phase, name — with no `rules` array. So `len(r.get("rules") or [])` was always 0 and the
+# verify step reported
+#   FAIL cache rules: expected 2, found 0
+# on a zone whose two rules were live and demonstrably working (cf-cache-status: HIT on a
+# CSS asset). A self-check that fails when the thing it checks is correct is worse than no
+# self-check: it trains the operator to ignore the script's own verdict.
+#
+# /rulesets/phases/<phase>/entrypoint returns the ruleset WITH its rules.
+RULE_COUNT=$(cf GET "/zones/${ZONE_ID}/rulesets/phases/http_request_cache_settings/entrypoint" \
   | python3 -c '
 import json,sys
-for r in json.load(sys.stdin)["result"]:
-    if r.get("phase")=="http_request_cache_settings" and r.get("kind")=="zone":
-        print(len(r.get("rules") or [])); break
-else: print(0)' 2>/dev/null || echo 0)
+d = json.load(sys.stdin)
+r = d.get("result") or {}
+print(len(r.get("rules") or []))' 2>/dev/null || echo 0)
 if [ "$RULE_COUNT" = "2" ]; then
   log "  OK   cache rules = 2 (of the Free plan's 10 slots, per 5.3)"
 else
@@ -227,10 +237,22 @@ fi
 
 [ "$FAIL" = 0 ] || die "verification failed — see the FAIL lines above"
 
-log "done. Remaining MANUAL steps (deliberately not automated):"
-log "  1. Generate an Origin CA certificate in the dashboard, install it on the origin,"
-log "     and confirm nginx serves 443 with it (Full (strict) requires this)."
-log "  2. Point the apex + www A records at the origin IP and enable the orange cloud."
-log "     THIS is the cutover (section 11) — do it last, after the go/no-go gate."
-log "  3. Confirm a static asset returns cf-cache-status: HIT on the second request:"
+log "done. Still MANUAL, and deliberately so:"
+log "  1. TLS on the origin. Full (strict) needs a valid chain on 443, so run this only"
+log "     AFTER the origin serves HTTPS. Two ways:"
+log "       - Cloudflare Origin CA cert from the dashboard, installed by hand; or"
+log "       - certbot with the dns-cloudflare plugin, which needs a token carrying DNS:Edit:"
+log "           certbot certonly --dns-cloudflare \\"
+log "             --dns-cloudflare-credentials /root/.secrets/cloudflare.ini \\"
+log "             -d ${CF_DOMAIN} -d '*.${CF_DOMAIN}'"
+log "     Verify before continuing:  openssl s_client -connect <origin>:443 -servername ${CF_DOMAIN}"
+log "     (expect 'Verify return code: 0'). Setting Full (strict) without this 502s the site."
+log "  2. The apex/www A records. THIS is the cutover (section 11) — do it last, after the"
+log "     go/no-go gate, and never as a side effect of a config script."
+log "  3. WordPress siteurl/home must be the DOMAIN, not the origin IP:"
+log "       wp search-replace 'http://<origin-ip>' 'https://${CF_DOMAIN}' --all-tables"
+log "     Left on the IP, every asset URL points at an address whose 443 only accepts"
+log "     Cloudflare IPs, so a reader's browser loads NO css or js — the page renders unstyled"
+log "     while the origin itself looks healthy. Flush the object and FastCGI caches after."
+log "  4. Confirm a static asset returns cf-cache-status: HIT on the second request:"
 log "       curl -sI https://${CF_DOMAIN}/wp-content/themes/pgds/assets/dist/main.<hash>.css | grep cf-cache-status"

@@ -23,6 +23,13 @@
 set -uo pipefail
 
 ENV_FILE=/root/.pgds-backup.env
+# §10.2 requires the SES credentials be SEPARATE from the backup credentials, and they are:
+# pgds-backup is PutObject-only, pgds-ses is send-only. This script previously read only
+# the backup env file, so `aws sesv2 send-email` ran as pgds-backup and failed with
+#   AccessDeniedException: User .../pgds-backup is not authorized to perform ses:SendEmail
+# while the alert itself was detected correctly. Sourced AFTER the backup file so the SES
+# keys win for this process, leaving the backup keys untouched for pgds-db-backup.sh.
+SES_ENV_FILE=/root/.pgds-ses.env
 STATE_DIR=/var/lib/pgds
 LOG_TAG=pgds-health
 
@@ -41,6 +48,14 @@ mkdir -p "$STATE_DIR"
 if [ -r "$ENV_FILE" ]; then
   # shellcheck disable=SC1090
   set -a; . "$ENV_FILE"; set +a
+fi
+# Sourced SECOND so the send-only SES keys override the PutObject-only backup keys for
+# this process. Without it the send ran as pgds-backup and AWS refused it — see the
+# comment on SES_ENV_FILE. The backup script keeps reading ENV_FILE alone, so the two
+# credentials stay separate on disk as §10.2 requires.
+if [ -r "$SES_ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  set -a; . "$SES_ENV_FILE"; set +a
 fi
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-ap-southeast-1}"
 
@@ -112,10 +127,35 @@ Runbook: RUNBOOK.md §7 (monitoring), §4.1 (RAM budget).
 EOF
 )"
 
+# --content as JSON, not shorthand.
+#
+# The shorthand form (Simple={Subject={Data=...},Body={...}}) CANNOT carry this body. Its
+# parser treats both commas and newlines as structural, and the body contains both — the
+# `ps` table alone supplies several of each. The previous version tried to paper over that
+# by escaping commas with sed, which mistook a parser limitation for an escaping problem;
+# the CLI still rejected it and printed a caret pointing mid-body:
+#
+#   Simple={Subject={Data=[pgds] origin health alert,Charset=UTF-8},Body={Text={Data=Line one
+#                               ^
+#
+# The visible symptom was "WARNING: SES send failed" on every real alert while a hand-typed
+# test send worked, which pointed at credentials rather than at the argument syntax.
+#
+# JSON has no such ambiguity. Built with python3 -c so the body is encoded properly whatever
+# it contains, and passed via a temp file so a long body cannot hit ARG_MAX either.
+CONTENT_JSON="$(mktemp)"
+trap 'rm -f "$CONTENT_JSON"' EXIT
+python3 -c 'import json,sys
+body = sys.stdin.read()
+json.dump({"Simple": {
+    "Subject": {"Data": "[pgds] origin health alert", "Charset": "UTF-8"},
+    "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
+}}, sys.stdout)' <<<"$BODY" > "$CONTENT_JSON"
+
 if aws sesv2 send-email \
     --from-email-address "$ALERT_FROM" \
     --destination "ToAddresses=$ALERT_TO" \
-    --content "Simple={Subject={Data=[pgds] origin health alert,Charset=UTF-8},Body={Text={Data=$(printf '%s' "$BODY" | sed 's/,/\\,/g'),Charset=UTF-8}}}" \
+    --content "file://$CONTENT_JSON" \
     >/dev/null 2>&1; then
   echo "$now" > "$STATE_DIR/alerted"
   log "alert emailed to $ALERT_TO"
