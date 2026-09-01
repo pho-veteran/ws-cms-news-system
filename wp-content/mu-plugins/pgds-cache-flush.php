@@ -32,15 +32,33 @@ function pgds_flush_page_cache() {
 		return;
 	}
 	try {
+		/*
+		 * Symlinks are NOT followed, so the delete cannot escape the cache directory.
+		 * Verified rather than assumed: with `/var/cache/nginx/fcgi/evil-link ->
+		 * /tmp/precious` in place, a flush removed the real cache entry and left
+		 * /tmp/precious/important.txt untouched. RecursiveDirectoryIterator does not
+		 * descend into symlinked directories unless FOLLOW_SYMLINKS is passed, and it is
+		 * deliberately not passed here.
+		 *
+		 * A symlink is unlinked rather than rmdir'd. isDir() is TRUE for a link to a
+		 * directory and rmdir() then fails, which left the link in the cache directory
+		 * forever while the flush still reported success — so the directory was never
+		 * actually emptied. nginx does not create symlinks in its cache, so this is
+		 * defensive, but a flush that silently leaves entries behind is the wrong thing to
+		 * build the "edits appear immediately" guarantee (§5.1) on.
+		 */
 		$it = new RecursiveIteratorIterator(
 			new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ),
 			RecursiveIteratorIterator::CHILD_FIRST
 		);
 		foreach ( $it as $f ) {
-			if ( $f->isDir() ) {
-				@rmdir( $f->getPathname() );
+			$path = $f->getPathname();
+			if ( is_link( $path ) ) {
+				@unlink( $path );
+			} elseif ( $f->isDir() ) {
+				@rmdir( $path );
 			} else {
-				@unlink( $f->getPathname() );
+				@unlink( $path );
 			}
 		}
 	} catch ( Exception $e ) {
