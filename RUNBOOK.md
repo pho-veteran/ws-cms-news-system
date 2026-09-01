@@ -237,6 +237,20 @@ there.
    was exercised end to end against the IANA-reserved `example.com`, which produced 3
    tokens and then destroyed cleanly, so only the domain value is missing.
 5. Request SES production access (24h+, §11 — the one D0 item that can delay launch).
+   **Submitted 2026-09-01 for `vihn.id.vn`; `Details.ReviewDetails.Status = PENDING`.**
+   This call is rejected outright without a real, reachable website URL (`put-account-details`
+   validates it), which is why it could not be filed earlier. Check with:
+
+   ```bash
+   aws sesv2 get-account --region ap-southeast-1 \
+     --query '{prod:ProductionAccessEnabled,review:Details.ReviewDetails.Status}'
+   ```
+
+   Until it flips to `prod: true`, sending works but only to **verified** recipients.
+   `pgds-health-alert.sh` therefore targets `success@simulator.amazonses.com`, which the
+   sandbox always accepts and which proves the whole path end to end. Point
+   `PGDS_ALERT_TO` in `/root/.pgds-ses.env` at the real operator mailbox once either
+   production access lands or that address is verified as an identity.
 6. Run the §13 go/no-go gate.
 7. **Last:** point the apex and `www` A records at the origin and enable the orange
    cloud. This is the cutover; everything above is reversible without visitor impact.
