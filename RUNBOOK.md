@@ -20,14 +20,24 @@ WordPress core, the database, and plugins are never deployed by this pipeline.
 
 Configure every repository secret documented in `.github/workflows/README.md` before the
 first deployment. The workflow uses a dedicated key-only deployment account and a pinned SSH
-host key; it does not allowlist GitHub Actions IP ranges.
+host key; it does not allowlist GitHub Actions IP ranges. Short-lived AWS credentials open port
+22 only to the active runner's IPv4 `/32`, then the workflow revokes the exact security-group
+rule under `if: always()`. A later serialized deploy removes a leaked `github-actions deploy`
+rule first if a job was force-killed before cleanup could run.
 
 The post-deployment order is mandatory (proposal §12.1): **origin first, edge second**.
 
 1. rsync the runtime theme → 2. reload PHP-FPM (resets opcache) → 3. flush FastCGI → 4. purge Cloudflare only when theme assets changed.
 
 Purging Cloudflare before the origin can re-cache stale origin content at the edge.
-Overlapping deployments are serialized by the GitHub Actions concurrency group.
+Overlapping deployments are serialized by the GitHub Actions concurrency group. After a run,
+verify that no temporary rule remains:
+
+```bash
+aws ec2 describe-security-group-rules --region ap-southeast-1 \
+  --filters Name=group-id,Values=<production-security-group-id> \
+  --query "SecurityGroupRules[?starts_with(Description || '', 'github-actions deploy ')]"
+```
 
 For a break-glass manual deployment, first build the runtime assets and fonts from the theme
 directory, then use the same order and exclusions as `.github/workflows/deploy.yml`. Do not

@@ -301,12 +301,9 @@ variable "github_repository" {
   description = <<-EOT
     "owner/repo" allowed to assume the deploy role via OIDC (github-oidc.tf).
 
-    This value IS the security boundary. The trust policy pins
-    `token.actions.githubusercontent.com:sub` to
-    `repo:<this value>:ref:refs/heads/main`, so only workflows running on main in this
-    exact repository can assume the role. Without the pin, any GitHub repository on the
-    internet could assume it; with it scoped to a ref, a pull request from a fork cannot,
-    because a fork's token carries a different `sub`.
+    This value forms the human-readable part of the security boundary. GitHub repositories
+    created on or after 2026-07-15 also include immutable owner and repository IDs in the
+    subject; github_repository_owner_id and github_repository_id provide those parts.
   EOT
   type        = string
   default     = "pho-veteran/ws-cms-news-system"
@@ -314,5 +311,27 @@ variable "github_repository" {
   validation {
     condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
     error_message = "github_repository must be in \"owner/repo\" form."
+  }
+}
+
+variable "github_repository_owner_id" {
+  description = "Immutable GitHub owner ID in the deploy workflow's OIDC subject. Query `.owner.id` from `gh api repos/<owner>/<repo>`."
+  type        = string
+  default     = "128946325"
+
+  validation {
+    condition     = can(regex("^[1-9][0-9]*$", var.github_repository_owner_id))
+    error_message = "github_repository_owner_id must contain only the positive numeric GitHub owner ID."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Immutable GitHub repository ID in the deploy workflow's OIDC subject. Query `.id` from `gh api repos/<owner>/<repo>`."
+  type        = string
+  default     = "1352508712"
+
+  validation {
+    condition     = can(regex("^[1-9][0-9]*$", var.github_repository_id))
+    error_message = "github_repository_id must contain only the positive numeric GitHub repository ID."
   }
 }

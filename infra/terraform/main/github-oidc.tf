@@ -60,8 +60,10 @@ resource "aws_iam_role" "github_deploy" {
 
   /*
    * The `sub` condition is what makes this safe. Without it, ANY GitHub repository in the
-   * world could assume this role. Pinned to this repo and further to the `main` ref, so a
-   * pull request from a fork — which runs with a different `sub` — cannot assume it either.
+   * world could assume this role. GitHub repositories created on or after 2026-07-15 emit
+   * an immutable subject that includes both the owner ID and repository ID. Pinning those
+   * IDs plus the `main` ref prevents a rename, transfer, or fork pull request from widening
+   * who can assume the role.
    */
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -74,7 +76,7 @@ resource "aws_iam_role" "github_deploy" {
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub" = "repo:${split("/", var.github_repository)[0]}@${var.github_repository_owner_id}/${split("/", var.github_repository)[1]}@${var.github_repository_id}:ref:refs/heads/main"
         }
       }
     }]

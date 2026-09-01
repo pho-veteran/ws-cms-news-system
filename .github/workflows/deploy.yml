@@ -190,7 +190,7 @@ jobs:
       # authorize/revoke ingress on this one security group.
       # ---------------------------------------------------------------------
       - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
@@ -202,19 +202,63 @@ jobs:
           SG_ID: ${{ secrets.AWS_SECURITY_GROUP_ID }}
         run: |
           set -euo pipefail
+
+          # A previous job can be killed after authorizing ingress but before its always()
+          # cleanup runs. Deploys are serialized, so no matching rule can belong to another
+          # active deploy; remove any legacy leak before opening this run's rule.
+          STALE_RULE_IDS="$(
+            aws ec2 describe-security-group-rules \
+              --filters "Name=group-id,Values=${SG_ID}" \
+              --query "SecurityGroupRules[?IsEgress==\`false\` && FromPort==\`22\` && ToPort==\`22\` && (Description=='github-actions temporary deploy access' || starts_with(Description || '', 'github-actions deploy '))].SecurityGroupRuleId" \
+              --output text
+          )"
+          for rule_id in $STALE_RULE_IDS; do
+            aws ec2 revoke-security-group-ingress \
+              --group-id "$SG_ID" \
+              --security-group-rule-ids "$rule_id" \
+              >/dev/null
+            echo "removed stale temporary SSH rule ${rule_id}"
+          done
+
           # api.ipify.org is a plain-text echo; checkip.amazonaws.com is the fallback so a
-          # single provider outage cannot block a deploy.
-          RUNNER_IP="$(curl -fsS --max-time 15 https://api.ipify.org || curl -fsS --max-time 15 https://checkip.amazonaws.com | tr -d '[:space:]')"
-          case "$RUNNER_IP" in
-            *.*.*.*) : ;;
-            *) echo "could not determine runner IP (got '$RUNNER_IP')" >&2; exit 1 ;;
-          esac
-          echo "runner_cidr=${RUNNER_IP}/32" >> "$GITHUB_OUTPUT"
-          aws ec2 authorize-security-group-ingress \
-            --group-id "$SG_ID" \
-            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${RUNNER_IP}/32,Description='github-actions temporary deploy access'}]" \
-            >/dev/null
-          echo "opened 22 for ${RUNNER_IP}/32"
+          # single provider outage cannot block a deploy. Force IPv4 because this workflow
+          # deliberately authorizes an IPv4 /32 and the origin has no public IPv6 address.
+          RUNNER_IP="$(
+            { curl -4fsS --max-time 15 https://api.ipify.org || \
+              curl -4fsS --max-time 15 https://checkip.amazonaws.com; } |
+              tr -d '[:space:]'
+          )"
+          if ! python3 - "$RUNNER_IP" <<'PY'
+          import ipaddress
+          import sys
+
+          address = ipaddress.ip_address(sys.argv[1])
+          if address.version != 4:
+              raise SystemExit(f"expected an IPv4 address, got {address}")
+          PY
+          then
+            echo "could not determine the runner's public IPv4 address" >&2
+            exit 1
+          fi
+
+          RUNNER_CIDR="${RUNNER_IP}/32"
+          RULE_DESCRIPTION="github-actions deploy ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          echo "runner_cidr=${RUNNER_CIDR}" >> "$GITHUB_OUTPUT"
+          echo "rule_description=${RULE_DESCRIPTION}" >> "$GITHUB_OUTPUT"
+
+          RULE_ID="$(
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SG_ID" \
+              --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${RUNNER_CIDR},Description='${RULE_DESCRIPTION}'}]" \
+              --query 'SecurityGroupRules[0].SecurityGroupRuleId' \
+              --output text
+          )"
+          if [[ ! "$RULE_ID" =~ ^sgr-[0-9a-f]+$ ]]; then
+            echo "AWS did not return the temporary security-group rule ID" >&2
+            exit 1
+          fi
+          echo "rule_id=${RULE_ID}" >> "$GITHUB_OUTPUT"
+          echo "opened 22 for ${RUNNER_CIDR} as ${RULE_ID}"
 
       - name: Deploy runtime theme files
         shell: bash
@@ -328,21 +372,47 @@ jobs:
         env:
           SG_ID: ${{ secrets.AWS_SECURITY_GROUP_ID }}
           RUNNER_CIDR: ${{ steps.open_ssh.outputs.runner_cidr }}
+          RULE_ID: ${{ steps.open_ssh.outputs.rule_id }}
+          RULE_DESCRIPTION: ${{ steps.open_ssh.outputs.rule_description }}
         run: |
           set -uo pipefail
-          if aws ec2 revoke-security-group-ingress \
-               --group-id "$SG_ID" \
-               --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${RUNNER_CIDR}}]" \
-               >/dev/null 2>&1; then
-            echo "revoked 22 for ${RUNNER_CIDR}"
-          else
-            echo "::warning::could not revoke SSH for ${RUNNER_CIDR} on ${SG_ID} — remove it by hand"
+
+          # Prefer the immutable rule ID returned by authorize. If the open step failed
+          # after AWS created the rule but before it published that output, recover only
+          # this run's uniquely described rule instead of revoking by CIDR.
+          RULE_IDS="$RULE_ID"
+          if [ -z "$RULE_IDS" ] && [ -n "$RULE_DESCRIPTION" ]; then
+            RULE_IDS="$(
+              aws ec2 describe-security-group-rules \
+                --filters "Name=group-id,Values=${SG_ID}" \
+                --query "SecurityGroupRules[?IsEgress==\`false\` && Description=='${RULE_DESCRIPTION}'].SecurityGroupRuleId" \
+                --output text 2>/dev/null || true
+            )"
           fi
+
+          if [ -z "$RULE_IDS" ]; then
+            echo "::warning::no temporary SSH rule ID was available for ${RUNNER_CIDR}"
+          fi
+          for rule_id in $RULE_IDS; do
+            if aws ec2 revoke-security-group-ingress \
+                 --group-id "$SG_ID" \
+                 --security-group-rule-ids "$rule_id" \
+                 >/dev/null 2>&1; then
+              echo "revoked ${rule_id} for ${RUNNER_CIDR}"
+            else
+              echo "::warning::could not revoke ${rule_id} on ${SG_ID} — remove it by hand"
+            fi
+          done
+
           # Report any deploy rule still present, so a leak is visible in the run summary
-          # instead of only in the console weeks later.
-          LEFT="$(aws ec2 describe-security-groups --group-ids "$SG_ID" \
-                    --query "SecurityGroups[0].IpPermissions[?FromPort==\`22\`].IpRanges[?contains(Description||'','github-actions')].CidrIp" \
-                    --output text 2>/dev/null || true)"
+          # instead of only in the console weeks later. Query security-group rules directly;
+          # nested IpPermissions projections can silently return an empty list.
+          LEFT="$(
+            aws ec2 describe-security-group-rules \
+              --filters "Name=group-id,Values=${SG_ID}" \
+              --query "SecurityGroupRules[?IsEgress==\`false\` && FromPort==\`22\` && ToPort==\`22\` && (Description=='github-actions temporary deploy access' || starts_with(Description || '', 'github-actions deploy '))].[SecurityGroupRuleId,CidrIpv4]" \
+              --output text 2>/dev/null || true
+          )"
           if [ -n "${LEFT:-}" ]; then
             echo "::warning::temporary deploy rules still on ${SG_ID}: ${LEFT}"
           else

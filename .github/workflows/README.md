@@ -22,6 +22,16 @@ The origin is always purged before the edge.
 | `DEPLOY_FASTCGI_CACHE_DIR` | Absolute directory containing the Nginx FastCGI cache files.                                               | Confirm the `fastcgi_cache_path` configured in Nginx; the project configuration uses `/var/cache/nginx/fcgi`.                                                                                                 |
 | `CLOUDFLARE_API_TOKEN`     | Cloudflare API token permitted to purge the production zone cache.                                         | In Cloudflare, create an API token scoped to **Zone / Cache Purge / Purge** for this zone only. Do not use the account-wide Global API Key.                                                                   |
 | `CLOUDFLARE_ZONE_ID`       | Cloudflare zone identifier for the production domain.                                                      | In the Cloudflare dashboard, open the production zone and copy its Zone ID from the Overview page.                                                                                                            |
+| `AWS_DEPLOY_ROLE_ARN`      | ARN of the short-lived OIDC role used to manage one temporary SSH rule.                                    | Apply `infra/terraform/main`; use the `github_deploy_role_arn` output. Do not replace OIDC with access-key secrets.                                                                                            |
+| `AWS_SECURITY_GROUP_ID`    | Production origin security group where the workflow opens the runner's IPv4 `/32`.                         | Apply `infra/terraform/main`; use the `app_security_group_id` output.                                                                                                                                           |
+| `AWS_REGION`               | AWS region containing the production security group.                                                       | Use the main stack region; production currently uses `ap-southeast-1`.                                                                                                                                         |
+
+The IAM trust policy uses GitHub's immutable OIDC subject form for repositories created on or
+after 2026-07-15: `repo:<owner>@<owner-id>/<repo>@<repo-id>:ref:refs/heads/main`. Keep
+`github_repository`, `github_repository_owner_id`, and `github_repository_id` in
+`infra/terraform/main/variables.tf` aligned with the values returned by
+`gh api repos/<owner>/<repo>` and the repository OIDC settings endpoint. A legacy name-only
+subject makes AWS reject `AssumeRoleWithWebIdentity` even when `id-token: write` is present.
 
 ## Server access requirements
 
@@ -33,3 +43,9 @@ privilege and must not receive an interactive passwordless root shell.
 The deploy workflow uses `StrictHostKeyChecking=yes` with the pinned
 `DEPLOY_SSH_KNOWN_HOSTS` secret. Do not replace this with a runtime `ssh-keyscan` without
 an independently verified host key, because that would accept a man-in-the-middle key.
+
+The job obtains short-lived AWS credentials through OIDC, removes any leaked rule from an
+interrupted prior deploy, and then opens port 22 only to its detected public IPv4 `/32`. It
+records the returned security-group rule ID and revokes that exact rule under `if: always()`.
+After each deploy, the security group should contain no rule whose description starts with
+`github-actions deploy`; the permanent administrator `/32` remains managed by Terraform.
