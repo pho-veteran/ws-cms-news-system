@@ -129,6 +129,12 @@ jobs:
     name: Deploy to production
     needs: build
     runs-on: ubuntu-latest
+    # id-token is what lets this job exchange a GitHub OIDC token for the AWS role in
+    # infra/terraform/main/github-oidc.tf. Without it the AWS step fails with
+    # "Credentials could not be loaded"; with it, no long-lived AWS key exists in GitHub.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -166,6 +172,49 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+
+      # ---------------------------------------------------------------------
+      # Temporary SSH access for this runner only.
+      #
+      # §10.2 restricts SSH ingress to one administrator CIDR, and a GitHub-hosted runner
+      # is never at that address. The first real deploy proved it:
+      #   ssh: connect to host *** port 22: Connection timed out
+      #
+      # Allow-listing GitHub's ranges is not an option — https://api.github.com/meta lists
+      # 5,625 IPv4 ranges for `actions`, against AWS's default 60 rules per security group.
+      # Opening 0.0.0.0/0 would throw away the §10.2 control outright.
+      #
+      # So the job opens a /32 for its own address, deploys, and revokes it in an always()
+      # step below. Credentials come from OIDC (see infra/terraform/main/github-oidc.tf),
+      # so no long-lived AWS key is stored in GitHub, and the role can do nothing but
+      # authorize/revoke ingress on this one security group.
+      # ---------------------------------------------------------------------
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Open SSH for this runner
+        id: open_ssh
+        shell: bash
+        env:
+          SG_ID: ${{ secrets.AWS_SECURITY_GROUP_ID }}
+        run: |
+          set -euo pipefail
+          # api.ipify.org is a plain-text echo; checkip.amazonaws.com is the fallback so a
+          # single provider outage cannot block a deploy.
+          RUNNER_IP="$(curl -fsS --max-time 15 https://api.ipify.org || curl -fsS --max-time 15 https://checkip.amazonaws.com | tr -d '[:space:]')"
+          case "$RUNNER_IP" in
+            *.*.*.*) : ;;
+            *) echo "could not determine runner IP (got '$RUNNER_IP')" >&2; exit 1 ;;
+          esac
+          echo "runner_cidr=${RUNNER_IP}/32" >> "$GITHUB_OUTPUT"
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$SG_ID" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${RUNNER_IP}/32,Description='github-actions temporary deploy access'}]" \
+            >/dev/null
+          echo "opened 22 for ${RUNNER_IP}/32"
 
       - name: Deploy runtime theme files
         shell: bash
@@ -259,3 +308,43 @@ jobs:
             --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             --header 'Content-Type: application/json' \
             --data '{"purge_everything":true}'
+
+      # ---------------------------------------------------------------------
+      # Revoke the temporary SSH rule.
+      #
+      # if: always() so the rule is removed even when the deploy, the reload, or the
+      # Cloudflare purge failed. Without always(), a failing rsync would leave port 22 open
+      # to a runner IP indefinitely — and the next run would then hit AWS's
+      # InvalidPermission.Duplicate on a stale rule, so the failure compounds.
+      #
+      # continue-on-error so a revoke hiccup cannot mask the real deploy result; the step
+      # still logs loudly, and the guard below turns a leaked rule into a visible warning
+      # rather than a silent one.
+      # ---------------------------------------------------------------------
+      - name: Revoke SSH for this runner
+        if: always() && steps.open_ssh.outputs.runner_cidr != ''
+        continue-on-error: true
+        shell: bash
+        env:
+          SG_ID: ${{ secrets.AWS_SECURITY_GROUP_ID }}
+          RUNNER_CIDR: ${{ steps.open_ssh.outputs.runner_cidr }}
+        run: |
+          set -uo pipefail
+          if aws ec2 revoke-security-group-ingress \
+               --group-id "$SG_ID" \
+               --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${RUNNER_CIDR}}]" \
+               >/dev/null 2>&1; then
+            echo "revoked 22 for ${RUNNER_CIDR}"
+          else
+            echo "::warning::could not revoke SSH for ${RUNNER_CIDR} on ${SG_ID} — remove it by hand"
+          fi
+          # Report any deploy rule still present, so a leak is visible in the run summary
+          # instead of only in the console weeks later.
+          LEFT="$(aws ec2 describe-security-groups --group-ids "$SG_ID" \
+                    --query "SecurityGroups[0].IpPermissions[?FromPort==\`22\`].IpRanges[?contains(Description||'','github-actions')].CidrIp" \
+                    --output text 2>/dev/null || true)"
+          if [ -n "${LEFT:-}" ]; then
+            echo "::warning::temporary deploy rules still on ${SG_ID}: ${LEFT}"
+          else
+            echo "no temporary deploy rules remain"
+          fi

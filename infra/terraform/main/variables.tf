@@ -296,3 +296,23 @@ variable "monthly_run_rate_budget" {
     error_message = "monthly_run_rate_budget must be a positive number expressed as a string, e.g. \"40\"."
   }
 }
+
+variable "github_repository" {
+  description = <<-EOT
+    "owner/repo" allowed to assume the deploy role via OIDC (github-oidc.tf).
+
+    This value IS the security boundary. The trust policy pins
+    `token.actions.githubusercontent.com:sub` to
+    `repo:<this value>:ref:refs/heads/main`, so only workflows running on main in this
+    exact repository can assume the role. Without the pin, any GitHub repository on the
+    internet could assume it; with it scoped to a ref, a pull request from a fork cannot,
+    because a fork's token carries a different `sub`.
+  EOT
+  type        = string
+  default     = "pho-veteran/ws-cms-news-system"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
+    error_message = "github_repository must be in \"owner/repo\" form."
+  }
+}
