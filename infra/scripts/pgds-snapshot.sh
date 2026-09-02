@@ -23,7 +23,18 @@
 #   # §6.2), so either attach a separate policy or run it from the admin workstation.
 #   # Prefer the workstation: a key that can delete snapshots is exactly what should
 #   # not sit on an internet-facing box.
-#   41 2 * * * /usr/local/sbin/pgds-snapshot.sh
+#
+# DO NOT put this in cron. This header used to carry a `41 2 * * *` example, which read
+# as the active schedule while user_data.sh never installed it — so for weeks nothing
+# created a snapshot at all and §6.3 measured RTO against a "latest snapshot" that did not
+# exist. The daily job is now an AWS Data Lifecycle Manager policy
+# (infra/terraform/main/dlm.tf): AWS runs the schedule and the pruning server-side, so the
+# delete capability lives in IAM instead of on the box, which is the same objection this
+# header raises about cron — resolved rather than traded away.
+#
+# This script remains the MANUAL path: an ad-hoc restore point before a resize or a
+# migration. It tags its images pgds-auto-* while DLM tags its own CreatedBy=dlm, so the
+# two retention pools are independent and neither prunes the other's images.
 
 set -euo pipefail
 

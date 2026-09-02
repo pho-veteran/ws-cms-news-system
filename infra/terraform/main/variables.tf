@@ -154,7 +154,7 @@ variable "domain_name" {
 }
 
 variable "budget_notification_emails" {
-  description = "Email addresses to notify for the $50/$85 AWS Budgets alerts (Proposal 02 §8.4)."
+  description = "Email addresses to notify for the AWS Budgets alerts (Proposal 02 §8.4). Four budgets use this: lifetime $50/$160/$190 (ANNUALLY) and the monthly run-rate budget. The $160/$190 thresholds replace §8.4's $85, which was derived from the Lightsail six-month total; see infra/terraform/README.md."
   type        = list(string)
 }
 

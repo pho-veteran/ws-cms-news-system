@@ -599,30 +599,44 @@ the proposal's Day-3 restore test was written for Lightsail.
 
 ## 7. Drift register — repo vs. reality
 
-Recorded because each of these will mislead someone who trusts the file over the host.
+Reconciled 2026-09-02. Every row below was a place the repo would have misled someone who
+trusted the file over the host; the Status column records what was done about it.
 
-| # | Claim in repo | Reality | Where |
+| # | Claim in repo | Reality | Status |
 |---|---|---|---|
-| 1 | Lightsail `small_3_0` @ $12/mo | EC2 `t4g.small` @ ~$24.89/mo; account capped at `micro_3_0` | `PROPOSAL_02` §2 vs `terraform.tfvars:8` |
-| 2 | "there is no domain, so no zone exists" | `vihn.id.vn` live, Cloudflare proxy active, zone serving | `RUNBOOK.md:208` |
-| 3 | Cutover steps written as pending | Cutover completed | `RUNBOOK.md:237-272` |
-| 4 | `server_name phatgiaovadoisong.vn www.…` | Live nginx uses `server_name _` | `infra/nginx/pgds.conf:29-35` |
-| 5 | nginx config is port 80 only, no TLS | Live serves 443 with a Let's Encrypt cert | `infra/nginx/pgds.conf:29-32` |
-| 6 | TLS design is Cloudflare **Origin CA** | Live cert is **Let's Encrypt** (`CN=YR2`, exp. 2026-11-30), certbot cron | `PROPOSAL_02` §5.3 |
-| 7 | FastCGI zone belongs in `nginx.conf` http block | Lives in `/etc/nginx/conf.d/pgds-cache.conf` — equivalent, different location | `infra/nginx/http-snippet.conf:1-8` |
-| 8 | Cache flush hooks `save_post` | Hooks `transition_post_status` + 5 others | `CLAUDE.md`, `RUNBOOK.md:65` vs `pgds-cache-flush.php:152-160` |
-| 9 | Budgets $50 / $85, monthly $45 | $50 / $160 / $190, monthly $40 | `infra/terraform/README.md:251-275` vs `budgets.tf:52-147` |
-| 10 | Snapshot cron `41 2 * * *` | No snapshot cron installed | `pgds-snapshot.sh:19-26` vs live `cron.d/pgds` |
-| 11 | SES DKIM Terraform-managed | `domain_name = ""` → both SES resources `count = 0` | `ses.tf:12-20`, `terraform.tfvars:15` |
-| 12 | `X-Origin-Verify` blocks direct IP | Commented out; not in live config | `infra/nginx/pgds.conf:37-39` |
-| 13 | `§5` resize procedure | Lightsail-only steps; current backend is EC2 | `RUNBOOK.md:113-119` |
+| 1 | Lightsail `small_3_0` @ $12/mo | EC2 `t4g.small` @ ~$24.89/mo; account capped at `micro_3_0` | **Documented** — proposals kept as the design record; §1 and §3 here carry the deployed figures |
+| 2 | "there is no domain, so no zone exists" | `vihn.id.vn` live, proxy active | **Fixed** — `RUNBOOK.md` §7b now opens with a verified cutover-done banner |
+| 3 | Cutover steps written as pending | Cutover completed | **Fixed** — each step marked DONE / NOT DONE / DENIED |
+| 4 | `server_name phatgiaovadoisong.vn www.…` | Live nginx uses `server_name _` | **Fixed** — `infra/nginx/pgds.conf` reconciled from the served config |
+| 5 | nginx config is port 80 only, no TLS | Live serves 443 | **Fixed** — same sync |
+| 6 | TLS design is Cloudflare **Origin CA** | **Let's Encrypt** (`CN=YR2`, exp. 2026-11-30), certbot-renewed | **Documented** — Let's Encrypt kept deliberately (certbot automates renewal; an Origin CA key is a manual 15-year rotation). Rationale recorded in `pgds.conf` and RUNBOOK step 2 so it is not "corrected" back |
+| 7 | FastCGI zone belongs in `nginx.conf` http block | Lives in `/etc/nginx/conf.d/pgds-cache.conf` | **Benign** — equivalent context, different file; no change needed |
+| 8 | Cache flush hooks `save_post` | Hooks `transition_post_status` + 5 others | **Fixed** — `CLAUDE.md` and `RUNBOOK.md` §3 corrected, with the reason `save_post` was wrong |
+| 9 | Budgets $50 / $85, monthly $45 | $50 / $160 / $190, monthly $40 | **Fixed** — `infra/terraform/README.md` + `variables.tf` description now match `budgets.tf` |
+| 10 | Snapshot cron `41 2 * * *` | Nothing created snapshots on a schedule | **Fixed in infrastructure** — DLM policy `policy-04ea69769e8b12ff7` applied; misleading cron example removed from the script |
+| 11 | SES DKIM Terraform-managed | `domain_name = ""` → SES resources `count = 0` | **Documented** — identity exists outside Terraform and is verified; RUNBOOK step 4 explains the import needed to bring it under management |
+| 12 | `X-Origin-Verify` blocks direct IP | Commented out; absent from live config | **Documented, still open** — RUNBOOK §7c gives the ordered enable procedure. Needs a Cloudflare Transform Rule; enabling nginx first 403s everything |
+| 13 | `§5` resize procedure | Lightsail-only steps; backend is EC2 | **Fixed** — EC2 in-place resize documented, with the RAM re-tune the new size requires |
+| 14 | SES production access "PENDING" | **DENIED** — `ReviewDetails.Status: DENIED` | **Fixed in docs, action open** — AWS does not re-review on its own; someone must re-request. Alerts reach nobody real until then |
 
-Items 4–7 and 12 share one root cause: `lifecycle.ignore_changes` on `user_data` plus a
-first-boot-only bootstrap means the live nginx and TLS configuration was hand-applied over
-SSH and was never written back to the repo. The repository is not the source of truth for
-the origin's web-server configuration today. Reconciling that — copying the live config
-back into `infra/nginx/` and deciding whether TLS stays on Let's Encrypt or moves to
-Cloudflare Origin CA — is the highest-value cleanup available.
+Items 4–6 shared one root cause, now addressed: `lifecycle.ignore_changes = [user_data]`
+plus a first-boot-only bootstrap means Terraform never deploys the nginx config, so it was
+hand-applied over SSH and drifted silently. `infra/nginx/pgds.conf` now mirrors the served
+file, and its header documents the install commands and the trap that caused the drift.
+
+**Two traps found while reconciling**, both worth knowing before touching nginx again:
+
+- `sites-enabled/pgds.conf` on the origin is a **regular file, not a symlink**, and its
+  contents had diverged from `sites-available/pgds.conf`. nginx serves `sites-enabled`, so
+  editing `sites-available` changes nothing. Check `readlink -f` before assuming.
+- The two files differed in exactly the way that matters: `sites-available` carries
+  `http2 on;`, which **nginx 1.24.0 rejects** (`[emerg] unknown directive "http2"` — it
+  arrived in 1.25.1). Re-symlinking to "fix" the drift would have taken the origin down.
+  The repo now carries the working `listen 443 ssl http2` form.
+
+Two items remain genuinely open and need a person, not more code: the SES re-request
+(#14 — and until then, verifying the operator's mailbox as an identity is the cheap fix that
+makes alerting real today) and the origin header check (#12).
 
 ---
 

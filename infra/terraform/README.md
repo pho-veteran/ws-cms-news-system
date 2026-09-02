@@ -117,7 +117,7 @@ Levers that were checked and rejected: gp3's 3000 IOPS / 125 MB/s are the free
 baseline, so there is nothing to trim there; shrinking the volume 60→50 GB saves
 $0.96/mo but §4.2 puts media at 25–40 GB and warns that outgrowing the disk forces a
 migration — not worth the risk for a dollar. The budget guardrails were re-modelled
-instead (see Budgets below), because at ~$31/mo the original MONTHLY $50 budget would
+instead (see Budgets below), because at ~$25–31/mo the original MONTHLY $50 budget would
 have alerted every month and been muted.
 
 ### To get back to Lightsail
@@ -176,9 +176,14 @@ existing yet.
 Variables: only `aws_region` (default `ap-southeast-1`).
 
 Validated: `init`, `validate`, `fmt -check` all pass. `terraform plan`
-reports **8 resources to add** (2 buckets × 4 sub-resources: bucket,
-versioning, encryption config, public-access block), 0 to change, 0 to
-destroy.
+reports **10 resources to add** (2 buckets × 5 sub-resources: bucket,
+versioning, encryption config, public-access block, lifecycle
+configuration), 0 to change, 0 to destroy.
+
+The lifecycle configurations are the pair added after the original eight: state
+noncurrent versions expire at 90 days (keeping 10), and `db-dumps/` expires at 7
+days current and noncurrent. Both also abort incomplete multipart uploads after 7
+days, which is what stops a failed dump upload from billing invisibly forever.
 
 ## Stack 2 — `main/`
 
@@ -191,7 +196,9 @@ no DynamoDB table (§9.1).
 | `ec2.tf` | `aws_instance`, `aws_eip`, security group + rules — the fallback origin, gated on `compute_backend == "ec2"`. **Currently active.** |
 | `iam.tf` | Two IAM users (`pgds-backup`, `pgds-ses`) + policies + access keys |
 | `ses.tf` | SES domain identity + DKIM, gated on `var.domain_name != ""` |
-| `budgets.tf` | Three budgets: two lifetime (ANNUALLY $50/$85) + one monthly run-rate anomaly |
+| `budgets.tf` | Four budgets: three lifetime (ANNUALLY $50/$160/$190) + one monthly run-rate anomaly ($40) |
+| `alarms.tf` | SNS topic `pgds-alarms` + email subscription + 3 CloudWatch alarms, gated on `compute_backend == "ec2"` |
+| `github-oidc.tf` | GitHub OIDC provider + `pgds-github-deploy` role + security-group ingress policy, gated on `compute_backend == "ec2"` |
 | `user_data.sh` | LEMP bootstrap script run on first boot; shared by both backends |
 
 Exactly one compute backend exists at a time — `count`/`for_each` on
@@ -250,29 +257,37 @@ Cloudflare nameservers delegated first).
 
 ### Budgets
 
-`main/budgets.tf` creates three budgets:
+`main/budgets.tf` creates **four** budgets. All are COST/USD with
+`comparison_operator = GREATER_THAN` and a PERCENTAGE threshold type, and all notify
+`budget_notification_emails`:
 
-| Budget | Limit | Period | Purpose |
-|---|---|---|---|
-| `pgds-lifetime-50` | $50 | ANNUALLY | §8.4 mid-project signal against the $100 cap |
-| `pgds-lifetime-85` | $85 | ANNUALLY | §8.4 approaching-the-cap signal |
-| `pgds-monthly-run-rate` | $45 | MONTHLY | Anomaly detection (forecast at 100%, actual at 80%) |
+| Budget | Limit | Period | Notifications | Purpose |
+|---|---|---|---|---|
+| `pgds-lifetime-50` | $50 | ANNUALLY | ACTUAL 100% | §8.4 mid-project signal against the $100 cap |
+| `pgds-lifetime-160-projection-exceeded` | $160 | ANNUALLY | ACTUAL 100% | Six-month EC2 projection (~$149) has been exceeded |
+| `pgds-lifetime-190-credits-nearly-gone` | $190 | ANNUALLY | ACTUAL 100% + FORECASTED 100% | The $200 credit balance is nearly consumed — real cash starts here |
+| `pgds-monthly-run-rate` | $40 (`monthly_run_rate_budget`) | MONTHLY | FORECASTED 100% + ACTUAL 80% | Anomaly detection |
 
-**Why the §8.4 thresholds are ANNUALLY, not MONTHLY.** §8.4's "$50 and $85" are
-*cumulative lifetime* figures — they only read as mid-project milestones against
-Lightsail's ~$12/mo. On the EC2 fallback (~$31/mo) a MONTHLY $50 budget stays quiet in
-month one and then alerts every month after, which is precisely the alert-fatigue
-failure §8.4 warns about for the zero-spend budget: an always-on alarm gets muted, and
-then there is no guardrail at all. ANNUALLY is the longest window AWS Budgets offers,
-and since the project's life is six months it never resets mid-project. (QUARTERLY
-would reset twice inside it.)
+These are the values in `budgets.tf`. §8.4 of the proposal specifies "$50 and $85"; the
+$85 threshold was re-modelled because it was derived from the ~$85 six-month *Lightsail*
+total. On EC2 the six-month gross is ~$149, so an $85 lifetime budget would fire around
+month four of normal operation and teach the recipient to ignore it. The $160 and $190
+budgets replace it: $160 says the projection has been beaten, $190 says the credits are
+about to run out. Both are the signals someone would actually act on.
 
-The separate monthly budget watches the *run rate* and is deliberately sized above the
-expected ~$31, so it fires on a runaway rather than on normal operation. Egress is the
-volatile component — $0.12/GB past the first 100 GB free, with nothing in the
-architecture capping it — so $45 trips at roughly 220 GB/month, well above the ~150 GB
-the traffic in §5.2 implies. **Lower `monthly_run_rate_budget` to ~20 after switching
-back to Lightsail**, or it stops being a meaningful signal.
+**Why the lifetime thresholds are ANNUALLY, not MONTHLY.** They are *cumulative lifetime*
+figures. On EC2 (~$24.89/mo) a MONTHLY $50 budget stays quiet in month one and then alerts
+every month after, which is precisely the alert-fatigue failure §8.4 warns about for the
+zero-spend budget: an always-on alarm gets muted, and then there is no guardrail at all.
+ANNUALLY is the longest window AWS Budgets offers, and since the project's life is six
+months it never resets mid-project. (QUARTERLY would reset twice inside it.)
+
+The monthly budget watches the *run rate* and is sized ~$15 above the measured $24.89, so
+it fires on a runaway rather than on normal operation. Egress is the volatile component —
+$0.12/GB past the first 100 GB free, with nothing in the architecture capping it — so $40
+trips at roughly 226 GB/month, well above the ~150 GB the traffic in §5.2 implies.
+**Lower `monthly_run_rate_budget` to ~20 after switching back to Lightsail**, or it stops
+being a meaningful signal.
 
 ### SES — how far it is verified, and what is genuinely blocked
 
@@ -336,7 +351,7 @@ Kept here for reference, and in case a similar budget reappears:
 
 ```bash
 # Option A — delete it outright (recommended: it's redundant once the
-# $50/$85 budgets exist)
+# lifetime budgets exist)
 aws budgets delete-budget \
   --account-id 334156771769 \
   --budget-name "My Zero-Spend Budgettt" \
@@ -392,7 +407,7 @@ day-to-day applies.
 | `ssh_admin_cidrs` | yes, no default | list; rejects `0.0.0.0/0` |
 | `backup_bucket_name` | yes, no default | from bootstrap output |
 | `backup_bucket_arn` | yes, no default | from bootstrap output |
-| `budget_notification_emails` | yes, no default | list of emails for the $50/$85 alerts |
+| `budget_notification_emails` | yes, no default | list of emails for the $50/$160/$190 + monthly alerts |
 | `domain_name` | no, default `""` | leave empty until a real domain is chosen |
 | `aws_region`, `availability_zone`, `instance_name`, `bundle_id`, `blueprint_id`, `backup_object_prefix`, `cloudflare_ipv4_cidrs`, `cloudflare_ipv6_cidrs` | no | sensible defaults, override only if needed |
 

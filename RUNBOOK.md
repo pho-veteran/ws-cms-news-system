@@ -63,7 +63,16 @@ sudo find /var/cache/nginx/fcgi -type f -delete      # flush the entire HTML cac
 ```
 
 Content edited in the admin already purges itself: the `pgds-cache-flush.php` mu-plugin
-hooks `save_post`.
+hooks `transition_post_status` (**not** `save_post` — proposal §5.6 specified `save_post`,
+but that fires for autosaves and revisions and misses a trash/untrash, so the implementation
+uses the status transition and flushes when either the old or new status is `publish`). It
+also hooks `deleted_post`, `edited_term`, `wp_update_nav_menu`, `switch_theme`, and
+`customize_save_after`. Drafting does not purge; publishing, editing a published post,
+unpublishing, and trashing all do.
+
+Scope: this purges the **origin** FastCGI cache only and makes no Cloudflare API call. That
+is correct, because the edge never holds HTML — but it also means a changed **static asset**
+is not purged from the edge by this path. Only a deploy purges Cloudflare.
 
 ## 4. Restore from a snapshot (SPOF — target RTO 30–60 min)
 
@@ -110,13 +119,33 @@ The drill's temporary security-group rules were revoked, the test instance
 terminated, and the AMI and its snapshot deleted — re-check for orphans after any
 future drill, since a forgotten snapshot bills at $0.05/GB-month.
 
-## 5. Scaling the bundle under high traffic (proposal §8.2)
+## 5. Scaling under high traffic (proposal §8.2)
 
-Lightsail does **not** resize in place:
+**On EC2 (current backend)** a resize *is* in place, unlike Lightsail — this is one of the
+few ways the forced move to EC2 made operations easier:
+
+```bash
+aws ec2 stop-instances  --region ap-southeast-1 --instance-ids i-047f1e4d31db00df6
+aws ec2 modify-instance-attribute --region ap-southeast-1 \
+  --instance-id i-047f1e4d31db00df6 --instance-type t4g.medium
+aws ec2 start-instances --region ap-southeast-1 --instance-ids i-047f1e4d31db00df6
+```
+
+The Elastic IP survives a stop/start, so no DNS change is needed. Downtime is the boot
+time, ~1–2 minutes. Take a snapshot first anyway (§4). Set `ec2_instance_type` in
+`terraform.tfvars` to match afterwards or the next `plan` will propose reverting it —
+`variables.tf` only permits `t4g.small` and `t4g.medium`.
+
+After resizing **re-tune for the new RAM** (§4.1 of the proposal derives every worker count
+from the RAM budget): on 4 GB, `pm.max_children` can go to ~12 and
+`innodb_buffer_pool_size` to ~512M. Leaving 2 GB tuning on a 4 GB box wastes the upgrade.
+
+Cost: `t4g.medium` is $0.0424/h vs $0.0212/h, so ~+$15/month while it is up. Scale back down
+after the traffic peak.
+
+**On Lightsail (if the bundle cap is ever lifted)** resize is a migration, not a toggle:
 snapshot → create a larger-bundle instance → move the static IP → verify → delete the old
-instance.
-For holidays: bump 2 GB → 4 GB (~$0.40/day), then scale back down. Worth doing temporarily
-before importing 2,000 posts as well.
+instance. There is brief downtime at the IP move.
 
 ## 6. YouTube API quota
 
@@ -157,20 +186,50 @@ origin. Credentials live in `/root/.pgds-backup.env`, root-owned mode 600 (§10.
 |---|---|---|
 | `pgds-db-backup.sh` | `17 3,15 * * *` UTC (cron) | `mysqldump --single-transaction` → gzip → S3 `db-dumps/`, plus 2 local copies (§6.1) |
 | `pgds-health-alert.sh` | `*/10 * * * *` (cron) | RAM/disk/swap thresholds + service liveness → syslog, and SES email when configured (§7) |
-| `pgds-snapshot.sh` | **manual / CI, not cron** | Daily AMI + 4-rolling retention (§6.1) |
+| AWS DLM policy | `19:40` UTC daily (AWS-side) | Daily AMI + 4-rolling retention (§6.1) — `infra/terraform/main/dlm.tf` |
+| `pgds-snapshot.sh` | **manual, on demand** | Ad-hoc AMI before a resize or migration |
 
 Thresholds: memory ≥85% (of `MemAvailable`, not `used` — §4.1 budgets ~850 MB *for*
 the page cache), disk ≥80%, swap ≥256 MB. §4.1 is explicit that regular swap use means
 the configuration is wrong, hence the low swap bar. Alerts have a 3-hour cooldown so a
 sustained problem cannot mail every 10 minutes and get itself muted.
 
-**Why the snapshot job is not in cron on the origin:** it needs
-`ec2:DeregisterImage` and `ec2:DeleteSnapshot`, and a credential that can delete
-backups must not sit on an internet-facing box. Run it from the admin workstation:
+**Why the daily snapshot is DLM and not cron on the origin.** Pruning needs
+`ec2:DeregisterImage` and `ec2:DeleteSnapshot`, and a credential that can delete backups
+must not sit on an internet-facing box — that is exactly the credential an attacker wants
+after a WordPress compromise. DLM resolves this rather than trading it away: AWS runs the
+schedule and the pruning server-side under the `pgds-dlm-ami-management` role, so the delete
+capability lives in IAM and never on the instance. The origin gained no new credential.
+
+Applied 2026-09-02, policy `policy-04ea69769e8b12ff7`. Before that date **nothing created a
+snapshot on a schedule** — `user_data.sh` never installed the cron entry that
+`pgds-snapshot.sh`'s header suggests, so the account held exactly one AMI, from the
+2026-08-31 restore drill, while §6.3 measured RTO against "the latest snapshot".
+
+Verify it is running — a schedule that silently stopped looks identical to one that never
+fired:
+
+```bash
+aws dlm get-lifecycle-policy --policy-id policy-04ea69769e8b12ff7 --region ap-southeast-1 \
+  --query 'Policy.{state:State,status:StatusMessage}'
+aws ec2 describe-images --owners self --region ap-southeast-1 \
+  --filters Name=tag:CreatedBy,Values=dlm \
+  --query 'sort_by(Images,&CreationDate)[].{n:Name,d:CreationDate}' --output table
+```
+
+Expect up to 4 rows, the newest under ~25h old. DLM starts within an hour of 19:40 UTC
+(02:40 ICT), chosen clear of both db-backup runs so a dump and an AMI never contend for the
+same 2 GB and 2 vCPUs.
+
+`pgds-snapshot.sh` remains the **manual** path for an ad-hoc restore point — before a resize
+or migration. Run it from the admin workstation, not the origin:
 
 ```bash
 PGDS_INSTANCE_ID=i-047f1e4d31db00df6 ./infra/scripts/pgds-snapshot.sh
 ```
+
+It tags its images `pgds-auto-*` while DLM tags its own `CreatedBy=dlm`, so the two
+retention pools are independent and neither prunes the other's images.
 
 It prunes the AMI **and** its backing EBS snapshot together. Deregistering an AMI alone
 orphans the snapshot, which keeps billing at $0.05/GB-month invisibly — check for
@@ -197,18 +256,36 @@ intact.
 
 ### Budget alarms
 
-`pgds-lifetime-50` and `pgds-lifetime-85` track *cumulative* spend toward the $100 cap
-(ANNUALLY, so they do not reset inside the six-month life). `pgds-monthly-run-rate`
-($45, forecast at 100% + actual at 80%) catches a runaway — almost always egress.
-**Lower it to ~20 after moving back to Lightsail**, or it stops meaning anything.
-Details: `infra/terraform/README.md`.
+Four budgets, all emailing `budget_notification_emails`. The three lifetime budgets are
+ANNUALLY so they do not reset inside the six-month life, and track *cumulative* spend:
+
+| Budget | Limit | Fires on |
+|---|---|---|
+| `pgds-lifetime-50` | $50 | ACTUAL 100% |
+| `pgds-lifetime-160-projection-exceeded` | $160 | ACTUAL 100% |
+| `pgds-lifetime-190-credits-nearly-gone` | $190 | ACTUAL 100% + FORECASTED 100% |
+| `pgds-monthly-run-rate` | $40 | FORECASTED 100% + ACTUAL 80% |
+
+The $190 budget is tied to the $200 credit balance — it is the one that warns before the
+credits run out and real cash starts. The $40 monthly budget sits ~$15 above the measured
+$24.89 run rate to catch a runaway, which for this architecture is almost always egress at
+$0.12/GB beyond the first 100 GB. **Lower it to ~20 after moving back to Lightsail**, or it
+stops meaning anything. Authoritative values: `infra/terraform/main/budgets.tf`.
 
 ## 7b. Cloudflare edge + cutover (§5.3, §11)
 
-Not yet applied: there is no domain, so no zone exists. The origin firewall already
-admits 80/443 from Cloudflare ranges ONLY (§10.2), which means **the site is
-unreachable from the internet until the proxy is in front of it.** That is deliberate,
-and it makes the order below matter.
+> **Cutover is DONE.** `vihn.id.vn` is live behind the Cloudflare proxy — verified
+> 2026-09-02: the site returns HTTP 200 with `server: cloudflare`, HTML shows
+> `X-Cache: MISS` then `HIT` on a second request, and a hashed asset returns
+> `cf-cache-status: HIT` with `Cache-Control: public, max-age=31536000, immutable`.
+> `wp-login.php` returns `X-Cache: BYPASS`, so Cache Rule 1 and the nginx `$skip`
+> conditions are both working. The steps below are kept as the procedure to repeat if
+> the zone is ever rebuilt; each one is marked with its current state.
+
+The origin firewall admits 80/443 from Cloudflare ranges ONLY (§10.2), which means **the
+site is unreachable from the internet except through the proxy** — verified: a direct
+`curl http://3.1.122.66/` from outside those ranges times out. That is deliberate, and it
+is what makes the order below matter.
 
 `infra/scripts/pgds-cloudflare-setup.sh` turns §5.3 into one idempotent, self-verifying
 command. It sets SSL to Full (strict), Always Use HTTPS on, Brotli on, Auto Minify off,
@@ -218,8 +295,8 @@ and creates exactly the **two** Cache Rules §5.3 budgets (2 of the Free plan's 
 2. cache static assets by extension, edge TTL 31 days
 
 HTML is absent from both, on purpose (§5.2/§5.6): the edge caches assets only, Nginx
-FastCGI owns the page cache and is purged on `save_post`. That is what removes the edge
-stale window and means no cookie-based bypass rule is needed.
+FastCGI owns the page cache and is purged on a publish transition (§3). That is what
+removes the edge stale window and means no cookie-based bypass rule is needed.
 
 ```bash
 # Dry run first — resolves the zone and reports its status without changing anything.
@@ -236,40 +313,103 @@ there.
 
 ### Cutover order
 
-1. Add the domain to Cloudflare, delegate its nameservers, wait for zone `status: active`
-   (§11 — propagation can take hours; do it before Day 1).
-2. Generate an Origin CA certificate, install it on the origin, confirm nginx serves 443.
-   Full (strict) requires this, and it is a manual step by design — a private key should
-   not pass through a shell script.
-3. Run the script above.
-4. Set `domain_name` in `terraform.tfvars`, `terraform apply`, then add the three DKIM
-   CNAMEs from `terraform output ses_dkim_tokens`. **This path is verified working** — it
-   was exercised end to end against the IANA-reserved `example.com`, which produced 3
-   tokens and then destroyed cleanly, so only the domain value is missing.
-5. Request SES production access (24h+, §11 — the one D0 item that can delay launch).
-   **Submitted 2026-09-01 for `vihn.id.vn`; `Details.ReviewDetails.Status = PENDING`.**
-   This call is rejected outright without a real, reachable website URL (`put-account-details`
-   validates it), which is why it could not be filed earlier. Check with:
+1. **DONE.** Add the domain to Cloudflare, delegate its nameservers, wait for zone
+   `status: active` (§11 — propagation can take hours; do it before Day 1).
+2. **DONE, but not as specified.** The origin serves 443 with a **Let's Encrypt**
+   certificate (`CN=YR2`, expires 2026-11-30) obtained via DNS-01 and auto-renewed by the
+   `certbot` cron job — not the Cloudflare **Origin CA** certificate §5.3 specified. Either
+   satisfies Full (strict). Let's Encrypt was kept because certbot already automates
+   renewal, where an Origin CA cert is a 15-year key to rotate by hand. Recorded so nobody
+   "corrects" it back and breaks renewal.
+3. **DONE.** Run the script above.
+4. **NOT DONE — SES DKIM is not Terraform-managed.** `domain_name` is still `""` in
+   `terraform.tfvars`, so `aws_ses_domain_identity.app` and `aws_ses_domain_dkim.app` both
+   have `count = 0` and `terraform output ses_dkim_tokens` returns an empty list. The domain
+   identity `vihn.id.vn` nevertheless exists and shows `VerificationStatus: SUCCESS`,
+   because it was created outside Terraform. Setting `domain_name = "vihn.id.vn"` and
+   re-applying would bring it under management — do that in a maintenance window and expect
+   Terraform to want to create an identity that already exists (import it rather than let
+   the apply fail). The path itself is proven: it was exercised end to end against the
+   IANA-reserved `example.com`, produced 3 tokens, and destroyed cleanly.
+5. **DENIED — action required.** SES production access was requested and **refused**:
+
+   ```
+   ProductionAccessEnabled: false
+   Details.ReviewDetails.Status: DENIED      # checked 2026-09-02
+   Max24HourSend: 200
+   ```
+
+   This is a state change from the "PENDING" this runbook previously recorded, and it does
+   not resolve itself — AWS does not re-review a denied request on its own. Someone must
+   open a new request (or a Support case) with more detail about the sending use case,
+   bounce handling, and list provenance. Re-check with:
 
    ```bash
    aws sesv2 get-account --region ap-southeast-1 \
      --query '{prod:ProductionAccessEnabled,review:Details.ReviewDetails.Status}'
    ```
 
-   Until it flips to `prod: true`, sending works but only to **verified** recipients.
-   `pgds-health-alert.sh` therefore targets `success@simulator.amazonses.com`, which the
-   sandbox always accepts and which proves the whole path end to end. Point
-   `PGDS_ALERT_TO` in `/root/.pgds-ses.env` at the real operator mailbox once either
-   production access lands or that address is verified as an identity.
-6. Run the §13 go/no-go gate.
-7. **Last:** point the apex and `www` A records at the origin and enable the orange
-   cloud. This is the cutover; everything above is reversible without visitor impact.
-8. Confirm the edge is caching assets:
+   **Consequence while denied:** the account stays in the sandbox — 200 emails/24h, 1 msg/s,
+   and delivery only to *verified* recipients. `pgds-health-alert.sh` therefore targets
+   `success@simulator.amazonses.com`, which the sandbox always accepts and which proves the
+   whole path end to end. Alerts do **not** reach the operator's mailbox until either
+   production access is granted or that mailbox is verified as an SES identity — and
+   verifying the single operator address is the cheap fix that makes alerting real today:
+
    ```bash
-   curl -sI https://<domain>/wp-content/themes/pgds/assets/dist/main.<hash>.css | grep cf-cache-status
+   aws sesv2 create-email-identity --region ap-southeast-1 --email-identity <operator@example.com>
+   # then click the verification link, and point PGDS_ALERT_TO in /root/.pgds-ses.env at it
    ```
-   Expect `HIT` on the second request. This is the one §13 item that cannot be checked
-   before a zone exists.
+
+   Until one of those happens, treat health-alert email as unproven for real incidents: the
+   send path works, but nothing arrives where a human is looking.
+6. Run the §13 go/no-go gate.
+7. **DONE.** Point the apex and `www` A records at the origin and enable the orange cloud.
+   This is the cutover; everything above is reversible without visitor impact.
+8. **DONE.** Confirm the edge is caching assets:
+   ```bash
+   curl -sI https://vihn.id.vn/wp-content/themes/pgds/assets/dist/main.<hash>.css | grep cf-cache-status
+   ```
+   Returns `cf-cache-status: HIT`.
+
+### 7c. Origin verification — one of two barriers is missing
+
+§10.2 specifies **two** independent barriers against direct-origin access:
+
+1. the security group, admitting `:80`/`:443` from Cloudflare ranges only — **deployed**
+2. a secret header injected by a Cloudflare Transform Rule and checked by nginx — **not
+   deployed**
+
+Only the first exists. The check in `infra/nginx/pgds.conf` is commented out and is absent
+from the live config, so the security group is the sole thing standing between the public
+internet and the origin. Verified 2026-09-02: `curl http://3.1.122.66/` from outside a
+Cloudflare range times out, so the origin is **not** currently exposed — this is a missing
+layer of defence in depth, not an open door.
+
+Why it matters anyway: the allowlist is 15 IPv4 + 7 IPv6 ranges shared by **every**
+Cloudflare customer. Anyone who can route a request through Cloudflare — their own free zone
+pointed at `3.1.122.66` — comes from an allowlisted address. The header is what distinguishes
+*our* zone from *any* zone.
+
+**Enabling it is a two-sided change and the order is not optional.** The Transform Rule must
+be injecting the header *before* nginx starts requiring it. Reverse the order and every
+request, Cloudflare's included, gets a 403 — a total outage that presents as an origin
+failure rather than a config change.
+
+```
+1. Cloudflare → Rules → Transform Rules → Modify Request Header
+     set static   X-Origin-Verify: <generate: openssl rand -hex 32>
+2. Confirm it is arriving, before requiring it:
+     add_header X-Seen-Verify $http_x_origin_verify always;   # temporary, then remove
+     curl -sI https://vihn.id.vn/ | grep -i x-seen-verify
+3. Put the secret in an untracked include — NOT in pgds.conf, which is committed:
+     /etc/nginx/conf.d/pgds-origin-secret.conf   →   map $http_x_origin_verify $pgds_origin_ok { "<secret>" 1; default 0; }
+4. Uncomment the check in pgds.conf, then:  nginx -t && systemctl reload nginx
+5. Re-verify through the edge (expect 200) and directly (expect 403 if you can reach it).
+```
+
+Rotation: update the Transform Rule first, then the include — during the gap both values
+must be accepted, so keep two entries in the map until the change has propagated.
 
 ## 8. Exit plan (before decommissioning)
 
