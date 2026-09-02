@@ -1,5 +1,19 @@
 # PROPOSAL 02 — Infrastructure & Costs
 
+> ## ⚠ This is the design record, not a description of production
+>
+> Written before the build. Several decisions below did **not** survive contact with the
+> account — most importantly the compute platform, which changes the cost model. The body
+> is preserved unedited because the reasoning is still what justifies the architecture; do
+> not read it as documentation of what is running.
+>
+> **As-built reconciliation is §14 at the end of this file.** For the deployed architecture
+> and a request-level walkthrough, see `docs/ARCHITECTURE.md`. For operating it, `RUNBOOK.md`.
+>
+> The three that change conclusions: compute is **EC2 `t4g.small`**, not Lightsail (§2, §14.1);
+> the six-month gross is **~$149**, not ~$85 (§8, §14.6); and **SES production access was
+> denied** (§14.7). Reconciled against the live account and origin on 2026-09-02.
+
 > **System lifetime:** ephemeral, maximum 6 months.
 > **Priority criterion:** cost effective.
 > **Staffing:** 1–2 engineers. **Timeline:** 3 days.
@@ -467,3 +481,267 @@ Record this in `RUNBOOK.md` along with the **scheduled decommission date** and *
 | Media exceeds 60GB disk | Low | Measure total size on D0. If exceeded → 4GB bundle (80GB) or R2 |
 | Cloudflare ToS 2.8 (non-HTML content) | Low | Images through CDN are normal usage; do not add video |
 | SCP cannot be used on a standalone account | Low | Record the limitation in the runbook |
+
+---
+
+## 13. Exclusion list
+
+§1 promised "see section 13 for the complete exclusion list" and the document ended at §12.
+The list it meant, gathered from the body: Route 53 (§5.1), CloudFront (§5.1), ACM (§5.1),
+S3 OAC (§5.1), S3 media offload (§4.2), the S3 offload plugin (§5.1), Reserved Instances and
+Savings Plans (§2.2), Fargate/ECS/App Runner (§2.2), Lambda + Bref (§2.2), the IPv6-only
+`small_ipv6_3_0` bundle (§8.2), the prebuilt Lightsail WordPress blueprint (§4), the
+CloudWatch agent and custom metrics (§7), DynamoDB state locking (§9.1), Terraform-managed
+snapshots (§9.2), a declarative WordPress layer (§9.2), any dependency on Cloudflare
+tag/prefix/hostname purging (§5.2), lifecycle storage-class transitions on backups (§6), and
+high availability / multi-AZ (§3).
+
+All of these still hold as built, except that §7's "no CloudWatch" could not — see §14.4.
+
+## 14. As-built reconciliation (2026-09-02)
+
+Verified against the live AWS account, the running origin over SSH, and the public edge over
+HTTPS. Where this section and the body above disagree, **this section is what is true**.
+
+### 14.1 Compute: EC2, not Lightsail — the decision that did not survive
+
+§2 costs the entire proposal around the Lightsail `small_3_0` bundle at $12.00/month, and
+§8.2 records `get-bundles` reporting it `isActive: true` at that price. **The account cannot
+create it.** It is capped at `micro_3_0` (1 GB), and §2 rules out 1 GB on technical grounds —
+2 GB is the floor for WordPress + MariaDB + Redis.
+
+The trap worth recording: `lightsail get-bundles` reports what the *service* offers in the
+region, not what *this account* is permitted to launch. §8.2's verification table treats the
+two as the same thing, which is why the constraint was not found until creation was attempted.
+No API reveals the account cap; it takes an AWS Support request to lift.
+
+As built (`infra/terraform/main/ec2.tf`, `terraform.tfvars:8`):
+
+| | Proposal §2/§4 | As built |
+|---|---|---|
+| Platform | Lightsail `small_3_0` | **EC2 `t4g.small`** |
+| Instance | — | `i-047f1e4d31db00df6` |
+| AZ | `ap-southeast-1a` (default) | **`ap-southeast-1b`** |
+| OS | `ubuntu_24_04` blueprint | Ubuntu 24.04.4 LTS arm64, AMI from Canonical's SSM parameter |
+| RAM | 2 GB | 1835 MB usable |
+| Disk | 60 GB bundled SSD | 60 GB `gp3`, encrypted, `delete_on_termination = false` |
+| Public IP | `aws_lightsail_static_ip` | `aws_eip` — `3.1.122.66` |
+| Firewall | `aws_lightsail_instance_public_ports` | `aws_security_group` + 5 ingress rules |
+
+Both paths exist in Terraform, gated on `var.compute_backend` and mutually exclusive via
+`count`. **Flipping the variable back to `"lightsail"` would destroy the working origin** —
+`variables.tf` still defaults to `"lightsail"`, so `terraform.tfvars:8` is the only thing
+holding the EC2 path in place. Do not remove that line.
+
+The §4.1 RAM budget survived the platform change unchanged, because `t4g.small` is the same
+2 vCPU / 2 GB shape. Measured on the live host: 578 MB used, 1003 MB in buff/cache, 1256 MB
+available, **swap 0 B** — the configuration is behaving as §4.1 designed, and the low swap
+bar is a real signal rather than a permanently-tripped one.
+
+### 14.2 One thing EC2 made better: resize
+
+§10.1 spends a section on Lightsail resize being a snapshot-and-migrate operation with
+downtime at the IP move. On EC2 it is a stop, `modify-instance-attribute`, start — the
+Elastic IP survives, so no DNS change and ~1–2 minutes of downtime. §10.1 no longer describes
+the current backend; `RUNBOOK.md` §5 carries the EC2 procedure, including the RAM re-tune
+that a 4 GB resize requires and that §4.1's own logic implies.
+
+### 14.3 Snapshots: DLM, and for weeks there were none
+
+§6.1 requires a daily instance snapshot with 4-rolling retention, and §6.3 measures RTO
+against "the latest snapshot". Neither was true: `pgds-snapshot.sh` carried a `41 2 * * *`
+example in its header that read as an active schedule, but `user_data.sh` never installed it,
+so **the account held exactly one AMI — from the 2026-08-31 restore drill.**
+
+Fixed 2026-09-02 with an AWS Data Lifecycle Manager policy (`infra/terraform/main/dlm.tf`,
+`policy-04ea69769e8b12ff7`): daily AMI at 19:40 UTC, 4 rolling, `NoReboot: true`, targeted by
+the `Name=pgds-prod` tag.
+
+DLM rather than cron for the reason §6.2 itself gives: pruning needs `ec2:DeregisterImage` and
+`ec2:DeleteSnapshot`, and a credential that can delete backups must not sit on an
+internet-facing box. AWS runs the schedule server-side, so that capability lives in IAM and
+the origin gained no new credential — the objection is resolved rather than traded away.
+`pgds-snapshot.sh` remains the manual, on-demand path.
+
+§6.1's cost note still applies with one correction of terms: EBS snapshots behind an AMI are
+incremental, so 4 rolling images bill roughly one full copy plus daily deltas, not 4 × 60 GB.
+
+### 14.4 Monitoring: CloudWatch was unavoidable, and still $0
+
+§7 rejects CloudWatch outright. That reasoning was Lightsail-specific — it assumed free
+built-in platform metrics and console alarms. EC2 has no equivalent free alarm surface, so
+the three §7 alarms are CloudWatch alarms (`infra/terraform/main/alarms.tf`), and burst
+capacity becomes `CPUCreditBalance`:
+
+| §7 alarm | As built |
+|---|---|
+| CPU > 80% for 10 min | `pgds-cpu-high` — Average > 80, 2 × 300 s |
+| Burst capacity < 20% | `pgds-cpu-credits-low` — `CPUCreditBalance` < 60, 6 × 300 s |
+| Status check failed | `pgds-status-check-failed` — Maximum > 0, 2 × 60 s |
+
+**§7's cost conclusion still holds.** Its ~$24 figure was for *custom* metrics ($0.30 each)
+plus alarms; these use built-in EC2 metrics and three standard alarms, inside the account's
+10-alarm allowance — $0, or $1.80 over six months without it. §7's actual decision — do not
+install an agent to publish RAM and disk as custom metrics — is intact: those still come from
+`pgds-health-alert.sh` every 10 minutes. `treat_missing_data` is `"breaching"` on the status
+check, so an instance that stops reporting is treated as broken.
+
+Alarms route through SNS topic `pgds-alarms` rather than SES directly, because SES cannot
+send to an unverified address — see §14.7.
+
+### 14.5 Terraform: larger than §9 planned
+
+§9 estimated ~100–150 lines. The main stack is 12 files, because three concerns §9 did not
+anticipate needed declaring: CloudWatch alarms + SNS (§14.4), GitHub OIDC for deployment, and
+DLM (§14.3).
+
+`bootstrap/` is 10 resources, not the 8 its README claimed — two lifecycle configurations
+were added. Note these are **expiration** rules (state noncurrent versions at 90 days keeping
+10; `db-dumps/` at 7 days; incomplete multipart uploads aborted at 7 days), not the storage-class
+**transitions** §6 excludes. §6's requirement that every post stay immediately retrievable is
+untouched. The multipart rule is the one that quietly matters: without it a failed dump upload
+bills forever, invisibly.
+
+§9.1's S3-native locking (`use_lockfile = true`, no DynamoDB) is as specified and working.
+Both buckets carry `prevent_destroy`, versioning, SSE-AES256, and all four public-access blocks.
+
+**Deployment identity, beyond §9.** `.github/workflows/deploy.yml` federates via OIDC — no
+long-lived AWS key in GitHub. The `pgds-github-deploy` role's entire permission set is
+`Authorize`/`RevokeSecurityGroupIngress` on one security group ARN plus two read-only
+describes; the trust policy pins GitHub's immutable subject form (numeric owner and repo IDs)
+and only `refs/heads/main`. The workflow opens port 22 to the runner's own `/32`, deploys, and
+revokes it under `if: always()`. §12's "static IAM key on the instance" risk is unchanged for
+the origin, but the *deploy* path has no static key at all.
+
+### 14.6 Cost: ~$149 gross over six months, not ~$85
+
+The §8.1 table is Lightsail's. On EC2 the components bill separately — which is precisely the
+argument §2.1 made for Lightsail, now running in reverse:
+
+| | Proposal §8.1 | As built |
+|---|---|---|
+| Compute | $12.00/mo bundled | $0.0212/h ≈ $15.48/mo |
+| Storage | included | 60 GB gp3 @ $0.096 ≈ $5.76/mo |
+| Public IPv4 | included | $0.005/h ≈ $3.65/mo |
+| Egress | 3 TB included | $0.12/GB beyond 100 GB free |
+| **Monthly** | **~$13.86** | **~$24.89** |
+| **6 months** | **~$85** | **~$149** |
+
+Against $200 of credits, **net cash is still ~$0** and the six-month total stays inside the
+credit balance — the conclusion §8.3 draws survives even though every input changed. The $100
+cap in the header is exceeded in gross terms and should be read as the operational discipline
+§8.3 describes, not a hard limit.
+
+Egress is now the unbounded term. Nothing in the architecture caps it, and it is the reason
+the monthly budget exists.
+
+**Budgets as built** — verified in the account, four not two:
+
+| Budget | Limit | Period |
+|---|---|---|
+| `pgds-lifetime-50` | $50 | ANNUALLY |
+| `pgds-lifetime-160-projection-exceeded` | $160 | ANNUALLY |
+| `pgds-lifetime-190-credits-nearly-gone` | $190 | ANNUALLY |
+| `pgds-monthly-run-rate` | $40 | MONTHLY |
+
+§8.4's "$50 and $85" became $50/$160/$190 because $85 was derived from the *Lightsail*
+six-month total: on EC2 it would fire around month four of entirely normal operation and
+teach its recipient to ignore it — the exact alert-fatigue failure §8.4 warns about for the
+zero-spend budget. $160 says the projection has been beaten; $190 says the credits are nearly
+gone. ANNUALLY because they are cumulative lifetime figures and the project's life is six
+months, so they never reset mid-project.
+
+§8.4's zero-spend budget cleanup **is done** — the $1.00/month budget in ALARM is gone.
+
+### 14.7 SES: production access was DENIED
+
+§11 and §12 both call SES production access the one D0 blocker. It was requested and
+**refused**:
+
+```
+ProductionAccessEnabled: false
+Details.ReviewDetails.Status: DENIED       # verified 2026-09-02
+Max24HourSend: 200
+```
+
+AWS does not re-review a denied request on its own; someone must file a new one. Meanwhile
+the account is sandboxed — 200/24h, 1 msg/s, delivery only to *verified* recipients.
+
+**The operational consequence is worse than it sounds:** `pgds-health-alert.sh` sends
+successfully to `success@simulator.amazonses.com`, which proves the path end to end while
+delivering to nobody. The RAM/disk/service monitoring §7 substitutes for CloudWatch is
+therefore **unproven for real incidents** — the send works, nothing arrives where a human is
+looking. The cheap fix is to verify the single operator mailbox as an SES identity; it does not
+need production access. `RUNBOOK.md` §7b step 5 carries the command.
+
+Separately, SES is **not Terraform-managed**: `domain_name = ""` leaves
+`aws_ses_domain_identity` and `aws_ses_domain_dkim` at `count = 0`, so
+`terraform output ses_dkim_tokens` is empty. The identity `vihn.id.vn` nevertheless exists and
+shows `VerificationStatus: SUCCESS`, created outside Terraform. Bringing it under management
+means setting the variable and **importing** the existing identity, not letting the apply
+collide with it.
+
+### 14.8 Cloudflare and TLS
+
+§5 is as built. Zone `vihn.id.vn` is active on the Free plan, proxy on, and the two §5.3 Cache
+Rules exist in the `http_request_cache_settings` ruleset — 2 of the Free plan's 10. Measured at
+the edge: HTML `cf-cache-status: DYNAMIC` with origin `X-Cache: MISS` then `HIT`; a hashed
+asset `cf-cache-status: HIT` with `public, max-age=31536000, immutable`; `wp-login.php`
+`X-Cache: BYPASS`. §5's central choice — HTML never cached at the edge — is intact.
+
+**TLS differs from §5.3.** The origin certificate is **Let's Encrypt** (`CN=YR2`, expires
+2026-11-30) via DNS-01, auto-renewed by certbot, not the Cloudflare **Origin CA** certificate
+§5.3 specifies. Either satisfies Full (strict). Let's Encrypt was kept because certbot already
+automates renewal, where an Origin CA cert is a 15-year key to rotate by hand. Recorded so it
+is not "corrected" back into a manual renewal.
+
+**§10.2's secret header is still not enforced — one of two barriers is missing.** §10.2 wants
+the security group *and* a Cloudflare Transform Rule injecting a header nginx checks. Only the
+security group is deployed. The origin is not exposed today (a direct `curl` to `3.1.122.66`
+times out), but the allowlist is 15 IPv4 + 7 IPv6 ranges shared by *every* Cloudflare
+customer: anyone pointing their own free zone at this origin arrives from an allowlisted
+address. The header is what distinguishes *our* zone from *any* zone.
+
+As of 2026-09-02 the nginx side is installed and **fail-open**: `pgds.conf` always evaluates
+`if ($pgds_origin_ok = 0) { return 403; }`, and an untracked include
+`/etc/nginx/pgds-origin-verify.conf` decides whether it enforces. The Transform Rule could not
+be created — the available token is refused on transform rulesets (even GET) while reading the
+cache ruleset fine, so it lacks `Transform Rules: Edit` + `Account Rulesets: Read`. Arming it
+is a two-sided change in a strict order, documented in `RUNBOOK.md` §7c: the edge must inject
+the header *before* the include is switched to enforcing, or every request including
+Cloudflare's gets a 403.
+
+Note certbot here authenticates by DNS-01, so a blanket 403 cannot break renewal. That
+changes if anyone switches the authenticator to `webroot` or `standalone`.
+
+### 14.9 The migration §11 plans has not happened
+
+§4.2, §6.1, §8.1 and §12 all size around 2,000 posts and 25–40 GB of media. Actual state:
+
+| | Planned | Actual |
+|---|---|---|
+| Posts | 2,000 | **25** |
+| Attachments | — | **0** |
+| `wp-content/uploads` | 25–40 GB | **16 KB** |
+| Posts with `_pgds_source_id` | 2,000 | 24 |
+
+So several §12 risks are **not yet in play** rather than mitigated: media exceeding the 60 GB
+disk, image processing pushing 2 GB into swap, and the temporary 4 GB import upgrade. The
+disk is 9% used. The §6.1 snapshot cost estimate assumes a ~40 GB base and will be far below
+that until the import runs.
+
+Reading the go/no-go gate honestly: the cache, functionality, and infrastructure checks pass,
+but the **data** checks in §13 of Proposal 01 cannot pass yet — there is no imported corpus to
+verify. `redirects.map` has 26 entries and one post lacks `_pgds_source_id`, both consistent
+with seeded rather than imported content.
+
+### 14.10 What remains open
+
+1. **SES re-request** (§14.7) — until then, health alerts reach nobody real. Verifying the
+   operator mailbox as an identity is the cheap fix available today.
+2. **The origin header check** (§14.8) — needs a token with Transform Rules scope.
+3. **The 2,000-post import** (§14.9) — and with it the §13 data gate.
+4. **SES under Terraform** (§14.7) — set `domain_name`, import the existing identity.
+5. **Restore drill on EC2** — §6.3 requires a real restore test. The 21.7-minute RTO in
+   `RUNBOOK.md` §4 was measured on EC2, so this is partly satisfied; DLM now supplies the
+   scheduled snapshot the measured RTO assumed.

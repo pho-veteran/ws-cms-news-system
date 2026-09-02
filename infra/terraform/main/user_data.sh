@@ -134,6 +134,21 @@ rm -f /etc/nginx/sites-enabled/default
 touch /etc/nginx/redirects.map
 chmod 644 /etc/nginx/redirects.map
 
+# Origin-verification include (§10.2), created in its DISABLED (fail-open) form for exactly
+# the same reason as the redirects.map placeholder above: pgds.conf `include`s this file and
+# its server block references $pgds_origin_ok, so with the file absent nginx refuses to
+# start entirely —
+#   [emerg] unknown "pgds_origin_ok" variable
+# A rebuilt origin must boot BEFORE anyone has created the Cloudflare Transform Rule that
+# injects the header, so the placeholder must allow everything. Arming it is a two-sided
+# change done by hand, in order, once the edge is injecting: see RUNBOOK §7c.
+#   ENFORCING:  map $http_x_origin_verify $pgds_origin_ok { "<secret>" 1; default 0; }
+if [ ! -f /etc/nginx/pgds-origin-verify.conf ]; then
+  printf '%s\n' 'map $http_x_origin_verify $pgds_origin_ok { default 1; }' \
+    > /etc/nginx/pgds-origin-verify.conf
+fi
+chmod 600 /etc/nginx/pgds-origin-verify.conf
+
 systemctl enable nginx
 
 # ---------------------------------------------------------------------------
