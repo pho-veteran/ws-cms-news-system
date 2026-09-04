@@ -20,11 +20,20 @@ $note = $args['post'] ?? null;
 $greg_day = date_i18n( 'd' );
 $greg_sub = pgds_month_year_vi();
 
-$lunar_day = $note ? get_post_meta( $note->ID, '_pgds_lunar_day', true ) : '';
-$lunar_sub = $note ? get_post_meta( $note->ID, '_pgds_lunar_sub', true ) : '';
-$menh      = $note ? get_post_meta( $note->ID, '_pgds_menh', true ) : '';
-$gio       = $note ? get_post_meta( $note->ID, '_pgds_gio', true ) : '';
-$quote     = $note ? get_post_meta( $note->ID, '_pgds_quote', true ) : '';
+if ( function_exists( 'pgds_lunar_get_today' ) ) {
+	$data      = pgds_lunar_get_today();
+	$lunar_day = $data['lunar_day'];
+	$lunar_sub = $data['lunar_sub'];
+	$menh      = $data['menh'];
+	$gio       = $data['gio'];
+	$quote     = $data['quote'];
+} else {
+	$lunar_day = $note ? get_post_meta( $note->ID, '_pgds_lunar_day', true ) : '';
+	$lunar_sub = $note ? get_post_meta( $note->ID, '_pgds_lunar_sub', true ) : '';
+	$menh      = $note ? get_post_meta( $note->ID, '_pgds_menh', true ) : '';
+	$gio       = $note ? get_post_meta( $note->ID, '_pgds_gio', true ) : '';
+	$quote     = $note ? get_post_meta( $note->ID, '_pgds_quote', true ) : '';
+}
 
 if ( ! $quote ) {
 	$quote = __( '"Tâm bình thì thế giới bình." — Lời Phật dạy', 'pgds' );
