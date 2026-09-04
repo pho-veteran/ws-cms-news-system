@@ -18,7 +18,7 @@
 .pgds-feature-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: $sp-6;
+  gap: 26px;
   align-items: stretch;
 
   @include mq(lg) {

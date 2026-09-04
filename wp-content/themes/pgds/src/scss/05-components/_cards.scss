@@ -38,7 +38,7 @@
 // --- Feature grid (block 3: Featured news) ----------------------------------
 .pgds-feature-main {
   border-right: 1px solid var(--color-border);
-  padding-right: $sp-6;
+  padding-right: 26px;
 
   @include mq-max(lg) {
     border-right: 0;
@@ -112,7 +112,7 @@
   &__title {
     font-size: $fs-base;
     line-height: $lh-tight;
-    font-weight: $fw-semibold;
+    font-weight: $fw-bold;
     margin-bottom: $sp-2;
     color: var(--color-text);
     @include line-clamp(2);

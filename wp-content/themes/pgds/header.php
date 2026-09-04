@@ -21,6 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <a class="pgds-skip-link" href="#pgds-main"><?php esc_html_e( 'Bỏ qua tới nội dung', 'pgds' ); ?></a>
 
+<div class="pgds-guide">
+	<p><?php esc_html_e( 'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.', 'pgds' ); ?></p>
+</div>
+
 <header class="pgds-header" role="banner">
 	<div class="pgds-wrap pgds-header__inner">
 		<?php if ( has_custom_logo() ) : ?>

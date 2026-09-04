@@ -42,7 +42,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<ul>
 				<li><a href="<?php echo esc_url( get_term_link( 'media', 'category' ) ); ?>"><?php esc_html_e( 'Media', 'pgds' ); ?></a></li>
 				<li><a href="<?php echo esc_url( get_term_link( 'tot-doi-dep-dao', 'category' ) ); ?>"><?php esc_html_e( 'Tốt đời – đẹp đạo', 'pgds' ); ?></a></li>
-				<li><a href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>"><?php esc_html_e( 'Vietnam Buddhism', 'pgds' ); ?></a></li>
+				<li><a href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>"><?php esc_html_e( 'Phật giáo Việt Nam', 'pgds' ); ?></a></li>
 			</ul>
 		</div>
 

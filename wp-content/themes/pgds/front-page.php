@@ -114,8 +114,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 			</div>
 			<div class="pgds-media-block__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Loại media', 'pgds' ); ?>">
 				<button class="pgds-tab" role="tab" id="pgds-tab-video" aria-selected="true" aria-controls="pgds-panel-video"><?php esc_html_e( 'Video', 'pgds' ); ?></button>
-				<button class="pgds-tab" role="tab" id="pgds-tab-ema" aria-selected="false" aria-controls="pgds-panel-ema" tabindex="-1"><?php esc_html_e( 'Emagazine', 'pgds' ); ?></button>
-				<button class="pgds-tab" role="tab" id="pgds-tab-info" aria-selected="false" aria-controls="pgds-panel-info" tabindex="-1"><?php esc_html_e( 'Infographic', 'pgds' ); ?></button>
+				<button class="pgds-tab" role="tab" id="pgds-tab-ema" aria-selected="false" aria-controls="pgds-panel-ema" tabindex="-1"><?php esc_html_e( 'E-magazine', 'pgds' ); ?></button>
 			</div>
 		</div>
 
@@ -146,7 +145,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 						<ul class="pgds-media-bullets">
 							<?php foreach ( $B['media_bullets'] as $mb ) : ?>
 								<li>
-									<?php pgds_icon( 'video', array( 'class' => 'pgds-media-bullets__icon', 'size' => 16 ) ); ?>
+									<span class="pgds-media-bullets__dot"></span>
 									<a href="<?php echo esc_url( get_permalink( $mb ) ); ?>"><?php echo esc_html( get_the_title( $mb ) ); ?></a>
 								</li>
 							<?php endforeach; ?>
@@ -173,13 +172,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 				'id'    => 'pgds-panel-ema',
 				'tab'   => 'pgds-tab-ema',
 				'posts' => $B['media_tabs']['emagazine'] ?? array(),
-				'empty' => __( 'Chưa có nội dung Emagazine.', 'pgds' ),
-			),
-			'info' => array(
-				'id'    => 'pgds-panel-info',
-				'tab'   => 'pgds-tab-info',
-				'posts' => $B['media_tabs']['infographic'] ?? array(),
-				'empty' => __( 'Chưa có nội dung Infographic.', 'pgds' ),
+				'empty' => __( 'Chưa có nội dung E-magazine.', 'pgds' ),
 			),
 		);
 		foreach ( $pgds_media_panels as $pgds_panel ) :
@@ -281,8 +274,8 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 			<?php if ( ! empty( $B['vn_list'] ) ) : ?>
 				<section class="pgds-section" aria-labelledby="pgds-vn-title">
 					<div class="pgds-cat-head">
-						<h2 id="pgds-vn-title">Vietnam Buddhism</h2>
-						<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>">View more<?php pgds_icon( 'chevron', array( 'size' => 14 ) ); ?></a>
+						<h2 id="pgds-vn-title"><?php esc_html_e( 'Phật giáo Việt Nam', 'pgds' ); ?></h2>
+						<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>"><?php esc_html_e( 'Xem thêm', 'pgds' ); ?><?php pgds_icon( 'chevron', array( 'size' => 14 ) ); ?></a>
 					</div>
 					<ul class="pgds-compact">
 						<?php foreach ( $B['vn_list'] as $p ) : ?>

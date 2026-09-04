@@ -99,6 +99,7 @@ time,
 
 // Icons inherit their colour and align with the text they label.
 .pgds-icon {
+  display: inline-block;
   flex: none;
   vertical-align: middle;
 }

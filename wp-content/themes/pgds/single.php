@@ -61,36 +61,11 @@ while ( have_posts() ) :
 				</header>
 
 				<?php if ( $vid ) : ?>
-					<?php
-					$poster = get_post_meta( $post_id, '_pgds_youtube_poster', true );
-					get_template_part(
-						'template-parts/video-facade',
-						null,
-						array(
-							'video_id'    => $vid,
-							'poster'      => $poster ? $poster : '',
-							// Preferred over the URL when present (yt-sync stores both), so
-							// the poster carries real dimensions and a srcset. When neither
-							// exists the part falls back to the featured image.
-							'poster_id'   => (int) get_post_meta( $post_id, '_pgds_youtube_poster_id', true ),
-							'dur'         => $dur,
-							/*
-							 * Prefer the video's OWN title (synced by `wp pgds yt-sync`)
-							 * for the play button's accessible name and the poster's alt
-							 * text: it describes the thing being played, which is what a
-							 * screen-reader user needs before deciding to activate it. The
-							 * post headline is editorial framing and can differ from the
-							 * video ("Toàn cảnh Đại lễ..." vs "Đại lễ Phật đản PL.2570 —
-							 * bản đầy đủ"). Falls back to the headline when unsynced.
-							 */
-							'title'       => get_post_meta( $post_id, '_pgds_youtube_title', true ) ?: get_the_title(),
-							'caption'     => $source ? ( 'Nguồn: ' . $source ) : '',
-							// §6.3: hides the facade and drops the play affordance for a
-							// private / removed / age-restricted video.
-							'unavailable' => '1' === get_post_meta( $post_id, '_pgds_video_unavailable', true ),
-						)
-					);
-					?>
+					<figure class="pgds-video">
+						<div class="pgds-video__embed">
+							<?php echo wp_oembed_get( 'https://www.youtube.com/watch?v=' . rawurlencode( $vid ) ); ?>
+						</div>
+					</figure>
 				<?php elseif ( has_post_thumbnail() ) : ?>
 					<figure class="pgds-article__figure">
 						<?php the_post_thumbnail( 'pgds-lead', array( 'fetchpriority' => 'high' ) ); ?>

@@ -4,10 +4,10 @@
 @use 'config' as *;
 
 .pgds-media-block {
-  margin: $sp-6 0;
+  margin: 26px 0;
   background: var(--color-bg-inverse);
   border-radius: $radius-xl;
-  padding: $sp-6;
+  padding: 22px;
 
   &__head {
     display: flex;
@@ -148,10 +148,12 @@
     padding: $sp-1 0;
   }
 
-  &__icon {
+  &__dot {
     flex: none;
-    width: 14px;
-    height: 14px;
+    width: 5px;
+    height: 5px;
+    border-radius: $radius-full;
+    background: var(--pgds-gilt-light);
   }
 
   a {

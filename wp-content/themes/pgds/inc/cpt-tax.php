@@ -98,8 +98,8 @@ function pgds_category_tree() {
 			),
 		),
 		'vietnam-buddhism' => array(
-			'label'       => 'Vietnam Buddhism',
-			'description' => 'Vietnamese Buddhism for international readers: heritage, practice and community life.',
+			'label'       => 'Phật giáo Việt Nam',
+			'description' => 'Phật giáo Việt Nam dành cho bạn đọc quốc tế: di sản, tu tập và đời sống cộng đồng.',
 			'children'    => array(),
 		),
 	);
