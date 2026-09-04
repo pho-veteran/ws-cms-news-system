@@ -24,7 +24,9 @@ export default [
       sourceType: 'module',
       globals: {
         CSS: 'readonly',
+        clearInterval: 'readonly',
         document: 'readonly',
+        setInterval: 'readonly',
         window: 'readonly',
         URLSearchParams: 'readonly',
       },
