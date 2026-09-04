@@ -49,6 +49,10 @@ function pgds_meta_fields() {
 			'label' => 'Nguồn tin',
 			'type'  => 'text',
 		),
+		'_pgds_display_author' => array(
+			'label' => 'Tên tác giả hiển thị (nếu khác WP user)',
+			'type'  => 'text',
+		),
 	);
 }
 
@@ -76,6 +80,7 @@ function pgds_register_meta() {
 		'_pgds_feature_rank' => 'integer',
 		'_pgds_photo_story'  => 'boolean',
 		'_pgds_source'       => 'string',
+		'_pgds_display_author' => 'string',
 	);
 	/*
 	 * Per-key sanitize callbacks.

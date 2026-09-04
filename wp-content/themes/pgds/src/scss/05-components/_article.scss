@@ -147,6 +147,14 @@
     color: var(--color-text-meta);
     font-style: italic;
   }
+
+  &__author {
+    text-align: right;
+    font-weight: $fw-bold;
+    color: var(--pgds-ink);
+    margin-top: $sp-2;
+    font-size: $fs-sm;
+  }
 }
 
 // --- Pagination --------------------------------------------------------------

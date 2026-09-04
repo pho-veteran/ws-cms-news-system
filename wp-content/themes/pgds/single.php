@@ -105,6 +105,8 @@ while ( have_posts() ) :
 					<?php the_content(); ?>
 				</div>
 
+				<p class="pgds-article__author"><?php echo esc_html( pgds_display_author( get_post() ) ); ?></p>
+
 				<?php if ( $source ) : ?>
 					<p class="pgds-article__source"><?php printf( esc_html__( 'Nguồn: %s', 'pgds' ), esc_html( $source ) ); ?></p>
 				<?php endif; ?>
@@ -133,7 +135,7 @@ while ( have_posts() ) :
 				if ( $related ) :
 					?>
 					<section class="pgds-section pgds-section--spaced" aria-labelledby="pgds-related-title">
-						<div class="pgds-cat-head"><h2 id="pgds-related-title"><?php esc_html_e( 'Bài liên quan', 'pgds' ); ?></h2></div>
+						<div class="pgds-cat-head"><h2 id="pgds-related-title"><?php esc_html_e( 'Cùng chuyên mục', 'pgds' ); ?></h2></div>
 						<div class="pgds-grid-3">
 							<?php foreach ( $related as $r ) : ?>
 								<?php get_template_part( 'template-parts/card-secondary', null, array( 'post' => $r, 'variant' => 'full', 'bordered' => true ) ); ?>

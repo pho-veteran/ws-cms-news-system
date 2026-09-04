@@ -274,6 +274,25 @@ function pgds_video_id( $post ) {
 }
 
 /**
+ * Editorial author name: custom meta first, then WP user fallback.
+ *
+ * @param int|WP_Post $post Post.
+ * @return string
+ */
+function pgds_display_author( $post ): string {
+	$post = get_post( $post );
+	if ( ! $post ) {
+		return '';
+	}
+	$custom = get_post_meta( $post->ID, '_pgds_display_author', true );
+	if ( '' !== trim( (string) $custom ) ) {
+		return $custom;
+	}
+	$author = get_userdata( $post->post_author );
+	return $author ? $author->display_name : '';
+}
+
+/**
  * Format duration in seconds -> "MM:SS" or "H:MM:SS".
  *
  * @param int $seconds Seconds.
