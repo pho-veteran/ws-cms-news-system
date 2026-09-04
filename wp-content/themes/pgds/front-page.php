@@ -66,13 +66,19 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		</div>
 
 		<!-- Photo news panel -->
-		<?php if ( ! empty( $B['photo'] ) ) : $ph = $B['photo'][0]; ?>
-			<aside class="pgds-photo-panel" aria-label="<?php esc_attr_e( 'Tin ảnh', 'pgds' ); ?>">
+		<?php if ( ! empty( $B['photo'] ) ) : ?>
+			<aside class="pgds-photo-panel" aria-label="<?php esc_attr_e( 'Tin ảnh', 'pgds' ); ?>" data-pgds="photo-slider">
 				<div class="pgds-photo-panel__head"><?php esc_html_e( 'Tin ảnh', 'pgds' ); ?></div>
-				<a class="pgds-photo-panel__link" href="<?php echo esc_url( get_permalink( $ph ) ); ?>">
-					<?php pgds_art( $ph, 'pgds-lead', 'pgds-ratio-lead' ); ?>
-					<span class="pgds-photo-panel__cap"><?php echo esc_html( get_the_title( $ph ) ); ?></span>
-				</a>
+				<div class="pgds-photo-panel__track">
+					<?php foreach ( $B['photo'] as $i => $ph ) : ?>
+						<a class="pgds-photo-panel__slide<?php echo 0 !== $i ? ' is-hidden' : ''; ?>"
+						   href="<?php echo esc_url( get_permalink( $ph ) ); ?>"
+						   <?php echo 0 !== $i ? 'aria-hidden="true" tabindex="-1"' : ''; ?>>
+							<?php pgds_art( $ph, 'pgds-lead', 'pgds-ratio-lead' ); ?>
+							<span class="pgds-photo-panel__cap"><?php echo esc_html( get_the_title( $ph ) ); ?></span>
+						</a>
+					<?php endforeach; ?>
+				</div>
 				<div class="pgds-photo-panel__dots" aria-hidden="true">
 					<?php foreach ( $B['photo'] as $i => $x ) : ?>
 						<span class="<?php echo 0 === $i ? 'is-active' : ''; ?>"></span>

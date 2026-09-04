@@ -243,12 +243,23 @@
     margin: $sp-3 $sp-3 0;
   }
 
+  &__track {
+    position: relative;
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
   // Replaces the inline style the template used to carry; the caption is absolutely
-  // positioned against this link, so it must establish the containing block.
-  &__link {
+  // positioned against this slide, so it must establish the containing block.
+  &__slide {
     position: relative;
     display: flex;
     flex: 1;
+
+    &.is-hidden {
+      display: none;
+    }
   }
 
   .pgds-art {
