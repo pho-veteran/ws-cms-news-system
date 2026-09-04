@@ -117,6 +117,8 @@ while ( have_posts() ) :
 					</div>
 				<?php endif; ?>
 
+				<?php comments_template(); ?>
+
 				<!-- Related posts -->
 				<?php
 				$related = array();

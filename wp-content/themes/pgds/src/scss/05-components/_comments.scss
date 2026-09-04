@@ -1,0 +1,179 @@
+@use 'config' as *;
+
+// 05-COMPONENTS / COMMENTS
+// Comment section on single articles: title, listed comments, reply form.
+
+.pgds-comments {
+  margin-top: $sp-8;
+
+  &__title {
+    font-size: $fs-xl;
+    color: var(--pgds-robe-deep);
+    border-bottom: 2px solid var(--pgds-robe);
+    padding-bottom: $sp-2;
+    margin-bottom: $sp-4;
+  }
+
+  &__list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 $sp-5;
+
+    .comment {
+      padding: $sp-4 0;
+      border-bottom: 1px solid var(--pgds-line);
+
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+
+    .comment-author {
+      font-size: $fs-sm;
+      font-weight: $fw-semibold;
+      color: var(--pgds-ink);
+      margin-bottom: $sp-1;
+
+      img {
+        border-radius: $radius-full;
+        margin-right: $sp-2;
+        vertical-align: middle;
+      }
+    }
+
+    .comment-metadata {
+      font-size: $fs-3xs;
+      color: var(--pgds-text-muted);
+      margin-bottom: $sp-2;
+
+      a {
+        color: inherit;
+      }
+    }
+
+    .comment-content {
+      font-size: $fs-sm;
+      line-height: $lh-relax;
+
+      p:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .reply {
+      margin-top: $sp-2;
+
+      a {
+        font-size: $fs-xs;
+        font-weight: $fw-semibold;
+        color: var(--pgds-moss);
+      }
+    }
+
+    .children {
+      list-style: none;
+      padding-left: $sp-6;
+      margin: 0;
+    }
+  }
+
+  &__form-wrap {
+    background: #fff;
+    border: 1px solid var(--pgds-line);
+    border-radius: $radius-lg;
+    padding: $sp-5;
+  }
+
+  &__form-inner {
+    .comment-form-comment {
+      margin-bottom: $sp-3;
+
+      textarea {
+        width: 100%;
+        min-height: 80px;
+        border: 1px solid #c4b79b;
+        border-radius: $radius-md;
+        padding: $sp-3;
+        font-family: $font-body;
+        font-size: $fs-sm;
+        resize: vertical;
+        color: var(--pgds-ink);
+        background: transparent;
+
+        &::placeholder {
+          color: #9b8f79;
+        }
+
+        &:focus {
+          border-color: var(--pgds-robe);
+          box-shadow: 0 0 0 2px rgba(92, 58, 46, 0.12);
+          outline: none;
+        }
+      }
+    }
+
+    // Hide fields that comment_form might add (logged-in notice, etc.)
+    .logged-in-as {
+      font-size: $fs-xs;
+      color: var(--pgds-text-muted);
+      margin-bottom: $sp-3;
+    }
+
+    .comment-form-author,
+    .comment-form-email,
+    .comment-form-url {
+      margin-bottom: $sp-3;
+
+      label {
+        display: block;
+        font-size: $fs-xs;
+        font-weight: $fw-semibold;
+        margin-bottom: $sp-1;
+        color: var(--pgds-ink);
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid #c4b79b;
+        border-radius: $radius-md;
+        padding: $sp-2 $sp-3;
+        font-family: $font-body;
+        font-size: $fs-sm;
+        color: var(--pgds-ink);
+
+        &:focus {
+          border-color: var(--pgds-robe);
+          box-shadow: 0 0 0 2px rgba(92, 58, 46, 0.12);
+          outline: none;
+        }
+      }
+    }
+  }
+
+  &__submit {
+    background: var(--pgds-robe);
+    color: #fff;
+    border: 0;
+    border-radius: $radius-md;
+    padding: $sp-2 $sp-5;
+    font-family: $font-body;
+    font-size: $fs-sm;
+    font-weight: $fw-bold;
+    cursor: pointer;
+    transition: background $dur-base $ease-out;
+
+    &:hover {
+      background: var(--pgds-robe-deep);
+    }
+
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+
+  &__closed {
+    font-size: $fs-sm;
+    color: var(--pgds-text-muted);
+    font-style: italic;
+  }
+}
