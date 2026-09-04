@@ -4,10 +4,50 @@
 self-hosted fonts, builds the content-hashed assets, validates the generated manifest,
 and uploads the build output as artifacts.
 
-`deploy.yml` runs only for pushes to `main`. Its lint and build jobs are hard gates: the
-deployment job cannot start unless they succeed. It deploys only the runtime theme files,
-then reloads PHP-FPM, flushes FastCGI, and purges Cloudflare only when theme assets changed.
-The origin is always purged before the edge.
+`deploy.yml` runs for pushes to `main` and for a manual `workflow_dispatch`. Its lint and
+build jobs are hard gates: the deployment job cannot start unless they succeed. It deploys
+the first-party runtime code — the theme, `wp-content/plugins/pgds-lunar-calendar/`, and
+`wp-content/mu-plugins/` — then verifies the synced files, reloads PHP-FPM, flushes
+FastCGI, purges Cloudflare when asset inputs changed, and finally smoke-tests the public
+site. The origin is always purged before the edge.
+
+## What the deploy does and does not touch
+
+Deployed: the theme's runtime files, the first-party plugin directory, and the mu-plugins
+directory. `--delete` is scoped to the theme directory and to the plugin's own directory,
+so plugins installed through wp-admin survive. mu-plugins sync without `--delete` because
+that directory is shared with host drop-ins this repository does not own.
+
+Never touched by a deploy: WordPress core, the database, uploads, options, terms, and
+content. The workflow runs no `wp theme activate`, no `pgds_seed_categories()`, no
+`wp option update`, no `wp rewrite flush`, and no `wp pgds import`. The local scripts under
+`infra/local/scripts/` are development-only — `setup.sh` hardcodes `http://localhost:8080`
+and a default admin password, and must never run against production. Provisioning
+production content or media is a separate, reviewed operation.
+
+## Plugin activation
+
+The lunar calendar is loaded by `wp-content/mu-plugins/pgds-lunar-loader.php`, so copying
+the files *is* the activation — no `active_plugins` write and no WP-CLI on the server. This
+keeps the deployment account on its two sudo grants below rather than widening sudo to run
+WP-CLI as `www-data`. The loader skips itself when the plugin is activated normally in
+wp-admin, so both paths work without a double load.
+
+Before this loader existed, the deploy shipped only the theme: production answered 404 on
+`/wp-json/pgds-lunar/v1/today` while the same route worked locally, and the sidebar
+silently used the manual `pgds_lunar_note` CPT fallback. The homepage still returned 200,
+which is why the gap went unnoticed — hence the smoke test now asserts that route.
+
+## Post-deploy verification
+
+The workflow validates that `DEPLOY_*` secrets are plain hostnames, user names, unit names,
+and absolute paths before interpolating them into a remote `sudo` command, then:
+
+1. Confirms the synced theme, plugin, and mu-plugin files are readable on the server.
+2. Requires Cloudflare's purge response to carry `"success": true` — a rejected purge
+   returns HTTP 200 with `"success": false` and would otherwise pass.
+3. Smoke-tests `https://vihn.id.vn`: the homepage, the lunar REST route and its payload
+   shape, and both hashed asset URLs from the freshly built manifest.
 
 ## Required repository secrets
 
@@ -17,7 +57,7 @@ The origin is always purged before the edge.
 | `DEPLOY_SSH_KNOWN_HOSTS`   | Pinned SSH host key entry for the production server.                                                       | From a trusted administrator network, run `ssh-keyscan -H <production-host>` and independently verify the fingerprint against the server console or administrator record before storing the resulting line.   |
 | `DEPLOY_HOST`              | Production server hostname or IP address reachable by SSH.                                                 | Obtain it from the Lightsail instance networking configuration or the administrator-managed DNS record.                                                                                                       |
 | `DEPLOY_USER`              | Dedicated, key-only SSH account that can deploy the theme and run the required restricted `sudo` commands. | Create the deployment account on the production server; grant only the required `systemctl reload php8.3-fpm` and FastCGI-cache flush permissions in `sudoers`.                                               |
-| `DEPLOY_THEME_PATH`        | Absolute production path for the `pgds` theme directory.                                                   | Confirm the WordPress document root on the server; the expected value is the full path ending in `wp-content/themes/pgds`.                                                                                    |
+| `DEPLOY_THEME_PATH`        | Absolute production path for the `pgds` theme directory. The plugin and mu-plugin paths are derived from it. | Confirm the WordPress document root on the server; the expected value is the full path ending in `wp-content/themes/pgds`. The workflow rejects a value that does not sit under `wp-content/themes/`.        |
 | `DEPLOY_PHP_FPM_SERVICE`   | Exact systemd service unit used by PHP-FPM.                                                                | Run `systemctl list-unit-files` or ask the server administrator; the planned PHP 8.3 installation normally uses `php8.3-fpm`.                                                                                 |
 | `DEPLOY_FASTCGI_CACHE_DIR` | Absolute directory containing the Nginx FastCGI cache files.                                               | Confirm the `fastcgi_cache_path` configured in Nginx; the project configuration uses `/var/cache/nginx/fcgi`.                                                                                                 |
 | `CLOUDFLARE_API_TOKEN`     | Cloudflare API token permitted to purge the production zone cache.                                         | In Cloudflare, create an API token scoped to **Zone / Cache Purge / Purge** for this zone only. Do not use the account-wide Global API Key.                                                                   |

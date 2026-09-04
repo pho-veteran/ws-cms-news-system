@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  # Manual re-run without an empty commit. Redeploying the same ref is safe: rsync,
+  # plugin activation, and the cache purges below are all idempotent.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -260,6 +263,90 @@ jobs:
           echo "rule_id=${RULE_ID}" >> "$GITHUB_OUTPUT"
           echo "opened 22 for ${RUNNER_CIDR} as ${RULE_ID}"
 
+      # ---------------------------------------------------------------------
+      # Validate the deployment secrets that end up inside a remote shell command
+      # or an rsync destination.
+      #
+      # DEPLOY_PHP_FPM_SERVICE and DEPLOY_FASTCGI_CACHE_DIR are interpolated into a
+      # `sudo systemctl reload ... && sudo find ... -delete` string below. Quoting alone
+      # does not stop a value containing `'` from closing the quote and appending its own
+      # command, and that command would run under sudo. The rsync destinations have the
+      # same shape of exposure through the remote shell rsync spawns. So every value is
+      # pinned to a strict character class before use, and the paths must be absolute.
+      # ---------------------------------------------------------------------
+      - name: Validate deploy target secrets
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
+          DEPLOY_PHP_FPM_SERVICE: ${{ secrets.DEPLOY_PHP_FPM_SERVICE }}
+          DEPLOY_FASTCGI_CACHE_DIR: ${{ secrets.DEPLOY_FASTCGI_CACHE_DIR }}
+        run: |
+          set -euo pipefail
+
+          fail=0
+          require_match() {
+            local name="$1" value="$2" pattern="$3" description="$4"
+            if [[ ! "$value" =~ $pattern ]]; then
+              echo "::error::${name} is not ${description}"
+              fail=1
+            fi
+          }
+
+          require_match DEPLOY_HOST "$DEPLOY_HOST" \
+            '^[A-Za-z0-9._-]+$' 'a bare hostname or IPv4 address'
+          require_match DEPLOY_USER "$DEPLOY_USER" \
+            '^[a-z_][a-z0-9_-]*$' 'a plain POSIX user name'
+          require_match DEPLOY_THEME_PATH "$DEPLOY_THEME_PATH" \
+            '^/[A-Za-z0-9._/-]*[A-Za-z0-9._-]$' 'an absolute path without shell metacharacters'
+          require_match DEPLOY_PHP_FPM_SERVICE "$DEPLOY_PHP_FPM_SERVICE" \
+            '^[A-Za-z0-9@._-]+$' 'a plain systemd unit name'
+          require_match DEPLOY_FASTCGI_CACHE_DIR "$DEPLOY_FASTCGI_CACHE_DIR" \
+            '^/[A-Za-z0-9._/-]*[A-Za-z0-9._-]$' 'an absolute path without shell metacharacters'
+
+          # The theme path is what `wp-content/themes/pgds` resolves to; the plugin and
+          # mu-plugin paths are derived from it so a single secret keeps them consistent.
+          if [[ "$DEPLOY_THEME_PATH" != */wp-content/themes/* ]]; then
+            echo "::error::DEPLOY_THEME_PATH must live under wp-content/themes/"
+            fail=1
+          fi
+
+          # A bare `/` or a cache directory pointing at the document root would turn the
+          # flush step into a site-wide delete.
+          case "$DEPLOY_FASTCGI_CACHE_DIR" in
+            / | /etc | /etc/* | /usr | /usr/* | /var | /var/www | /var/www/*)
+              echo "::error::DEPLOY_FASTCGI_CACHE_DIR points at a path that must never be mass-deleted"
+              fail=1
+              ;;
+          esac
+
+          exit "$fail"
+
+      # ---------------------------------------------------------------------
+      # Resolve the WordPress root and the plugin directories from DEPLOY_THEME_PATH.
+      #
+      # Previously only the theme shipped, so the lunar-calendar plugin and the
+      # cache-flush mu-plugin had to be installed on the server by hand. They never were:
+      # https://vihn.id.vn/wp-json/pgds-lunar/v1/today returned 404 in production while
+      # working locally, and the sidebar silently fell back to the manual
+      # pgds_lunar_note CPT path. Deriving the paths here keeps one secret authoritative
+      # instead of adding three more that can drift apart.
+      # ---------------------------------------------------------------------
+      - name: Resolve deployment paths
+        id: paths
+        shell: bash
+        env:
+          DEPLOY_THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
+        run: |
+          set -euo pipefail
+          WP_ROOT="${DEPLOY_THEME_PATH%/wp-content/themes/*}"
+          {
+            echo "wp_root=${WP_ROOT}"
+            echo "plugins_path=${WP_ROOT}/wp-content/plugins"
+            echo "mu_plugins_path=${WP_ROOT}/wp-content/mu-plugins"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Deploy runtime theme files
         shell: bash
         env:
@@ -280,6 +367,91 @@ jobs:
             -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
             wp-content/themes/pgds/ \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_THEME_PATH}/"
+
+      # First-party plugin. --delete is scoped to the plugin's own directory, so a
+      # third-party plugin installed through wp-admin is untouched; deleting the whole
+      # plugins/ tree would remove them.
+      - name: Deploy first-party plugins
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          PLUGINS_PATH: ${{ steps.paths.outputs.plugins_path }}
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
+            wp-content/plugins/pgds-lunar-calendar/ \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${PLUGINS_PATH}/pgds-lunar-calendar/"
+
+      # mu-plugins load unconditionally, so a partial file breaks every request. rsync
+      # writes to a temporary name and renames, which makes each file swap atomic.
+      #
+      # No --delete here: mu-plugins/ is a flat directory shared with anything the host
+      # dropped in (an object-cache drop-in, for instance), and deleting unknown files
+      # under it would be a much larger blast radius than this repository owns.
+      - name: Deploy mu-plugins
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          MU_PLUGINS_PATH: ${{ steps.paths.outputs.mu_plugins_path }}
+        run: |
+          set -euo pipefail
+          rsync -az \
+            -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
+            wp-content/mu-plugins/ \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${MU_PLUGINS_PATH}/"
+
+      # ---------------------------------------------------------------------
+      # Confirm the synced files landed where PHP will look for them.
+      #
+      # No WP-CLI and no database write: the lunar calendar is booted by
+      # wp-content/mu-plugins/pgds-lunar-loader.php, so shipping the files IS the
+      # activation. That keeps the deployment account on its two existing sudo grants
+      # (reload php-fpm, flush FastCGI) instead of widening sudo to run WP-CLI as
+      # www-data just to write one option.
+      #
+      # This deliberately runs no `wp theme activate`, no pgds_seed_categories(), no
+      # `wp option update`, no `wp rewrite flush`, and no `wp pgds import`: those mutate
+      # production content, terms, or options, and a code deploy must not. Content and
+      # media provisioning stays a separate, reviewed operation.
+      # ---------------------------------------------------------------------
+      - name: Verify deployed files
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
+          PLUGINS_PATH: ${{ steps.paths.outputs.plugins_path }}
+          MU_PLUGINS_PATH: ${{ steps.paths.outputs.mu_plugins_path }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "THEME_PATH='${THEME_PATH}' PLUGINS_PATH='${PLUGINS_PATH}' MU_PLUGINS_PATH='${MU_PLUGINS_PATH}' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          fail=0
+          require_file() {
+            if [ -r "$1" ]; then
+              echo "ok  $1"
+            else
+              echo "::error::missing or unreadable on the server: $1"
+              fail=1
+            fi
+          }
+
+          require_file "${THEME_PATH}/style.css"
+          require_file "${THEME_PATH}/functions.php"
+          require_file "${THEME_PATH}/assets/dist/manifest.json"
+          require_file "${PLUGINS_PATH}/pgds-lunar-calendar/pgds-lunar-calendar.php"
+          require_file "${PLUGINS_PATH}/pgds-lunar-calendar/includes/class-rest-controller.php"
+          require_file "${MU_PLUGINS_PATH}/pgds-lunar-loader.php"
+          require_file "${MU_PLUGINS_PATH}/pgds-cache-flush.php"
+
+          exit "$fail"
+          REMOTE
 
       - name: Reload PHP-FPM and flush FastCGI cache
         shell: bash
@@ -319,9 +491,18 @@ jobs:
           SOURCES=(
             "wp-content/themes/pgds/src"
             "wp-content/themes/pgds/build.mjs"
+            "wp-content/themes/pgds/package.json"
             "wp-content/themes/pgds/package-lock.json"
+            "wp-content/themes/pgds/tools/fetch-fonts.mjs"
             "wp-content/themes/pgds/assets/fonts"
           )
+          # A manual re-run has no new commit to diff against, and the reason to trigger
+          # one is usually "the edge is serving something stale". Purge unconditionally.
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "manual dispatch; purging the edge"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # A first commit on a branch has no HEAD^; treat that as "assets changed" so the
           # purge errs toward correctness rather than serving a stale edge.
           if ! git rev-parse --verify --quiet HEAD^ >/dev/null; then
@@ -346,12 +527,87 @@ jobs:
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error \
-            --request POST \
-            --url "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
-            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            --header 'Content-Type: application/json' \
-            --data '{"purge_everything":true}'
+          # Cloudflare answers a rejected purge with HTTP 200 and "success": false, so
+          # --fail-with-body alone would let a silently unpurged edge pass as a green
+          # deploy. Capture the body and assert the flag.
+          RESPONSE="$(
+            curl --fail-with-body --silent --show-error \
+              --request POST \
+              --url "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              --header 'Content-Type: application/json' \
+              --data '{"purge_everything":true}'
+          )"
+          if ! printf '%s' "$RESPONSE" | jq -e '.success == true' >/dev/null; then
+            # The body carries an errors[] array, never the token.
+            echo "::error::Cloudflare purge did not succeed: $(printf '%s' "$RESPONSE" | jq -c '.errors // .')"
+            exit 1
+          fi
+          echo "edge purged"
+
+      # ---------------------------------------------------------------------
+      # Post-deploy smoke test through the edge.
+      #
+      # Every step above can succeed while the site itself is broken: a fatal in deployed
+      # PHP returns 500, and a missing plugin returns 404 on its own route while the
+      # homepage stays 200. That is precisely how the lunar plugin's absence went
+      # unnoticed. These checks run against the public hostname, after both purges, so
+      # they assert what a visitor actually receives.
+      # ---------------------------------------------------------------------
+      - name: Smoke test production
+        shell: bash
+        env:
+          SITE_URL: https://vihn.id.vn
+        run: |
+          set -euo pipefail
+
+          fail=0
+
+          check_status() {
+            local path="$1" expected="$2"
+            local code
+            # Cache-Control: no-cache asks Cloudflare for an origin response rather than
+            # confirming its own cache is warm.
+            code="$(
+              curl --silent --show-error --location \
+                --max-time 30 --retry 3 --retry-delay 5 --retry-all-errors \
+                --header 'Cache-Control: no-cache' \
+                --output /dev/null --write-out '%{http_code}' \
+                "${SITE_URL}${path}"
+            )"
+            if [ "$code" != "$expected" ]; then
+              echo "::error::${path} returned ${code}, expected ${expected}"
+              fail=1
+            else
+              echo "${path} -> ${code}"
+            fi
+          }
+
+          check_status / 200
+          check_status /wp-json/pgds-lunar/v1/today 200
+
+          # The lunar route must return usable data, not just 200 with an empty body.
+          LUNAR="$(
+            curl --silent --show-error --location --max-time 30 \
+              --retry 3 --retry-delay 5 --retry-all-errors \
+              "${SITE_URL}/wp-json/pgds-lunar/v1/today"
+          )"
+          if ! printf '%s' "$LUNAR" | jq -e '(.lunar_day | type == "string" and length > 0) and (.menh | type == "string" and length > 0)' >/dev/null; then
+            echo "::error::lunar endpoint returned unexpected payload: $(printf '%s' "$LUNAR" | head -c 300)"
+            fail=1
+          else
+            echo "lunar payload: $(printf '%s' "$LUNAR" | jq -c '{lunar_day, menh}')"
+          fi
+
+          # The hashed asset filenames just built must be reachable at the edge. This is
+          # the check that would have caught a purge that silently did nothing.
+          MANIFEST="wp-content/themes/pgds/assets/dist/manifest.json"
+          for key in main.css app.js; do
+            asset="$(jq -r --arg k "$key" '.[$k]' "$MANIFEST")"
+            check_status "/wp-content/themes/pgds/assets/dist/${asset}" 200
+          done
+
+          exit "$fail"
 
       # ---------------------------------------------------------------------
       # Revoke the temporary SSH rule.
