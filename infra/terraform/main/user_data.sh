@@ -243,7 +243,10 @@ visudo -cf /etc/sudoers
 install -d -m 0755 /etc/cron.d
 cat > /etc/cron.d/pgds <<'CRON'
 SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+# /snap/bin is REQUIRED: the AWS CLI is installed from snap, and cron's default PATH
+# omits it. Without it pgds-db-backup.sh dumps fine and then fails at the upload with
+# "aws: command not found", and pgds-health-alert.sh detects alerts it cannot send.
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin
 MAILTO=root
 
 # Database backup -> S3, twice daily (§6.1).

@@ -22,6 +22,13 @@
 
 set -euo pipefail
 
+# The AWS CLI is installed from snap, which puts it in /snap/bin — a directory absent
+# from cron's default PATH. Without this line the dump succeeds, the upload dies with
+# "aws: command not found", and the only symptom is a nightly "upload failed" in syslog
+# while manual runs (login shells, which source /etc/profile) work fine. Prepending the
+# system dirs keeps the resolution order predictable regardless of the caller's PATH.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+
 ENV_FILE=/root/.pgds-backup.env
 LOG_TAG=pgds-backup
 

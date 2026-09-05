@@ -22,6 +22,11 @@
 
 set -uo pipefail
 
+# Same snap PATH trap as pgds-db-backup.sh: `aws sesv2 send-email` is unreachable under
+# cron's default PATH because the CLI lives in /snap/bin, so every alert would be
+# detected correctly and then silently fail to send.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+
 ENV_FILE=/root/.pgds-backup.env
 # §10.2 requires the SES credentials be SEPARATE from the backup credentials, and they are:
 # pgds-backup is PutObject-only, pgds-ses is send-only. This script previously read only
