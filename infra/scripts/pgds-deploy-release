@@ -1,0 +1,310 @@
+#!/usr/bin/env bash
+#
+# Promote one staged PGDS release into the production WordPress runtime.
+#
+# This command is the deployment account's only passwordless root operation. Its
+# inputs are intentionally narrower than rsync, systemctl, find, or WP-CLI: one
+# release ID below a fixed staging root. Paths, services, destinations, ownership,
+# and the two managed mu-plugins are constants below, so CI cannot turn this helper
+# into a general root file-copy or command-execution primitive.
+
+set -Eeuo pipefail
+umask 022
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+readonly STAGING_ROOT=/var/lib/pgds-deploy/incoming
+readonly HISTORY_ROOT=/var/lib/pgds-deploy/history
+readonly LOCK_FILE=/run/lock/pgds-deploy.lock
+readonly WORDPRESS_ROOT=/var/www/pgds
+readonly THEME_DEST="$WORDPRESS_ROOT/wp-content/themes/pgds"
+readonly PLUGIN_DEST="$WORDPRESS_ROOT/wp-content/plugins/pgds-lunar-calendar"
+readonly MU_PLUGIN_DEST="$WORDPRESS_ROOT/wp-content/mu-plugins"
+readonly PHP_FPM_SERVICE=php8.3-fpm
+readonly FASTCGI_CACHE_DIR=/var/cache/nginx/fcgi
+readonly WEB_OWNER=www-data
+readonly WEB_GROUP=www-data
+readonly KEEP_RELEASES=5
+readonly MANAGED_MU_PLUGINS=(pgds-cache-flush.php pgds-lunar-loader.php)
+
+release_tmp=''
+work=''
+actual_paths_file=''
+manifest_paths_file=''
+rollback_needed=0
+promotion_complete=0
+
+log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
+die() { log "ERROR: $*" >&2; exit 1; }
+
+[ "${EUID:-$(id -u)}" -eq 0 ] || die 'must run as root'
+[ "$#" -eq 1 ] || die 'usage: pgds-deploy-release <release-id>'
+
+release_id="$1"
+[[ "$release_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] \
+  || die 'release ID must use only letters, numbers, dots, underscores, and hyphens'
+[[ "$release_id" != '.' && "$release_id" != '..' ]] || die 'invalid release ID'
+
+cleanup() {
+  status=$?
+  trap - EXIT
+
+  if [ -n "$release_tmp" ] && [ -d "$release_tmp" ]; then
+    rm -rf -- "$release_tmp"
+  fi
+  [ -n "$actual_paths_file" ] && rm -f -- "$actual_paths_file"
+  [ -n "$manifest_paths_file" ] && rm -f -- "$manifest_paths_file"
+
+  if [ "$status" -ne 0 ] && [ "$rollback_needed" -eq 1 ] && [ "$promotion_complete" -eq 0 ]; then
+    log 'promotion failed; restoring the previous runtime'
+    set +e
+    if [ -d "$work/theme" ]; then
+      rsync -a --delete "$work/theme/" "$THEME_DEST/"
+    else
+      rm -rf -- "$THEME_DEST"
+    fi
+    if [ -d "$work/plugin" ]; then
+      rsync -a --delete "$work/plugin/" "$PLUGIN_DEST/"
+    else
+      rm -rf -- "$PLUGIN_DEST"
+    fi
+    for mu_file in "${MANAGED_MU_PLUGINS[@]}"; do
+      if [ -f "$work/$mu_file" ]; then
+        install -m 0644 -o "$WEB_OWNER" -g "$WEB_GROUP" "$work/$mu_file" "$MU_PLUGIN_DEST/$mu_file"
+      else
+        rm -f -- "$MU_PLUGIN_DEST/$mu_file"
+      fi
+    done
+    chown -R "$WEB_OWNER:$WEB_GROUP" "$THEME_DEST" "$PLUGIN_DEST" 2>/dev/null
+    systemctl reload "$PHP_FPM_SERVICE"
+    if [ -d "$FASTCGI_CACHE_DIR" ]; then
+      find "$FASTCGI_CACHE_DIR" -xdev -type f -delete
+    fi
+    set -e
+  fi
+
+  if [ -n "$work" ] && [ -d "$work" ]; then
+    rm -rf -- "$work"
+  fi
+  exit "$status"
+}
+trap cleanup EXIT
+
+for required_command in cmp find flock php realpath rsync sha256sum stat systemctl; do
+  command -v "$required_command" >/dev/null || die "$required_command is required"
+done
+
+install -d -m 0755 -o root -g root "$(dirname "$LOCK_FILE")"
+exec 9>"$LOCK_FILE"
+flock -n 9 || die 'another release promotion is already running'
+
+staged="$STAGING_ROOT/$release_id"
+release="$HISTORY_ROOT/$release_id"
+
+[ -d "$STAGING_ROOT" ] || die 'staging root is missing'
+[ ! -L "$STAGING_ROOT" ] || die 'staging root must not be a symlink'
+[ "$(realpath -e -- "$STAGING_ROOT")" = "$STAGING_ROOT" ] \
+  || die 'staging root resolves unexpectedly'
+[ -d "$staged" ] || die "staged release does not exist: $release_id"
+staging_owner="$(stat -c '%u' "$STAGING_ROOT")"
+[ "$staging_owner" -ne 0 ] && [ "$(stat -c '%u' "$staged")" = "$staging_owner" ] \
+  || die 'staged release must be owned by the unprivileged uploader'
+if [ -n "$(find "$staged" -xdev ! -uid "$staging_owner" -print -quit)" ]; then
+  die 'every staged release entry must be owned by the unprivileged uploader'
+fi
+[ ! -L "$staged" ] || die 'staged release root must not be a symlink'
+[ ! -e "$release" ] || die 'release ID has already been promoted'
+
+staging_real="$(realpath -e -- "$staged")" || die 'cannot resolve staged release'
+case "$staging_real" in
+  "$STAGING_ROOT"/*) ;;
+  *) die 'staged release resolves outside the staging root' ;;
+esac
+
+mapfile -t top_entries < <(find "$staged" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+[ "${#top_entries[@]}" -eq 4 ] || die 'release must contain exactly MANIFEST.sha256, theme, plugins, and mu-plugins'
+[ "${top_entries[0]}" = MANIFEST.sha256 ] \
+  && [ "${top_entries[1]}" = mu-plugins ] \
+  && [ "${top_entries[2]}" = plugins ] \
+  && [ "${top_entries[3]}" = theme ] \
+  || die 'release has an unexpected top-level entry'
+
+[ -f "$staged/MANIFEST.sha256" ] || die 'MANIFEST.sha256 is missing'
+[ ! -L "$staged/MANIFEST.sha256" ] || die 'MANIFEST.sha256 must not be a symlink'
+[ -d "$staged/theme/pgds" ] || die 'theme/pgds is missing'
+[ -d "$staged/plugins/pgds-lunar-calendar" ] || die 'plugins/pgds-lunar-calendar is missing'
+[ -d "$staged/mu-plugins" ] || die 'mu-plugins is missing'
+
+if [ -n "$(find "$staged/theme" "$staged/plugins" "$staged/mu-plugins" -type l -print -quit)" ]; then
+  die 'release payload must not contain symlinks'
+fi
+if [ -n "$(find "$staged" -xdev \( -type b -o -type c -o -type p -o -type s \) -print -quit)" ]; then
+  die 'release payload contains a special file'
+fi
+
+mapfile -t plugin_entries < <(find "$staged/plugins" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+[ "${#plugin_entries[@]}" -eq 1 ] && [ "${plugin_entries[0]}" = pgds-lunar-calendar ] \
+  || die 'release contains an unmanaged plugin'
+
+mapfile -t mu_entries < <(find "$staged/mu-plugins" -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
+[ "${#mu_entries[@]}" -eq 2 ] \
+  && [ "${mu_entries[0]}" = pgds-cache-flush.php ] \
+  && [ "${mu_entries[1]}" = pgds-lunar-loader.php ] \
+  || die 'release must contain exactly the two managed mu-plugin files'
+[ "$(find "$staged/mu-plugins" -mindepth 1 -maxdepth 1 | wc -l)" -eq 2 ] \
+  || die 'mu-plugins contains an unexpected entry'
+
+required_files=(
+  theme/pgds/style.css
+  theme/pgds/functions.php
+  theme/pgds/assets/dist/manifest.json
+  plugins/pgds-lunar-calendar/pgds-lunar-calendar.php
+  plugins/pgds-lunar-calendar/includes/class-rest-controller.php
+  mu-plugins/pgds-cache-flush.php
+  mu-plugins/pgds-lunar-loader.php
+)
+for relative in "${required_files[@]}"; do
+  [ -f "$staged/$relative" ] && [ ! -L "$staged/$relative" ] \
+    || die "required regular file is missing: $relative"
+done
+
+# The manifest must name every payload file exactly once and no other path. Compare
+# normalized path lists before checksum verification so duplicate manifest lines cannot
+# hide an omitted file behind a matching line count.
+actual_paths_file="$(mktemp "/tmp/pgds-actual-paths-${release_id}.XXXXXX")"
+manifest_paths_file="$(mktemp "/tmp/pgds-manifest-paths-${release_id}.XXXXXX")"
+(
+  cd "$staged"
+  find theme plugins mu-plugins -type f -printf '%p\0' | LC_ALL=C sort -z > "$actual_paths_file"
+) || die 'cannot enumerate release payload files'
+
+awk '
+  NF < 2 || length($1) != 64 || $1 !~ /^[[:xdigit:]]+$/ || substr($0, 65, 2) != "  " { exit 1 }
+  {
+    path = substr($0, 67)
+    if (path == "" || path ~ /^\// || path ~ /(^|\/)\.\.?(\/|$)/ || path ~ /[[:space:]\\]/) {
+      exit 1
+    }
+    printf "%s%c", path, 0
+  }
+' "$staged/MANIFEST.sha256" | LC_ALL=C sort -z > "$manifest_paths_file" \
+  || die 'checksum manifest has an invalid entry'
+
+cmp -s "$actual_paths_file" "$manifest_paths_file" \
+  || die 'checksum manifest does not exactly match the payload files'
+rm -f -- "$actual_paths_file" "$manifest_paths_file"
+actual_paths_file=''
+manifest_paths_file=''
+
+(
+  cd "$staged"
+  LC_ALL=C sha256sum --strict --check MANIFEST.sha256
+) || die 'release checksum validation failed'
+
+# Validate all PHP while the release is still isolated. xargs -r alone could pass a
+# release containing no PHP; required_files above prevents that vacuous success too.
+while IFS= read -r -d '' php_file; do
+  php -l "$php_file" >/dev/null || die "PHP syntax check failed: ${php_file#"$staged/"}"
+done < <(find "$staged/theme" "$staged/plugins" "$staged/mu-plugins" -type f -name '*.php' -print0)
+
+php -r '
+$path = $argv[1];
+$data = json_decode(file_get_contents($path), true, 8, JSON_THROW_ON_ERROR);
+foreach (["main.css" => "/^main\\.[a-f0-9]{8}\\.css$/", "app.js" => "/^app\\.[a-f0-9]{8}\\.js$/"] as $key => $pattern) {
+    if (!isset($data[$key]) || !is_string($data[$key]) || preg_match($pattern, $data[$key]) !== 1) {
+        fwrite(STDERR, "invalid asset manifest entry: {$key}\\n");
+        exit(1);
+    }
+    if (!is_file(dirname($path) . "/" . $data[$key])) {
+        fwrite(STDERR, "manifest target is missing: {$data[$key]}\\n");
+        exit(1);
+    }
+}
+' "$staged/theme/pgds/assets/dist/manifest.json" || die 'theme asset manifest is invalid'
+
+wordpress_real="$(realpath -e -- "$WORDPRESS_ROOT")" || die 'cannot resolve WordPress root'
+[ "$wordpress_real" = "$WORDPRESS_ROOT" ] || die 'WordPress root resolves unexpectedly'
+
+validate_runtime_parent() {
+  local path="$1"
+  local expected="$2"
+
+  [ -d "$path" ] || die "runtime directory is missing: $path"
+  [ ! -L "$path" ] || die "runtime directory must not be a symlink: $path"
+  [ "$(realpath -e -- "$path")" = "$expected" ] \
+    || die "runtime directory resolves unexpectedly: $path"
+}
+
+validate_runtime_parent "$WORDPRESS_ROOT/wp-content" "$WORDPRESS_ROOT/wp-content"
+validate_runtime_parent "$WORDPRESS_ROOT/wp-content/themes" "$WORDPRESS_ROOT/wp-content/themes"
+validate_runtime_parent "$WORDPRESS_ROOT/wp-content/plugins" "$WORDPRESS_ROOT/wp-content/plugins"
+
+validate_runtime_parent "$MU_PLUGIN_DEST" "$MU_PLUGIN_DEST"
+for destination in "$THEME_DEST" "$PLUGIN_DEST"; do
+  if [ -e "$destination" ]; then
+    [ -d "$destination" ] && [ ! -L "$destination" ] \
+      || die "managed destination must be a regular directory: $destination"
+    [ "$(realpath -e -- "$destination")" = "$destination" ] \
+      || die "managed destination resolves unexpectedly: $destination"
+  fi
+done
+
+[ -d "$HISTORY_ROOT" ] || die 'release history root is missing'
+[ ! -L "$HISTORY_ROOT" ] || die 'release history root must not be a symlink'
+[ "$(stat -c '%u:%g' "$HISTORY_ROOT")" = '0:0' ] \
+  || die 'release history root must be owned by root'
+history_real="$(realpath -e -- "$HISTORY_ROOT")" || die 'cannot resolve release history root'
+[ "$history_real" = "$HISTORY_ROOT" ] || die 'release history root resolves unexpectedly'
+
+# Copy validated bytes into a new root-owned tree rather than moving deploy-owned
+# inodes into trusted history. Revalidate the copied payload before production changes,
+# closing the staging-to-root trust transition even if an uploader kept a file open.
+release_tmp="$(mktemp -d "$HISTORY_ROOT/.release-${release_id}.XXXXXX")"
+rsync -a --chown=root:root --chmod=D0755,F0644 "$staged/" "$release_tmp/"
+(
+  cd "$release_tmp"
+  LC_ALL=C sha256sum --strict --check MANIFEST.sha256
+) || die 'root-owned release copy failed checksum validation'
+mv -- "$release_tmp" "$release"
+release_tmp=''
+rm -rf -- "$staged"
+
+work="$(mktemp -d "$HISTORY_ROOT/.promote-${release_id}.XXXXXX")"
+[ -d "$THEME_DEST" ] && rsync -a "$THEME_DEST/" "$work/theme/"
+[ -d "$PLUGIN_DEST" ] && rsync -a "$PLUGIN_DEST/" "$work/plugin/"
+for mu_file in "${MANAGED_MU_PLUGINS[@]}"; do
+  [ -f "$MU_PLUGIN_DEST/$mu_file" ] && cp -a "$MU_PLUGIN_DEST/$mu_file" "$work/$mu_file"
+done
+rollback_needed=1
+
+log "promoting release $release_id"
+install -d -m 0755 -o "$WEB_OWNER" -g "$WEB_GROUP" "$THEME_DEST" "$PLUGIN_DEST"
+rsync -a --delete --chown="$WEB_OWNER:$WEB_GROUP" "$release/theme/pgds/" "$THEME_DEST/"
+rsync -a --delete --chown="$WEB_OWNER:$WEB_GROUP" "$release/plugins/pgds-lunar-calendar/" "$PLUGIN_DEST/"
+for mu_file in "${MANAGED_MU_PLUGINS[@]}"; do
+  install -m 0644 -o "$WEB_OWNER" -g "$WEB_GROUP" \
+    "$release/mu-plugins/$mu_file" "$MU_PLUGIN_DEST/$mu_file"
+done
+
+# PHP-FPM/opcache must see the new files before the HTML cache is removed. The public
+# edge purge remains the workflow's next step, preserving origin-first, edge-second.
+systemctl reload "$PHP_FPM_SERVICE"
+[ -d "$FASTCGI_CACHE_DIR" ] || die 'FastCGI cache directory is missing'
+cache_real="$(realpath -e -- "$FASTCGI_CACHE_DIR")" || die 'cannot resolve FastCGI cache directory'
+[ "$cache_real" = "$FASTCGI_CACHE_DIR" ] || die 'FastCGI cache directory resolves unexpectedly'
+find "$FASTCGI_CACHE_DIR" -xdev -type f -delete
+
+promotion_complete=1
+rollback_needed=0
+log "release $release_id promoted; origin cache flushed"
+
+# Keep enough immutable payloads for break-glass rollback without unbounded disk use.
+mapfile -d '' -t old_releases < <(
+  find "$HISTORY_ROOT" -mindepth 1 -maxdepth 1 -type d ! -name '.promote-*' ! -name '.release-*' \
+    -printf '%T@ %p\0' \
+    | LC_ALL=C sort -zrn \
+    | tail -z -n +$((KEEP_RELEASES + 1)) \
+    | cut -z -d' ' -f2-
+)
+for old_release in "${old_releases[@]}"; do
+  rm -rf -- "$old_release"
+done

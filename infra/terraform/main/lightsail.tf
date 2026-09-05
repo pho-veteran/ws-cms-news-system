@@ -22,7 +22,10 @@ resource "aws_lightsail_instance" "app" {
   bundle_id         = var.bundle_id
   key_pair_name     = var.key_pair_name
 
-  user_data = file("${path.module}/user_data.sh")
+  user_data = templatefile("${path.module}/user_data.sh", {
+    pgds_deploy_helper_base64     = filebase64("${path.module}/../../scripts/pgds-deploy-release")
+    pgds_deploy_public_key_base64 = base64encode("${trimspace(var.pgds_deploy_public_key)}\n")
+  })
 
   add_on {
     type          = "AutoSnapshot"

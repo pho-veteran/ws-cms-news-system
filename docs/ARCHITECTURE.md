@@ -8,9 +8,9 @@ system differs from `docs/initial_entries/PROPOSAL_02_AWS_INFRA_COST.md`, the de
 state wins and the difference is recorded in §7. The proposals remain the design record;
 they are not a description of production.
 
-Verified 2026-09-01 against the live origin (SSH) and the public edge (HTTP). Facts
-sourced from the repository carry a `file:line` reference; facts sourced from the running
-host say so.
+Verified 2026-09-05 against the live origin (SSH), the public edge (HTTP), and the
+restricted staged-release implementation. Facts sourced from the repository carry a
+`file:line` reference; facts sourced from the running host say so.
 
 ---
 
@@ -102,8 +102,10 @@ back would destroy the working origin.
    │  lint-php ─┐                                                             │
    │  lint-js  ─┴─► build ─► deploy ──► OIDC AssumeRole pgds-github-deploy    │
    │                                     open :22 for runner /32              │
-   │                                     rsync theme → reload FPM → flush     │
-   │                                     FastCGI → purge Cloudflare → revoke  │
+   │                                     SHA-256 package → atomic incoming    │
+   │                                     → fixed root promotion → origin      │
+   │                                     flush → optional CF purge → checks   │
+   │                                     → revoke                             │
    └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -467,56 +469,50 @@ never disagree about article content. That property is the reason for the "HTML 
 cached at the edge" rule, and any change that starts caching HTML at Cloudflare would
 invalidate it.
 
-### 4.4 Deploy — origin first, edge second
+### 4.4 Restricted staged release — origin first, edge second
 
-`.github/workflows/deploy.yml`, triggered on push to `main`, serialized by concurrency
-group `pgds-production-deploy` with `cancel-in-progress: false` so two deploys never
-interleave.
-
-Gates: `lint-php` (`php -l` across theme + mu-plugins) and `lint-js` (`eslint src/js/**`)
-run in parallel; `build` needs both; `deploy` needs `build`. The build gate asserts the
-manifest exists, is valid JSON, names `main.css`/`app.js`, and that both point at files
-matching `^main\.[a-f0-9]{8}\.css$` / `^app\.[a-f0-9]{8}\.js$` which are actually present.
+As of 2026-09-05, `.github/workflows/deploy.yml` is triggered on push to `main` and
+serialized by `pgds-production-deploy` with `cancel-in-progress: false`, so two promotions
+never interleave. `lint-php` and `lint-js` run in parallel, `build` requires both, and
+`deploy` requires `build`. The build gate makes non-vacuous lint mandatory and verifies the
+hashed asset manifest and its referenced files.
 
 The deploy job then:
 
-1. Rebuilds the theme itself (`npm ci`, `npm run fonts`, `npm run build`) rather than
-   downloading the `build` job's artifact.
-2. Writes the SSH key and pinned `known_hosts` at mode `600`.
-3. Federates to AWS via OIDC — `id-token: write`, `aws-actions/configure-aws-credentials@v6`
-   assuming `AWS_DEPLOY_ROLE_ARN`. No long-lived key.
-4. **Opens SSH for itself.** It first revokes stale port-22 rules left by earlier runs,
-   discovers its own egress IP via `api.ipify.org` with `checkip.amazonaws.com` as fallback,
-   validates it is genuinely IPv4 through Python's `ipaddress`, and authorizes exactly that
-   `/32` with a description carrying the run ID and attempt.
-5. `rsync -az --delete` of `wp-content/themes/pgds/` to the remote theme path, excluding
-   `node_modules/ src/ tools/ build.mjs package.json package-lock.json eslint.config.mjs
-   README.md`. `assets/dist/` is **not** excluded — the built output is the payload. Blast
-   radius is the theme directory; core, database, and plugins are never touched.
-6. **Purge, in this exact order:** `sudo systemctl reload <php-fpm> && sudo find
-   <fastcgi_cache_dir> -type f -delete`. The `&&` means a failed FPM reload aborts the flush
-   rather than flushing against stale opcode.
-7. Purge Cloudflare (`purge_everything`) **only if** `git diff HEAD^ HEAD` touched
-   `src/`, `build.mjs`, `package-lock.json`, or `assets/fonts/`.
-8. Revoke the SSH rule — `if: always()`, `continue-on-error: true`.
+1. Rebuilds theme assets, writes the pinned SSH material, and opens a temporary runner `/32`
+   through its OIDC AWS role after sweeping stale deployment rules.
+2. Uses `DEPLOY_USER` only as an existing-host bootstrap account. It derives the CI public key
+   from `DEPLOY_SSH_KEY`; verifies or installs the fixed `pgds-deploy` account and its one
+   sudo command through legacy sudo; then retires only the exact CI key from the legacy
+   `authorized_keys`. Replacement hosts receive this boundary through Terraform first boot.
+3. Packages the complete first-party runtime: theme runtime including `assets/dist/`,
+   `pgds-lunar-calendar`, and exactly `pgds-cache-flush.php` plus
+   `pgds-lunar-loader.php`. A SHA-256 manifest covers every payload file.
+4. Uploads as unprivileged `pgds-deploy`, which atomically extracts below
+   `/var/lib/pgds-deploy/incoming`; it has no WordPress write access.
+5. Invokes only `sudo /usr/local/sbin/pgds-deploy-release <release-id>`. The root-owned
+   helper validates checksums, PHP, and asset references; serializes promotion; promotes only
+   `/var/www/pgds/wp-content/themes/pgds`,
+   `/var/www/pgds/wp-content/plugins/pgds-lunar-calendar`, and the two named mu-plugins;
+   reloads fixed `php8.3-fpm`; and flushes fixed `/var/cache/nginx/fcgi`. Promotion failure
+   automatically restores the prior runtime. Successful payloads are root-owned history, with
+   the five newest releases retained.
+6. Purges Cloudflare only after the origin is fresh and only when the full pushed range changed
+   asset inputs (or on manual dispatch). It validates the API body's `success: true` value.
+7. Runs public checks for the homepage, usable lunar REST payload, and the freshly built
+   hashed CSS and JavaScript URLs, then attempts exact SSH-rule cleanup under `if: always()`.
 
-Order is the business rule: **origin first, edge second.** Reversed, the edge would refetch
-and re-cache the old asset from an origin that had not yet reloaded.
+The helper never changes WordPress core, database, uploads, content, options, terms,
+unrelated plugins, or other mu-plugins, and never runs setup, seed, import, activation, or
+WP-CLI. The lunar loader makes the release's plugin available without an `active_plugins`
+write.
 
-Three ways this pipeline can fail quietly, worth knowing before trusting a green check:
-
-- **The edge purge can be skipped when it was needed.** Detection compares only `HEAD^` to
-  `HEAD`. A push containing several commits where an earlier one changed `src/` but the last
-  one did not evaluates `changed=false`, and the edge keeps serving the old asset. Hashed
-  filenames limit the damage, but the purge did not happen.
-- **The Cloudflare response body is not inspected.** `curl --fail-with-body` catches
-  transport and HTTP failure; a `200` carrying `"success": false` passes.
-- **The SSH rule can survive the run.** The revoke step is `continue-on-error: true`, its
-  AWS lookups end in `|| true`, and the final audit only warns. A hard runner kill between
-  authorize and cleanup leaves port 22 open to that `/32` until the next deploy's stale-rule
-  sweep or a manual removal. It is bounded, not impossible.
-- **PHP lint passes vacuously if no files match.** `xargs -0 -r` does not invoke `php -l`
-  when `find` returns nothing, and `-r` suppresses the empty-input error.
+The invariant remains **origin first, optional edge second**: reversing it could allow the
+edge to fetch an old origin asset. The prior silent gaps in full pushed-range detection,
+Cloudflare response validation, and vacuous lint have been fixed. One bounded caveat remains:
+a hard runner termination or AWS cleanup failure can leave its temporary SSH `/32` until the
+next stale-rule sweep or manual removal; cleanup reports the condition rather than silently
+hiding it.
 
 ### 4.5 Scheduled work
 

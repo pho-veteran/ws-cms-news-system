@@ -5,7 +5,8 @@
 #   aws lightsail create-key-pair --region ap-southeast-1 --key-pair-name pgds-deploy \
 #     --query privateKeyBase64 --output text > ~/.ssh/pgds-deploy.pem
 #   chmod 600 ~/.ssh/pgds-deploy.pem
-key_pair_name = "pgds-deploy"
+key_pair_name         = "pgds-admin"
+pgds_deploy_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... github-actions-pgds"
 
 # SSH ingress. Deliberately has NO default (Proposal 02 §10.2) and rejects 0.0.0.0/0,
 # so an apply cannot silently expose port 22. Use your own address with /32.

@@ -1,11 +1,11 @@
-name: Deploy theme
+name: Deploy WordPress runtime
 
 on:
   push:
     branches:
       - main
-  # Manual re-run without an empty commit. Redeploying the same ref is safe: rsync,
-  # plugin activation, and the cache purges below are all idempotent.
+  # Manual re-run without an empty commit. Every run gets a distinct immutable
+  # release ID, while promotion and cache invalidation keep the same fixed boundaries.
   workflow_dispatch:
 
 permissions:
@@ -30,12 +30,22 @@ jobs:
         with:
           php-version: "8.3"
 
-      - name: Lint theme and mu-plugin PHP
+      - name: Lint first-party PHP
         shell: bash
         run: |
           set -euo pipefail
-          find wp-content/themes/pgds wp-content/mu-plugins \
-            -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
+          mapfile -d '' php_files < <(
+            find \
+              wp-content/themes/pgds \
+              wp-content/plugins/pgds-lunar-calendar \
+              wp-content/mu-plugins \
+              -type f -name '*.php' -print0
+          )
+          [ "${#php_files[@]}" -gt 0 ] || {
+            echo "::error::no first-party PHP files found"
+            exit 1
+          }
+          printf '%s\0' "${php_files[@]}" | xargs -0 -n 1 php -l
 
   lint-js:
     name: Lint JavaScript
@@ -142,7 +152,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -264,98 +274,120 @@ jobs:
           echo "opened 22 for ${RUNNER_CIDR} as ${RULE_ID}"
 
       # ---------------------------------------------------------------------
-      # Validate the deployment secrets that end up inside a remote shell command
-      # or an rsync destination.
-      #
-      # DEPLOY_PHP_FPM_SERVICE and DEPLOY_FASTCGI_CACHE_DIR are interpolated into a
-      # `sudo systemctl reload ... && sudo find ... -delete` string below. Quoting alone
-      # does not stop a value containing `'` from closing the quote and appending its own
-      # command, and that command would run under sudo. The rsync destinations have the
-      # same shape of exposure through the remote shell rsync spawns. So every value is
-      # pinned to a strict character class before use, and the paths must be absolute.
+      # The only remote path assembled from a secret is the SSH target. Runtime
+      # destinations, ownership, service names, and cache paths are fixed inside the
+      # root-owned promotion helper, so CI cannot redirect a privileged copy or purge.
+      # DEPLOY_USER remains the existing broad-sudo account only for the one-time,
+      # idempotent migration; all release operations use fixed user pgds-deploy.
       # ---------------------------------------------------------------------
       - name: Validate deploy target secrets
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
-          DEPLOY_PHP_FPM_SERVICE: ${{ secrets.DEPLOY_PHP_FPM_SERVICE }}
-          DEPLOY_FASTCGI_CACHE_DIR: ${{ secrets.DEPLOY_FASTCGI_CACHE_DIR }}
+          LEGACY_DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           set -euo pipefail
 
           fail=0
-          require_match() {
-            local name="$1" value="$2" pattern="$3" description="$4"
-            if [[ ! "$value" =~ $pattern ]]; then
-              echo "::error::${name} is not ${description}"
-              fail=1
-            fi
-          }
-
-          require_match DEPLOY_HOST "$DEPLOY_HOST" \
-            '^[A-Za-z0-9._-]+$' 'a bare hostname or IPv4 address'
-          require_match DEPLOY_USER "$DEPLOY_USER" \
-            '^[a-z_][a-z0-9_-]*$' 'a plain POSIX user name'
-          require_match DEPLOY_THEME_PATH "$DEPLOY_THEME_PATH" \
-            '^/[A-Za-z0-9._/-]*[A-Za-z0-9._-]$' 'an absolute path without shell metacharacters'
-          require_match DEPLOY_PHP_FPM_SERVICE "$DEPLOY_PHP_FPM_SERVICE" \
-            '^[A-Za-z0-9@._-]+$' 'a plain systemd unit name'
-          require_match DEPLOY_FASTCGI_CACHE_DIR "$DEPLOY_FASTCGI_CACHE_DIR" \
-            '^/[A-Za-z0-9._/-]*[A-Za-z0-9._-]$' 'an absolute path without shell metacharacters'
-
-          # The theme path is what `wp-content/themes/pgds` resolves to; the plugin and
-          # mu-plugin paths are derived from it so a single secret keeps them consistent.
-          if [[ "$DEPLOY_THEME_PATH" != */wp-content/themes/* ]]; then
-            echo "::error::DEPLOY_THEME_PATH must live under wp-content/themes/"
+          if [[ ! "$DEPLOY_HOST" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::DEPLOY_HOST is not a bare hostname or IPv4 address"
             fail=1
           fi
-
-          # A bare `/` or a cache directory pointing at the document root would turn the
-          # flush step into a site-wide delete.
-          case "$DEPLOY_FASTCGI_CACHE_DIR" in
-            / | /etc | /etc/* | /usr | /usr/* | /var | /var/www | /var/www/*)
-              echo "::error::DEPLOY_FASTCGI_CACHE_DIR points at a path that must never be mass-deleted"
-              fail=1
-              ;;
-          esac
-
+          if [[ ! "$LEGACY_DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+            echo "::error::DEPLOY_USER is not a plain POSIX user name"
+            fail=1
+          fi
+          if [ "$LEGACY_DEPLOY_USER" = pgds-deploy ]; then
+            echo "::error::DEPLOY_USER must remain the legacy bootstrap account, not pgds-deploy"
+            fail=1
+          fi
           exit "$fail"
 
-      # ---------------------------------------------------------------------
-      # Resolve the WordPress root and the plugin directories from DEPLOY_THEME_PATH.
-      #
-      # Previously only the theme shipped, so the lunar-calendar plugin and the
-      # cache-flush mu-plugin had to be installed on the server by hand. They never were:
-      # https://vihn.id.vn/wp-json/pgds-lunar/v1/today returned 404 in production while
-      # working locally, and the sidebar silently fell back to the manual
-      # pgds_lunar_note CPT path. Deriving the paths here keeps one secret authoritative
-      # instead of adding three more that can drift apart.
-      # ---------------------------------------------------------------------
-      - name: Resolve deployment paths
-        id: paths
-        shell: bash
-        env:
-          DEPLOY_THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
-        run: |
-          set -euo pipefail
-          WP_ROOT="${DEPLOY_THEME_PATH%/wp-content/themes/*}"
-          {
-            echo "wp_root=${WP_ROOT}"
-            echo "plugins_path=${WP_ROOT}/wp-content/plugins"
-            echo "mu_plugins_path=${WP_ROOT}/wp-content/mu-plugins"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Deploy runtime theme files
+      # Replacement hosts receive this account and helper from Terraform user_data.
+      # Existing hosts are migrated once through the prior account: install the same
+      # derived public key under pgds-deploy, validate the restricted sudo policy, then
+      # retire only that exact key from the legacy account. No WordPress data is touched.
+      - name: Ensure restricted deployment account
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
+          LEGACY_DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           set -euo pipefail
-          rsync -az --delete \
+          SSH=(ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          SCP=(scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          RESTRICTED_USER=pgds-deploy
+
+          probe_output="$("${SSH[@]}" "${RESTRICTED_USER}@${DEPLOY_HOST}" \
+            "sudo -n /usr/local/sbin/pgds-deploy-release bootstrap-probe" 2>&1 || true)"
+          restricted_ready=0
+          if grep -Fq 'staged release does not exist: bootstrap-probe' <<< "$probe_output"; then
+            restricted_ready=1
+          fi
+
+          public_key_file="$RUNNER_TEMP/pgds-deploy.pub"
+          bootstrap_dir="pgds-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          bootstrap_remote="/tmp/$bootstrap_dir"
+          ssh-keygen -y -f ~/.ssh/id_ed25519 \
+            | awk 'NR == 1 { print $1, $2, "github-actions-pgds" }' \
+            > "$public_key_file"
+          chmod 600 "$public_key_file"
+
+          if [ "$restricted_ready" -eq 1 ]; then
+            remote_key_blob="$("${SSH[@]}" "${RESTRICTED_USER}@${DEPLOY_HOST}" \
+              "awk 'NR == 1 { print \$2 }' ~/.ssh/authorized_keys")"
+            expected_key_blob="$(awk '{ print $2 }' "$public_key_file")"
+            [ "$remote_key_blob" = "$expected_key_blob" ] \
+              || { echo '::error::pgds-deploy is configured with a different key'; exit 1; }
+
+            if ! "${SSH[@]}" -o ConnectTimeout=5 \
+              "${LEGACY_DEPLOY_USER}@${DEPLOY_HOST}" true >/dev/null 2>&1; then
+              echo "restricted deployment account is ready and legacy CI access is retired"
+              exit 0
+            fi
+            echo "restricted account is ready; retiring remaining legacy CI access"
+          fi
+
+          "${SSH[@]}" "${LEGACY_DEPLOY_USER}@${DEPLOY_HOST}" \
+            "set -e; umask 077; rm -rf -- '$bootstrap_remote'; mkdir -- '$bootstrap_remote'"
+          trap '"${SSH[@]}" "${LEGACY_DEPLOY_USER}@${DEPLOY_HOST}" "rm -rf -- '\''$bootstrap_remote'\''" >/dev/null 2>&1 || true' EXIT
+          "${SCP[@]}" \
+            infra/scripts/install-pgds-deploy-helper.sh \
+            infra/scripts/pgds-deploy-release \
+            "$public_key_file" \
+            "${LEGACY_DEPLOY_USER}@${DEPLOY_HOST}:${bootstrap_remote}/"
+          "${SSH[@]}" "${LEGACY_DEPLOY_USER}@${DEPLOY_HOST}" \
+            "set -e; sudo -n env PGDS_AUTHORIZED_KEYS_SOURCE='${bootstrap_remote}/pgds-deploy.pub' PGDS_RETIRE_KEY_FROM_USER='${LEGACY_DEPLOY_USER}' bash '${bootstrap_remote}/install-pgds-deploy-helper.sh' '${bootstrap_remote}/pgds-deploy-release'; rm -rf -- '$bootstrap_remote'"
+          trap - EXIT
+
+          probe_output="$("${SSH[@]}" "${RESTRICTED_USER}@${DEPLOY_HOST}" \
+            "sudo -n /usr/local/sbin/pgds-deploy-release bootstrap-probe" 2>&1 || true)"
+          grep -Fq 'staged release does not exist: bootstrap-probe' <<< "$probe_output" \
+            || { printf '%s\n' "$probe_output" >&2; echo '::error::restricted deployment account verification failed'; exit 1; }
+          if "${SSH[@]}" -o ConnectTimeout=5 "${LEGACY_DEPLOY_USER}@${DEPLOY_HOST}" true >/dev/null 2>&1; then
+            echo "::error::the CI key still authenticates to the legacy broad-sudo account"
+            exit 1
+          fi
+          echo "restricted deployment account installed and legacy CI key retired"
+
+      # Build one self-contained first-party runtime package. Theme build sources and
+      # toolchain files are excluded; generated assets/dist remains in the payload.
+      # The manifest uses paths relative to the release root and covers every payload
+      # file, which lets the privileged helper reject omissions, additions, or tampering.
+      - name: Package staged release
+        id: release
+        shell: bash
+        env:
+          RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          RELEASE_ROOT="$RUNNER_TEMP/pgds-release/$RELEASE_ID"
+          install -d \
+            "$RELEASE_ROOT/theme/pgds" \
+            "$RELEASE_ROOT/plugins/pgds-lunar-calendar" \
+            "$RELEASE_ROOT/mu-plugins"
+
+          rsync -a --delete \
             --exclude='node_modules/' \
             --exclude='src/' \
             --exclude='tools/' \
@@ -364,107 +396,80 @@ jobs:
             --exclude='package-lock.json' \
             --exclude='eslint.config.mjs' \
             --exclude='README.md' \
-            -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
             wp-content/themes/pgds/ \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_THEME_PATH}/"
-
-      # First-party plugin. --delete is scoped to the plugin's own directory, so a
-      # third-party plugin installed through wp-admin is untouched; deleting the whole
-      # plugins/ tree would remove them.
-      - name: Deploy first-party plugins
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          PLUGINS_PATH: ${{ steps.paths.outputs.plugins_path }}
-        run: |
-          set -euo pipefail
-          rsync -az --delete \
-            -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
+            "$RELEASE_ROOT/theme/pgds/"
+          rsync -a --delete \
             wp-content/plugins/pgds-lunar-calendar/ \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:${PLUGINS_PATH}/pgds-lunar-calendar/"
+            "$RELEASE_ROOT/plugins/pgds-lunar-calendar/"
+          install -m 0644 \
+            wp-content/mu-plugins/pgds-cache-flush.php \
+            wp-content/mu-plugins/pgds-lunar-loader.php \
+            "$RELEASE_ROOT/mu-plugins/"
 
-      # mu-plugins load unconditionally, so a partial file breaks every request. rsync
-      # writes to a temporary name and renames, which makes each file swap atomic.
-      #
-      # No --delete here: mu-plugins/ is a flat directory shared with anything the host
-      # dropped in (an object-cache drop-in, for instance), and deleting unknown files
-      # under it would be a much larger blast radius than this repository owns.
-      - name: Deploy mu-plugins
+          (
+            cd "$RELEASE_ROOT"
+            mapfile -d '' payload_files < <(
+              find theme plugins mu-plugins -type f -print0 | LC_ALL=C sort -z
+            )
+            [ "${#payload_files[@]}" -gt 0 ] || {
+              echo "::error::release payload contains no files"
+              exit 1
+            }
+            printf '%s\0' "${payload_files[@]}" | xargs -0 sha256sum > MANIFEST.sha256
+          )
+          tar -C "$(dirname "$RELEASE_ROOT")" -czf "$RUNNER_TEMP/${RELEASE_ID}.tar.gz" "$RELEASE_ID"
+          {
+            echo "id=$RELEASE_ID"
+            echo "archive=$RUNNER_TEMP/${RELEASE_ID}.tar.gz"
+          } >> "$GITHUB_OUTPUT"
+
+      # Upload only into the unprivileged account's fixed incoming directory. The
+      # archive is extracted into a private temporary directory and renamed atomically,
+      # so a failed transfer or extraction never leaves a reusable partial release.
+      - name: Upload staged release
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          MU_PLUGINS_PATH: ${{ steps.paths.outputs.mu_plugins_path }}
+          DEPLOY_USER: pgds-deploy
+          RELEASE_ID: ${{ steps.release.outputs.id }}
+          RELEASE_ARCHIVE: ${{ steps.release.outputs.archive }}
         run: |
           set -euo pipefail
-          rsync -az \
-            -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
-            wp-content/mu-plugins/ \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:${MU_PLUGINS_PATH}/"
+          SSH=(ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          SCP=(scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          REMOTE_ARCHIVE="/var/lib/pgds-deploy/incoming/.${RELEASE_ID}.tar.gz"
 
-      # ---------------------------------------------------------------------
-      # Confirm the synced files landed where PHP will look for them.
-      #
-      # No WP-CLI and no database write: the lunar calendar is booted by
-      # wp-content/mu-plugins/pgds-lunar-loader.php, so shipping the files IS the
-      # activation. That keeps the deployment account on its two existing sudo grants
-      # (reload php-fpm, flush FastCGI) instead of widening sudo to run WP-CLI as
-      # www-data just to write one option.
-      #
-      # This deliberately runs no `wp theme activate`, no pgds_seed_categories(), no
-      # `wp option update`, no `wp rewrite flush`, and no `wp pgds import`: those mutate
-      # production content, terms, or options, and a code deploy must not. Content and
-      # media provisioning stays a separate, reviewed operation.
-      # ---------------------------------------------------------------------
-      - name: Verify deployed files
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          THEME_PATH: ${{ secrets.DEPLOY_THEME_PATH }}
-          PLUGINS_PATH: ${{ steps.paths.outputs.plugins_path }}
-          MU_PLUGINS_PATH: ${{ steps.paths.outputs.mu_plugins_path }}
-        run: |
+          "${SCP[@]}" "$RELEASE_ARCHIVE" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_ARCHIVE}"
+          "${SSH[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "RELEASE_ID='${RELEASE_ID}' REMOTE_ARCHIVE='${REMOTE_ARCHIVE}' bash -s" <<'REMOTE'
           set -euo pipefail
-          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "THEME_PATH='${THEME_PATH}' PLUGINS_PATH='${PLUGINS_PATH}' MU_PLUGINS_PATH='${MU_PLUGINS_PATH}' bash -s" <<'REMOTE'
-          set -euo pipefail
-
-          fail=0
-          require_file() {
-            if [ -r "$1" ]; then
-              echo "ok  $1"
-            else
-              echo "::error::missing or unreadable on the server: $1"
-              fail=1
-            fi
-          }
-
-          require_file "${THEME_PATH}/style.css"
-          require_file "${THEME_PATH}/functions.php"
-          require_file "${THEME_PATH}/assets/dist/manifest.json"
-          require_file "${PLUGINS_PATH}/pgds-lunar-calendar/pgds-lunar-calendar.php"
-          require_file "${PLUGINS_PATH}/pgds-lunar-calendar/includes/class-rest-controller.php"
-          require_file "${MU_PLUGINS_PATH}/pgds-lunar-loader.php"
-          require_file "${MU_PLUGINS_PATH}/pgds-cache-flush.php"
-
-          exit "$fail"
+          incoming=/var/lib/pgds-deploy/incoming
+          partial="$incoming/.extract-${RELEASE_ID}"
+          trap 'rm -f -- "$REMOTE_ARCHIVE"; rm -rf -- "$partial"' EXIT
+          cd "$incoming"
+          [ ! -e "$RELEASE_ID" ] || { echo "release ID already exists" >&2; exit 1; }
+          rm -rf -- "$partial"
+          install -d -m 0700 "$partial"
+          tar --extract --gzip --file "$REMOTE_ARCHIVE" --directory "$partial" \
+            --strip-components=1 --no-same-owner --no-same-permissions
+          mv -- "$partial" "$RELEASE_ID"
           REMOTE
 
-      - name: Reload PHP-FPM and flush FastCGI cache
+      # One exact sudo grant replaces broad write access to WordPress and the prior
+      # general systemctl/find grants. The root-owned helper validates checksums, PHP,
+      # and asset references; takes the deploy lock; promotes only the fixed theme,
+      # plugin, and two mu-plugin destinations; reloads FPM; then flushes origin cache.
+      - name: Promote release at origin
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PHP_FPM_SERVICE: ${{ secrets.DEPLOY_PHP_FPM_SERVICE }}
-          DEPLOY_FASTCGI_CACHE_DIR: ${{ secrets.DEPLOY_FASTCGI_CACHE_DIR }}
+          DEPLOY_USER: pgds-deploy
+          RELEASE_ID: ${{ steps.release.outputs.id }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "sudo systemctl reload '${DEPLOY_PHP_FPM_SERVICE}' && sudo find '${DEPLOY_FASTCGI_CACHE_DIR}' -type f -delete"
+            "sudo /usr/local/sbin/pgds-deploy-release '${RELEASE_ID}'"
 
       # Purge the origin before the edge. Purging Cloudflare first can re-cache stale
       # origin content at the edge, so only purge it after PHP-FPM and FastCGI are fresh.
@@ -503,19 +508,23 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # A first commit on a branch has no HEAD^; treat that as "assets changed" so the
-          # purge errs toward correctness rather than serving a stale edge.
-          if ! git rev-parse --verify --quiet HEAD^ >/dev/null; then
-            echo "no HEAD^ (initial or shallow); assuming assets changed"
+          # Compare the full pushed commit range rather than only HEAD^..HEAD. A multi-
+          # commit push can change assets in an earlier commit while leaving the tip's
+          # direct parent diff clean.
+          BEFORE="${{ github.event.before }}"
+          if [[ ! "$BEFORE" =~ ^[0-9a-f]{40}$ ]] \
+            || [ "$BEFORE" = 0000000000000000000000000000000000000000 ] \
+            || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            echo "push base unavailable; assuming assets changed"
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git diff --quiet HEAD^ HEAD -- "${SOURCES[@]}"; then
+          if git diff --quiet "$BEFORE" HEAD -- "${SOURCES[@]}"; then
             echo "asset sources unchanged; skipping edge purge"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "asset sources changed:"
-            git diff --name-only HEAD^ HEAD -- "${SOURCES[@]}"
+            git diff --name-only "$BEFORE" HEAD -- "${SOURCES[@]}"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -613,7 +622,7 @@ jobs:
       # Revoke the temporary SSH rule.
       #
       # if: always() so the rule is removed even when the deploy, the reload, or the
-      # Cloudflare purge failed. Without always(), a failing rsync would leave port 22 open
+      # Cloudflare purge failed. Without always(), a failed release promotion would leave port 22 open
       # to a runner IP indefinitely — and the next run would then hit AWS's
       # InvalidPermission.Duplicate on a stale rule, so the failure compounds.
       #

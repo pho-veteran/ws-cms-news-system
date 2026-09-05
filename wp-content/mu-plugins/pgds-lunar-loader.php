@@ -12,10 +12,10 @@
  * while the same route worked locally. The gap was invisible because the homepage still
  * returned 200.
  *
- * Activating it from CI would need `wp plugin activate` on the server, and the deployment
- * account deliberately holds only two sudo grants (reload php-fpm, flush the FastCGI
- * cache) — see .github/workflows/README.md. Widening sudo to run WP-CLI as www-data, just
- * to write one option, buys a larger privilege surface than the problem is worth.
+ * Activating it from CI would need `wp plugin activate` on the server. The deployment
+ * account instead has one fixed-purpose sudo grant for validated release promotion — see
+ * .github/workflows/README.md. Widening it to run WP-CLI as www-data just to write one
+ * option buys a larger privilege surface than the problem is worth.
  *
  * mu-plugins load unconditionally on every request, with no option to set and no
  * privilege beyond the file copy the deploy already performs. So the plugin ships as

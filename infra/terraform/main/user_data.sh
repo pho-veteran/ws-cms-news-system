@@ -20,6 +20,10 @@
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+readonly PGDS_DEPLOY_USER=pgds-deploy
+readonly PGDS_DEPLOY_GROUP=pgds-deploy
+readonly PGDS_DEPLOY_PUBLIC_KEY_BASE64='${pgds_deploy_public_key_base64}'
+
 # ---------------------------------------------------------------------------
 # 1. Base packages
 # ---------------------------------------------------------------------------
@@ -34,7 +38,8 @@ apt-get install -y \
   fail2ban \
   unattended-upgrades \
   unzip \
-  curl
+  curl \
+  rsync
 
 # ---------------------------------------------------------------------------
 # 2. Swap — insurance against OOM, NOT capacity (§4.1). Regular swap usage
@@ -191,6 +196,49 @@ dpkg-reconfigure -f noninteractive unattended-upgrades
 #
 # Times are deliberately off-the-hour and staggered: the 2 GB origin cannot absorb a
 # database dump, an image-processing sync and a traffic spike at once (§4.1).
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 10. Restricted application deployment boundary.
+#
+# GitHub Actions connects through a dedicated key-only account. Its public key is
+# passed separately from the administrator key pair so deploy credentials never
+# inherit access to Ubuntu's broad default sudo policy. The account owns only
+# incoming/ and may sudo only the fixed-purpose, root-owned promotion helper.
+#
+# This applies automatically to replacement hosts. Because ec2.tf deliberately
+# ignores user_data changes on the running database host, use
+# infra/scripts/install-pgds-deploy-helper.sh once when upgrading that host.
+# ---------------------------------------------------------------------------
+getent group "$PGDS_DEPLOY_GROUP" >/dev/null \
+  || groupadd --system "$PGDS_DEPLOY_GROUP"
+id "$PGDS_DEPLOY_USER" >/dev/null 2>&1 \
+  || useradd --create-home --home-dir "/home/$PGDS_DEPLOY_USER" \
+    --shell /bin/bash --gid "$PGDS_DEPLOY_GROUP" "$PGDS_DEPLOY_USER"
+install -d -m 0700 -o "$PGDS_DEPLOY_USER" -g "$PGDS_DEPLOY_GROUP" \
+  "/home/$PGDS_DEPLOY_USER/.ssh"
+printf '%s' "$PGDS_DEPLOY_PUBLIC_KEY_BASE64" \
+  | base64 --decode > "/home/$PGDS_DEPLOY_USER/.ssh/authorized_keys"
+chown "$PGDS_DEPLOY_USER:$PGDS_DEPLOY_GROUP" "/home/$PGDS_DEPLOY_USER/.ssh/authorized_keys"
+chmod 0600 "/home/$PGDS_DEPLOY_USER/.ssh/authorized_keys"
+
+install -d -m 0755 -o root -g root /var/lib/pgds-deploy
+install -d -m 0750 -o "$PGDS_DEPLOY_USER" -g "$PGDS_DEPLOY_GROUP" \
+  /var/lib/pgds-deploy/incoming
+install -d -m 0750 -o root -g root /var/lib/pgds-deploy/history
+printf '%s' '${pgds_deploy_helper_base64}' \
+  | base64 --decode > /usr/local/sbin/pgds-deploy-release
+chown root:root /usr/local/sbin/pgds-deploy-release
+chmod 0755 /usr/local/sbin/pgds-deploy-release
+cat > /etc/sudoers.d/pgds-deploy-release <<SUDOERS
+# The helper validates its one release-ID argument below a fixed staging root.
+$PGDS_DEPLOY_USER ALL=(root) NOPASSWD: /usr/local/sbin/pgds-deploy-release
+SUDOERS
+chmod 0440 /etc/sudoers.d/pgds-deploy-release
+visudo -cf /etc/sudoers.d/pgds-deploy-release
+visudo -cf /etc/sudoers
+
+# ---------------------------------------------------------------------------
+# 11. System cron — backup, health alerting, and WP-Cron.
 # ---------------------------------------------------------------------------
 install -d -m 0755 /etc/cron.d
 cat > /etc/cron.d/pgds <<'CRON'

@@ -72,8 +72,23 @@ variable "blueprint_id" {
 }
 
 variable "key_pair_name" {
-  description = "Name of an existing Lightsail key pair to attach to the instance for SSH access. Create it out of band (Lightsail console or `aws lightsail create-key-pair`) before applying."
+  description = "Existing SSH key-pair name for administrator access to the instance."
   type        = string
+}
+
+variable "pgds_deploy_public_key" {
+  description = <<-EOT
+    Dedicated OpenSSH Ed25519 public key used only by GitHub Actions through the
+    unprivileged pgds-deploy account. Do not reuse the administrator key pair or a
+    key authorized for Ubuntu's broad sudo account.
+  EOT
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^ssh-ed25519 [A-Za-z0-9+/]+={0,3}( [^\\r\\n]+)?$", trimspace(var.pgds_deploy_public_key)))
+    error_message = "pgds_deploy_public_key must be one OpenSSH Ed25519 public-key line."
+  }
 }
 
 variable "ssh_admin_cidrs" {

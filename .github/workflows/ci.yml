@@ -24,12 +24,35 @@ jobs:
         with:
           php-version: "8.3"
 
-      - name: Lint theme and mu-plugin PHP
+      - name: Lint first-party PHP
         shell: bash
         run: |
           set -euo pipefail
-          find wp-content/themes/pgds wp-content/mu-plugins \
-            -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
+          mapfile -d '' php_files < <(
+            find \
+              wp-content/themes/pgds \
+              wp-content/plugins/pgds-lunar-calendar \
+              wp-content/mu-plugins \
+              -type f -name '*.php' -print0
+          )
+          [ "${#php_files[@]}" -gt 0 ] || {
+            echo "::error::no first-party PHP files found"
+            exit 1
+          }
+          printf '%s\0' "${php_files[@]}" | xargs -0 -n 1 php -l
+
+  test-release-deploy:
+    name: Test release deployment boundary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Test helper installation and key migration
+        run: infra/tests/test-install-pgds-deploy-helper.sh
+
+      - name: Test release validation, promotion, and rollback
+        run: infra/tests/test-pgds-deploy-release.sh
 
   lint-js:
     name: Lint JavaScript
@@ -58,6 +81,7 @@ jobs:
     needs:
       - lint-php
       - lint-js
+      - test-release-deploy
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository

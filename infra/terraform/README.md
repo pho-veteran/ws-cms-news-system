@@ -217,7 +217,12 @@ commented out.
   `pm.max_children=6`), MariaDB 10.11 (`innodb_buffer_pool_size=256M`),
   Redis (`maxmemory 160mb`, `allkeys-lru`), a 2GB swapfile, fail2ban, and
   hardens SSH — the RAM budget from §4.1. It does **not** install
-  WordPress itself (§9.2: that layer stays imperative).
+  WordPress itself (§9.2: that layer stays imperative). As of 2026-09-05,
+  first boot also creates the fixed unprivileged `pgds-deploy` release account,
+  its fixed incoming/history directories, and the root-owned
+  `/usr/local/sbin/pgds-deploy-release` boundary. The account can sudo only that
+  fixed-purpose helper; it cannot write WordPress or obtain broad `rsync`,
+  `find`, service, or WP-CLI privileges.
 - Public ports: 80/443 restricted to Cloudflare's published IPv4/IPv6
   ranges (`var.cloudflare_ipv4_cidrs` / `var.cloudflare_ipv6_cidrs`,
   defaulted from https://www.cloudflare.com/ips-v4 and
@@ -384,7 +389,8 @@ aws budgets update-budget \
    # tfstate_bucket_name output from step 1.
    ~/.local/bin/terraform init
    ~/.local/bin/terraform apply \
-     -var="key_pair_name=<existing Lightsail key pair name>" \
+     -var="key_pair_name=<existing administrator SSH key-pair name>" \
+     -var='pgds_deploy_public_key=<dedicated-github-actions-ed25519-public-key>' \
      -var='ssh_admin_cidrs=["<your-ip>/32"]' \
      -var="backup_bucket_name=<from bootstrap output>" \
      -var="backup_bucket_arn=<from bootstrap output>" \
@@ -397,13 +403,31 @@ aws budgets update-budget \
    again).
 
 Prefer a `terraform.tfvars` (gitignored) over repeating `-var` flags for
-day-to-day applies.
+day-to-day applies. Never commit the sensitive `pgds_deploy_public_key` value.
+
+### Release-boundary lifecycle
+
+`key_pair_name` is an administrator access key-pair name; it is distinct from the required,
+sensitive `pgds_deploy_public_key`, which creates the fixed `pgds-deploy` CI account at first
+boot. Terraform supplies the helper, the dedicated public key, deploy-owned
+`/var/lib/pgds-deploy/incoming`, root-owned history, and the one fixed sudo command. It does
+not deploy WordPress core, database data, uploads, content, options, terms, unrelated plugins,
+or execute setup, seed, import, or WP-CLI.
+
+EC2 deliberately ignores `user_data` changes for the running database host. Therefore an
+existing host is migrated automatically and idempotently by the GitHub Actions workflow via
+legacy `DEPLOY_USER`: it derives the CI public key from `DEPLOY_SSH_KEY`, uses the legacy sudo
+access once to install or verify the restricted boundary, and removes only that exact CI key
+from the legacy account. Replacement hosts receive the boundary through `user_data` at first
+boot. `DEPLOY_USER` is only that legacy bootstrap account; release work always uses
+`pgds-deploy`.
 
 ## Required variables (`main`)
 
 | Variable | Required? | Notes |
 |---|---|---|
-| `key_pair_name` | yes, no default | existing Lightsail key pair for SSH |
+| `key_pair_name` | yes, no default | administrator SSH key-pair name for instance access; it is not the GitHub Actions deploy credential |
+| `pgds_deploy_public_key` | yes, sensitive, no default | dedicated GitHub Actions Ed25519 public key for fixed `pgds-deploy`; do not reuse the administrator key or a legacy broad-sudo key |
 | `ssh_admin_cidrs` | yes, no default | list; rejects `0.0.0.0/0` |
 | `backup_bucket_name` | yes, no default | from bootstrap output |
 | `backup_bucket_arn` | yes, no default | from bootstrap output |

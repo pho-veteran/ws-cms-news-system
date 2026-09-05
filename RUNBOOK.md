@@ -11,27 +11,44 @@ and `PROPOSAL_02`.
 >
 > **Measured RTO: 21.7 minutes** (drill run 2026-08-31, details in §4).
 
-## 1. Deploy the theme
+## 1. Deploy the first-party runtime
 
 GitHub Actions deploys pushes to `main` through `.github/workflows/deploy.yml`. The workflow
 runs PHP and JavaScript linting, fetches self-hosted fonts, builds and verifies the hashed
-assets, then deploys only if every gate succeeds. It deploys only the runtime theme files;
-WordPress core, the database, and plugins are never deployed by this pipeline.
+assets, then promotes a release only if every gate succeeds. Since 2026-09-05, a release
+contains the `pgds` theme runtime (including generated assets),
+`pgds-lunar-calendar`, and exactly `pgds-cache-flush.php` plus `pgds-lunar-loader.php`.
 
-Configure every repository secret documented in `.github/workflows/README.md` before the
-first deployment. The workflow uses a dedicated key-only deployment account and a pinned SSH
-host key; it does not allowlist GitHub Actions IP ranges. Short-lived AWS credentials open port
-22 only to the active runner's IPv4 `/32`, then the workflow revokes the exact security-group
-rule under `if: always()`. A later serialized deploy removes a leaked `github-actions deploy`
-rule first if a job was force-killed before cleanup could run.
+Every payload file is listed in a SHA-256 manifest. The fixed unprivileged `pgds-deploy`
+account uploads and atomically extracts the archive below
+`/var/lib/pgds-deploy/incoming`; it cannot write the WordPress runtime. Its only sudo
+operation is the root-owned fixed-purpose `/usr/local/sbin/pgds-deploy-release <release-id>`.
+That helper validates the release, promotes it only to fixed theme/plugin/two-mu-plugin
+destinations, reloads `php8.3-fpm`, flushes `/var/cache/nginx/fcgi`, and automatically
+restores the previous runtime on a failed promotion. Validated history is root-owned and
+retains the newest five release IDs.
 
-The post-deployment order is mandatory (proposal §12.1): **origin first, edge second**.
+The pipeline never touches WordPress core, the database, uploads, content, options, terms,
+unrelated plugins, or other mu-plugins. It never runs setup, seed, import, activation, or
+WP-CLI commands. The lunar loader activates the shipped plugin without an `active_plugins`
+write.
 
-1. rsync the runtime theme → 2. reload PHP-FPM (resets opcache) → 3. flush FastCGI → 4. purge Cloudflare only when theme assets changed.
+Configure the repository secrets in `.github/workflows/README.md` before the first deployment.
+`DEPLOY_USER` is only the legacy bootstrap account: the workflow derives the CI public key
+from `DEPLOY_SSH_KEY`, verifies or installs `pgds-deploy` via the legacy account's existing
+sudo access once, and removes only that exact CI key from the legacy `authorized_keys`.
+Thereafter, every release operation uses fixed `pgds-deploy`. This migration is idempotent.
 
-Purging Cloudflare before the origin can re-cache stale origin content at the edge.
-Overlapping deployments are serialized by the GitHub Actions concurrency group. After a run,
-verify that no temporary rule remains:
+The post-deployment order is mandatory: **origin first, optional edge second**. Once the
+helper has reloaded PHP-FPM and flushed FastCGI, the workflow purges Cloudflare when the full
+pushed range changed asset inputs (or for a manual rerun) and requires an API `success: true`
+response. Public checks then require the homepage, a nonempty lunar REST payload, and the
+fresh hashed CSS and JS URLs.
+
+Overlapping deployments are serialized. The workflow opens port 22 only to the runner's IPv4
+`/32` and attempts exact-rule cleanup under `if: always()`; a later deployment clears stale
+rules. A hard runner stop or AWS cleanup failure can still leave that bounded temporary rule,
+so verify it after an incident:
 
 ```bash
 aws ec2 describe-security-group-rules --region ap-southeast-1 \
@@ -39,27 +56,27 @@ aws ec2 describe-security-group-rules --region ap-southeast-1 \
   --query "SecurityGroupRules[?starts_with(Description || '', 'github-actions deploy ')]"
 ```
 
-For a break-glass manual deployment, first build the runtime assets and fonts from the theme
-directory, then use the same order and exclusions as `.github/workflows/deploy.yml`. Do not
-rsync `node_modules`, `src`, `tools`, build configuration, package files, ESLint configuration,
-or the theme README.
-
 ## 2. Rollback
+
+Preferred rollback is a Git revert through the normal gated pipeline:
 
 ```bash
 git revert <sha>
-git push origin main       # triggers the same gated production deployment pipeline
+git push origin main
 ```
 
-The blast radius remains one theme directory. If GitHub Actions or the production server is
-unavailable, use the break-glass manual deployment procedure in §1 to restore the prior
-runtime theme version, then follow the same origin-first cache purge order.
+For break-glass recovery when the pipeline is unavailable, an administrator may restage one of
+the five root-owned history release IDs by copying it into a **new** deploy-owned incoming
+release ID, then invoke only `sudo /usr/local/sbin/pgds-deploy-release <new-release-id>` as
+`pgds-deploy`. This preserves manifest validation, fixed destinations, automatic rollback,
+and the required origin-first cache order. Do not use arbitrary sudo `rsync`, `find`, service,
+or deployment-account commands to restore a release.
 
 ## 3. Manual cache purge
 
 ```bash
-sudo find /var/cache/nginx/fcgi -type f -delete      # flush the entire HTML cache
-# Verify: curl -sI https://site/ | grep X-Cache      (HIT on the second request)
+# Use the site's existing cache-management procedure; do not grant or use a
+# general deploy-account sudo `find` command. Verify: curl -sI https://site/ | grep X-Cache
 ```
 
 Content edited in the admin already purges itself: the `pgds-cache-flush.php` mu-plugin

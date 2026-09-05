@@ -176,7 +176,10 @@ resource "aws_instance" "app" {
 
   # Reused verbatim from the Lightsail path: same 2 vCPU / 2 GB shape, so the §4.1
   # RAM budget (MariaDB 256M buffer pool, Redis 160M, pm.max_children=6) is unchanged.
-  user_data                   = file("${path.module}/user_data.sh")
+  user_data = templatefile("${path.module}/user_data.sh", {
+    pgds_deploy_helper_base64     = filebase64("${path.module}/../../scripts/pgds-deploy-release")
+    pgds_deploy_public_key_base64 = base64encode("${trimspace(var.pgds_deploy_public_key)}\n")
+  })
   user_data_replace_on_change = false # Replacing the instance on a script edit would destroy the database.
 
   root_block_device {
@@ -222,7 +225,9 @@ resource "aws_instance" "app" {
      *
      * That is production downtime in exchange for re-running nothing: the already-booted
      * instance would not execute the new text either way. The Elastic IP survives a
-     * stop/start so the address would be preserved, but the outage would be real.
+     * stop/start so the address would be preserved, but the outage would be real. The
+     * deployment public key is therefore not retrofitted through state on this host;
+     * deploy.yml installs it through the idempotent restricted-account migration.
      *
      * The consequence to be explicit about: editing user_data.sh no longer affects a
      * RUNNING instance at all. Changes there apply to the next instance built from it, so

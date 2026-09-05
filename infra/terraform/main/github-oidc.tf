@@ -4,7 +4,8 @@
  * WHY THIS EXISTS
  * ---------------
  * §10.2 restricts SSH ingress to a single administrator CIDR, and the deploy job needs SSH
- * to rsync the theme. Those two requirements collide, and the collision is not theoretical:
+ * to stage a first-party runtime release and invoke its fixed-purpose promotion helper.
+ * Those requirements collide, and the collision is not theoretical:
  * the first real run failed with
  *
  *   ssh: connect to host *** port 22: Connection timed out
@@ -14,8 +15,8 @@
  * default AWS limit of 60 rules per security group, so allow-listing them is not merely
  * ugly, it is impossible. Opening 0.0.0.0/0 would discard the §10.2 control entirely.
  *
- * So the workflow opens a /32 for itself, deploys, and revokes it in an `always()` step.
- * The exposure is one runner IP for the length of one rsync.
+ * So the workflow opens a /32 for itself, stages and promotes one release, and revokes it
+ * in an `always()` step. The exposure is one runner IP for the deployment job only.
  *
  * WHY OIDC RATHER THAN AN ACCESS KEY
  * ----------------------------------
