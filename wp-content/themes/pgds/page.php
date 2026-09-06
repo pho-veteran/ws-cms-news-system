@@ -10,7 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 get_header();
-pgds_breadcrumb();
 
 while ( have_posts() ) :
 	the_post();

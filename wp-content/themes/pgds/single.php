@@ -19,7 +19,7 @@ while ( have_posts() ) :
 	$source  = get_post_meta( $post_id, '_pgds_source', true );
 	$dur     = (int) get_post_meta( $post_id, '_pgds_youtube_dur', true );
 
-	pgds_breadcrumb( get_post() );
+
 	?>
 
 	<main id="pgds-main" class="pgds-wrap" role="main">

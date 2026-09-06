@@ -10,7 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 get_header();
-pgds_breadcrumb();
 
 // found_posts carries the total across all pages, unlike post_count which is only
 // this page's slice. `global` is required: inside a template file $wp_query is not

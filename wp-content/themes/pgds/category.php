@@ -46,7 +46,6 @@ if ( have_posts() ) {
 	}
 }
 
-pgds_breadcrumb();
 ?>
 <main id="pgds-main" class="pgds-wrap pgds-category" role="main">
 	<header class="pgds-category__head">

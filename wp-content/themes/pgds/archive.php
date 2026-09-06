@@ -11,7 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 get_header();
-pgds_breadcrumb();
 ?>
 <main id="pgds-main" class="pgds-wrap" role="main">
 

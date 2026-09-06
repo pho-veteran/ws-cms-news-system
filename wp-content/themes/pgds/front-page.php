@@ -322,8 +322,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		 *   {"label":"Lời Phật dạy","w":320,"h":0,"kids":0,"text":0}
 		 *
 		 * i.e. a complementary ARIA landmark that a screen reader announces by name and then
-		 * has nothing to read out — the same defect class as the one-item breadcrumb fixed in
-		 * pgds_breadcrumb(). It also leaves a zero-height grid child, so the column's spacing
+		 * has nothing to read out — the same defect class as an empty navigation landmark. It also leaves a zero-height grid child, so the column's spacing
 		 * comes from an element with no content.
 		 *
 		 * Found only by auditing the PRODUCTION site: locally the seed data always supplies
