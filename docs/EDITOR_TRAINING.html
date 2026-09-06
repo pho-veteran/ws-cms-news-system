@@ -144,6 +144,10 @@
     font-size: 1.375rem; font-weight: 600; line-height: 1.25;
     margin: 0 0 .75rem; text-wrap: balance;
   }
+  .seg h3 {
+    font-size: .875rem; font-weight: 600; line-height: 1.35;
+    margin: 1.25rem 0 .5rem; color: var(--ink-soft);
+  }
   .seg > div > p { margin: 0 0 1rem; max-width: 64ch; }
   .seg > div > p:last-child { margin-bottom: 0; }
 
@@ -184,6 +188,11 @@
 
   /* ---- Field table ------------------------------------------------------ */
   .scroll { overflow-x: auto; margin: 1.25rem 0; }
+  .scroll::after {
+    content: "Vuốt sang trái để xem đủ bảng →";
+    display: block; color: var(--muted); font-size: .75rem;
+    margin-top: .45rem;
+  }
   table {
     border-collapse: collapse; width: 100%;
     min-width: 34rem; font-size: .875rem;
@@ -250,6 +259,7 @@
     .seg { grid-template-columns: 1fr; gap: .5rem; }
     .clock { padding-top: 0; }
     .clock span { display: inline; margin-left: .5rem; }
+    .scroll { border-bottom: 1px solid var(--rule-soft); padding-bottom: .45rem; }
   }
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -301,7 +311,7 @@
           <li>Viết nội dung. Mỗi đoạn là một khối; nhấn Enter để sang đoạn mới.</li>
           <li>Bên phải, chọn <strong>Chuyên mục</strong> — ít nhất một.</li>
           <li>Đặt <strong>Ảnh đại diện</strong>. Ảnh này dùng cho card, cho ảnh mở đầu bài, và làm ảnh nền cho video nếu bài có video.</li>
-          <li>Nhấn <strong>Đăng</strong>.</li>
+          <li>Hoàn thành khối <strong>Nội dung và hiển thị PGDS</strong> rồi chọn <strong>Lưu bản nháp</strong>, <strong>Xem trước</strong> hoặc <strong>Đăng</strong>.</li>
         </ol>
         <div class="note warn">
           <b>Ảnh đại diện không phải tuỳ chọn</b>
@@ -313,23 +323,48 @@
     <section class="seg">
       <div class="clock">0:15<span>15 phút</span></div>
       <div>
-        <h2>Khối “Thông tin PGDS”</h2>
-        <p>Cuộn xuống <strong>phía dưới vùng soạn nội dung</strong> — không phải cột bên phải. Khối này gồm 8 trường điều khiển cách bài xuất hiện trên trang.</p>
+        <h2>Khối “Nội dung và hiển thị PGDS”</h2>
+        <p>Cuộn xuống <strong>phía dưới vùng soạn nội dung</strong> — không phải cột bên phải. Khối này có ba nhóm thông tin điều khiển cách bài xuất hiện trên trang.</p>
+        <h3>Biên tập</h3>
         <div class="scroll">
           <table>
-            <caption>8 trường, theo đúng thứ tự bạn thấy trên màn hình.</caption>
+            <caption>Các mục biên tập.</caption>
             <thead>
               <tr><th scope="col">Trường</th><th scope="col">Dùng để làm gì</th><th scope="col">Ai điền</th></tr>
             </thead>
             <tbody>
               <tr><td>Sa-pô</td><td>Đoạn dẫn hiển thị trên card, trong danh sách, và làm đoạn mở đầu bài.</td><td class="who you">Bạn</td></tr>
-              <tr><td>Chuyên mục chính</td><td>Quyết định đường dẫn (breadcrumb) và nhãn chuyên mục trên card.</td><td class="who you">Bạn</td></tr>
-              <tr><td>YouTube ID</td><td>Gắn một video cho bài. Xem chặng 0:40.</td><td class="who you">Bạn</td></tr>
-              <tr><td>Thời lượng video</td><td>Số phút hiện trên góc ảnh video.</td><td class="who auto">Tự động</td></tr>
-              <tr><td>Tin nổi bật</td><td>Bật để bài được xét vào khối nổi bật đầu trang chủ.</td><td class="who you">Bạn</td></tr>
-              <tr><td>Thứ tự slot nổi bật</td><td><strong>1</strong> = bài lead lớn nhất. <strong>2–4</strong> = ba bài nhỏ bên cạnh.</td><td class="who you">Bạn</td></tr>
-              <tr><td>Tin ảnh</td><td>Bật để bài hiện trong panel “Tin ảnh” bên phải khối nổi bật.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Chuyên mục chính</td><td>Chọn một chuyên mục đã chọn cho bài.</td><td class="who you">Bạn</td></tr>
               <tr><td>Nguồn tin</td><td>Hiện ở cuối bài và dưới ảnh video. Ghi khi bài dẫn lại từ nơi khác.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Tên tác giả hiển thị</td><td>Chỉ điền khi tên cần hiện khác với tên tài khoản đăng bài.</td><td class="who you">Bạn</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Điều kiện và vị trí hiển thị trang chủ</h3>
+        <div class="scroll">
+          <table>
+            <caption>Các mục đưa bài lên trang chủ.</caption>
+            <thead>
+              <tr><th scope="col">Trường</th><th scope="col">Dùng để làm gì</th><th scope="col">Ai điền</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Tin nổi bật</td><td>Bật để bài được xét vào khối nổi bật đầu trang chủ.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Vị trí Tin nổi bật</td><td><strong>1</strong> = bài chính. <strong>2–4</strong> = ba bài bên cạnh.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Tin ảnh</td><td>Bật để bài hiện trong khối “Tin ảnh”.</td><td class="who you">Bạn</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Video</h3>
+        <div class="scroll">
+          <table>
+            <caption>Các mục video.</caption>
+            <thead>
+              <tr><th scope="col">Trường</th><th scope="col">Dùng để làm gì</th><th scope="col">Ai điền</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Video YouTube</td><td>Gắn một video cho bài. Xem chặng 0:40.</td><td class="who you">Bạn</td></tr>
+              <tr><td>Thời lượng</td><td>Số phút hiện trên ảnh video.</td><td class="who auto">Tự động</td></tr>
+              <tr><td>Trạng thái</td><td>Cho biết video đã được kiểm tra đến đâu.</td><td class="who auto">Tự động</td></tr>
             </tbody>
           </table>
         </div>
@@ -337,7 +372,7 @@
           <b>Sa-pô là trường đáng viết tay nhất</b>
           <p>Nếu bỏ trống, card sẽ tự lấy mấy chục chữ đầu của bài — thường cắt giữa câu — và trang bài sẽ <strong>không có đoạn dẫn nào</strong>. Một sa-pô viết riêng, khoảng 25–35 chữ, tóm ý và không lặp lại câu mở đầu.</p>
         </div>
-        <p>Trường <strong>Thời lượng video</strong> để hệ thống tự điền mỗi đêm. Nếu bạn nhập tay, lần cập nhật kế tiếp sẽ ghi đè.</p>
+        <p><strong>Thời lượng</strong> và <strong>Trạng thái</strong> trong nhóm <strong>Video</strong> chỉ để xem. PGDS tự cập nhật, nên bạn không cần và không thể tự nhập. Trạng thái có thể là <strong>Chưa gắn video</strong>, <strong>Đang chờ đồng bộ</strong>, <strong>Đã đồng bộ</strong> hoặc <strong>Video không còn khả dụng</strong>.</p>
       </div>
     </section>
 
@@ -345,15 +380,20 @@
       <div class="clock">0:30<span>10 phút</span></div>
       <div>
         <h2>Đưa bài lên trang chủ</h2>
+        <p>Khối <strong>Điều kiện và vị trí hiển thị trang chủ</strong> chỉ quyết định Tin nổi bật và Tin ảnh. Các khối còn lại trên trang chủ tự chọn bài phù hợp theo chuyên mục và thời gian đăng; bạn không cần đưa bài vào từng khối. Một bài được chọn cả Tin nổi bật và Tin ảnh chỉ hiện một lần trên trang chủ.</p>
         <p>Khối nổi bật đầu trang chủ có bốn chỗ, và bạn là người quyết định bài nào vào chỗ nào.</p>
         <ol class="steps">
           <li>Bật <strong>Tin nổi bật</strong>.</li>
-          <li>Đặt <strong>Thứ tự slot</strong>: <code>1</code> cho bài lead, <code>2</code>, <code>3</code>, <code>4</code> cho ba bài nhỏ.</li>
+          <li>Đặt <strong>Vị trí Tin nổi bật</strong>: <code>1</code> cho bài lead, <code>2</code>, <code>3</code>, <code>4</code> cho ba bài nhỏ.</li>
           <li>Cập nhật bài.</li>
         </ol>
         <div class="note">
           <b>Đổi bài lead</b>
-          <p>Muốn thay bài lead, hãy hạ bài cũ xuống số khác hoặc tắt <strong>Tin nổi bật</strong> của nó trước. Nếu hai bài cùng đặt số 1, chỉ một bài lên được và bài còn lại biến mất khỏi khối.</p>
+          <p>Muốn thay bài lead, hãy hạ bài cũ xuống số khác hoặc tắt <strong>Tin nổi bật</strong> của nó trước.</p>
+        </div>
+        <div class="note warn">
+          <b>Nếu trùng vị trí</b>
+          <p>Khi hai bài đã đăng cùng dùng một <strong>Vị trí Tin nổi bật</strong>, màn hình sẽ báo nhưng vẫn lưu bài. Bấm <strong>Mở bài đang trùng vị trí</strong> trong thông báo để mở và sửa bài kia, hoặc đổi vị trí của bài đang mở.</p>
         </div>
         <p><strong>Tin ảnh</strong> là một panel riêng, không liên quan đến bốn slot trên. Bật cho những bài mà bức ảnh chính là nội dung.</p>
         <p>Mỗi bài chỉ xuất hiện <strong>một lần</strong> trên trang chủ. Nếu bạn bật cả nổi bật và tin ảnh cho cùng một bài, hệ thống chọn vị trí đầu tiên và bỏ vị trí sau — đây là chủ ý, để trang chủ không lặp bài.</p>
@@ -367,17 +407,21 @@
         <p>Mỗi bài có <strong>một</strong> video chính. Không phải nhúng video vào giữa nội dung — chỉ cần điền mã.</p>
         <ol class="steps">
           <li>Mở video trên YouTube, sao chép <strong>toàn bộ đường dẫn</strong>.</li>
-          <li>Dán vào trường <strong>YouTube ID</strong>. Hệ thống tự cắt lấy phần mã.</li>
+          <li>Dán vào trường <strong>Video YouTube</strong>. Hệ thống tự cắt lấy phần mã.</li>
           <li>Cập nhật bài.</li>
         </ol>
-        <p>Trang bài sẽ hiện ảnh nền kèm nút phát. Video chỉ tải khi người đọc bấm vào — nhờ vậy trang mở nhanh và không gắn cookie theo dõi khi chưa cần.</p>
+        <p>Trang bài sẽ hiện ảnh nền kèm nút phát. Video chỉ tải khi người đọc bấm vào.</p>
         <div class="note">
           <b>Ảnh nền video</b>
           <p>Hệ thống tự tải ảnh từ YouTube về máy chủ mỗi đêm. Trong lúc chờ, ảnh đại diện của bài được dùng tạm — nên bài có video vẫn cần ảnh đại diện.</p>
         </div>
+        <div class="note">
+          <b>Thời lượng và Trạng thái</b>
+          <p>Hai mục này trong nhóm <strong>Video</strong> chỉ để xem và được PGDS tự cập nhật. Bạn không cần và không thể tự nhập. Trạng thái có thể là <strong>Chưa gắn video</strong>, <strong>Đang chờ đồng bộ</strong>, <strong>Đã đồng bộ</strong> hoặc <strong>Video không còn khả dụng</strong>.</p>
+        </div>
         <div class="note warn">
           <b>Nếu video bị xoá hoặc chuyển sang riêng tư</b>
-          <p>Hệ thống phát hiện và tự ẩn nút phát, thay bằng dòng “Video không còn khả dụng”. Bạn không phải làm gì — nhưng nếu thấy dòng đó, nghĩa là video nguồn đã mất và nên thay bài.</p>
+          <p>Hệ thống phát hiện và tự ẩn nút phát, thay bằng dòng “Video không còn khả dụng”. Hãy kiểm tra lại nguồn video trước khi đăng hoặc cập nhật bài.</p>
         </div>
       </div>
     </section>
@@ -385,17 +429,22 @@
     <section class="seg">
       <div class="clock">0:50<span>7 phút</span></div>
       <div>
-        <h2>“Sửa là thấy ngay”</h2>
-        <p>Trang được lưu đệm để tải nhanh, nhưng điều đó không làm bạn thấy nội dung cũ.</p>
+        <h2>Lưu nháp, xem trước và kiểm tra</h2>
         <ul class="plain">
-          <li><strong>Khi bạn đang đăng nhập</strong>, bạn luôn thấy phiên bản mới nhất — kể cả bản nháp, qua nút <strong>Xem trước</strong>.</li>
-          <li><strong>Với người đọc</strong>, bộ đệm được xoá tự động mỗi lần bạn đăng hoặc cập nhật một bài đã đăng. Không cần bấm gì thêm.</li>
-          <li><strong>Lưu nháp thì không xoá đệm</strong> — vì bản nháp chưa có trên trang. Đúng như mong đợi.</li>
+          <li><strong>Lưu bản nháp</strong> khi bài chưa hoàn tất. Chỉ người trong toà soạn thấy bản nháp.</li>
+          <li>Bấm <strong>Xem trước</strong> để đọc lại như người xem sẽ thấy. Hãy xem cả trên điện thoại.</li>
+          <li>Bấm <strong>Đăng</strong> khi bài đã sẵn sàng; với bài đã đăng, bấm <strong>Cập nhật</strong> sau khi sửa.</li>
+          <li>Bạn có thể lưu nháp và xem trước nhiều lần. Khi đăng hoặc cập nhật, nội dung mới tự hiện cho độc giả.</li>
         </ul>
-        <div class="note">
-          <b>Nếu người đọc báo vẫn thấy bản cũ</b>
-          <p>Nhờ họ tải lại trang bỏ qua bộ đệm trình duyệt (Ctrl+F5, hoặc Cmd+Shift+R trên máy Mac). Nếu vẫn còn, báo người phụ trách kỹ thuật — đừng đăng lại bài, vì việc đó không giải quyết được nguyên nhân.</p>
-        </div>
+        <h3>Các thông báo cần kiểm tra</h3>
+        <p>Thông báo chỉ nhắc bạn kiểm tra, <strong>không ngăn lưu bài</strong>.</p>
+        <ul class="plain">
+          <li>Với Tin nổi bật hoặc Tin ảnh, thiếu <strong>Ảnh đại diện</strong> hoặc <strong>Sa-pô</strong>: bài vẫn lưu nhưng có thể thiếu ảnh hoặc đoạn giới thiệu trên trang chủ.</li>
+          <li>Bật <strong>Tin nổi bật</strong> mà chưa chọn vị trí từ <code>1</code> đến <code>4</code>: lựa chọn mới không được áp dụng; hãy chọn lại vị trí.</li>
+          <li><strong>Chuyên mục chính</strong> chưa nằm trong các chuyên mục đã chọn cho bài: lựa chọn mới không được áp dụng; hãy chọn lại chuyên mục.</li>
+          <li>Đường dẫn <strong>Video YouTube</strong> chưa đúng: video mới không được áp dụng; hãy dán lại đường dẫn.</li>
+          <li>Nếu trùng <strong>Vị trí Tin nổi bật</strong>, dùng liên kết <strong>Mở bài đang trùng vị trí</strong> để mở bài kia và sắp xếp lại.</li>
+        </ul>
       </div>
     </section>
 
@@ -407,10 +456,13 @@
         <ul class="check">
           <li>Tiêu đề đọc được khi đứng riêng, không cần ngữ cảnh.</li>
           <li>Sa-pô viết tay, không lặp câu mở đầu của bài.</li>
-          <li>Đã đặt ảnh đại diện.</li>
-          <li>Đã chọn chuyên mục, và chọn cả chuyên mục chính.</li>
-          <li>Nếu có video: đã dán đường dẫn YouTube.</li>
+          <li>Đã đặt ảnh đại diện, nhất là khi chọn Tin nổi bật hoặc Tin ảnh.</li>
+          <li>Đã chọn chuyên mục; nếu có Chuyên mục chính thì chuyên mục đó cũng đã được chọn cho bài.</li>
+          <li>Nếu bật Tin nổi bật: đã chọn vị trí từ <code>1</code> đến <code>4</code> và không trùng bài đã đăng khác.</li>
+          <li>Nếu là Tin ảnh: đã bật Tin ảnh.</li>
+          <li>Nếu có video: đã dán đường dẫn YouTube đúng và Trạng thái không báo video không còn khả dụng.</li>
           <li>Nếu dẫn lại: đã ghi nguồn tin.</li>
+          <li>Đã đọc các thông báo trên màn hình.</li>
           <li>Đã xem trước trên điện thoại, không chỉ trên máy tính.</li>
         </ul>
       </div>
@@ -419,7 +471,7 @@
   </div>
 
   <section class="open">
-    <h2>Hai việc còn chờ quyết định</h2>
+    <h2>Ba việc còn chờ người trong toà soạn quyết</h2>
     <p>Không thuộc phần tập huấn, nhưng cần một người trong toà soạn nhận trách nhiệm trước ngày phát hành.</p>
     <dl>
       <div>
