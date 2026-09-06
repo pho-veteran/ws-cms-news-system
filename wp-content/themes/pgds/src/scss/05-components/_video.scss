@@ -9,6 +9,65 @@
   overflow: hidden;
   background: var(--color-bg-inverse);
 
+  &__poster {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  &__play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    width: $sp-8;
+    height: $sp-8;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    place-items: center;
+    color: var(--pgds-white);
+    background: rgba(0, 0, 0, 0.72);
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+
+    svg {
+      width: $sp-5;
+      height: $sp-5;
+      fill: currentColor;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--color-accent);
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--pgds-white);
+      outline-offset: 3px;
+    }
+  }
+
+  &__dur {
+    position: absolute;
+    right: $sp-2;
+    bottom: $sp-2;
+    padding: 2px $sp-1;
+    border-radius: $radius-sm;
+    color: var(--pgds-white);
+    font-size: $fs-2xs;
+    line-height: 1.4;
+    background: rgba(0, 0, 0, 0.78);
+  }
+
+  > iframe {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+  }
+
   &__embed {
     position: relative;
     aspect-ratio: 16 / 9;

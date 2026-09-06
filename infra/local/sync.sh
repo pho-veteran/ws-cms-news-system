@@ -49,14 +49,32 @@ docker exec "$wp_container" sh -c '
 docker cp "$REPO_ROOT/wp-content/mu-plugins/." \
   "$wp_container:/var/www/html/wp-content/mu-plugins/" >/dev/null
 docker exec "$wp_container" chown -R www-data:www-data /var/www/html/wp-content/mu-plugins
+docker exec "$wp_container" sh -c '
+  mkdir -p /var/www/html/wp-content/uploads
+  chmod 0777 /var/www/html/wp-content/uploads
+'
 
 echo "==> Syncing tools and scripts (for the wpcli container to reach via the shared wp_core volume)..."
-docker exec "$wp_container" mkdir -p /var/www/html/.pgds-tools /var/www/html/.pgds-scripts
-docker cp "$REPO_ROOT/tools/." "$wp_container:/var/www/html/.pgds-tools/" >/dev/null
-docker cp "$REPO_ROOT/infra/local/scripts/." "$wp_container:/var/www/html/.pgds-scripts/" >/dev/null
-docker exec "$wp_container" sh -c 'chmod +x /var/www/html/.pgds-scripts/*.sh'
+# Stream tar archives through the Docker API. This is reliable with remote daemons,
+# unlike `docker cp <directory>/.`, which can preserve a top-level tools/ or scripts/
+# directory and place files at paths the WP-CLI scripts cannot resolve.
+docker exec "$wp_container" sh -c '
+  rm -rf /tmp/pgds-tools-sync /tmp/pgds-scripts-sync
+  mkdir -p /tmp/pgds-tools-sync /tmp/pgds-scripts-sync
+'
+tar -C "$REPO_ROOT/tools" -cf - . | docker cp - "$wp_container:/tmp/pgds-tools-sync"
+tar -C "$REPO_ROOT/infra/local/scripts" -cf - . | docker cp - "$wp_container:/tmp/pgds-scripts-sync"
+tar -C "$REPO_ROOT/infra/local" -cf - fixtures | docker cp - "$wp_container:/tmp/pgds-scripts-sync"
+docker exec "$wp_container" sh -c '
+  rm -rf /var/www/html/.pgds-tools /var/www/html/.pgds-scripts
+  mv /tmp/pgds-tools-sync /var/www/html/.pgds-tools
+  mv /tmp/pgds-scripts-sync /var/www/html/.pgds-scripts
+  chmod +x /var/www/html/.pgds-scripts/*.sh
+  chmod +x /var/www/html/.pgds-tools/preview/*.sh
+'
 
 echo "==> Sync complete."
 echo "    Theme:   /var/www/html/wp-content/themes/pgds"
-echo "    Tools:   /var/www/html/.pgds-tools    (referenced as /tools by the scripts)"
+echo "    Tools:   /var/www/html/.pgds-tools"
+echo "    Preview: /var/www/html/.pgds-tools/preview"
 echo "    Scripts: /var/www/html/.pgds-scripts"

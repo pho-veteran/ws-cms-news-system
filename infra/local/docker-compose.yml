@@ -65,10 +65,12 @@ services:
       WORDPRESS_DB_USER: wp
       WORDPRESS_DB_PASSWORD: wppw
       WORDPRESS_DB_NAME: wordpress
+      PGDS_PREVIEW_ORIGIN_URL: http://wordpress:80
     volumes:
       # Same reason as the wordpress service: no bind mounts. Everything arrives
-      # through the shared wp_core volume, which ./sync.sh populates. The scripts
-      # live at /var/www/html/.pgds-scripts and tools at /var/www/html/.pgds-tools.
+      # through the shared wp_core volume, which ./sync.sh populates. General scripts
+      # live at /var/www/html/.pgds-scripts; the self-contained preview package lives
+      # under /var/www/html/.pgds-tools/preview.
       - wp_core:/var/www/html
     entrypoint: ["sh"]
     profiles: ["cli"]

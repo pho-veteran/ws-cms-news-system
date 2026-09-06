@@ -46,6 +46,23 @@ $WP theme activate pgds
 echo "==> Seeding categories (call directly in case the hook has not run)..."
 $WP eval 'if (function_exists("pgds_seed_categories")) { pgds_seed_categories(); echo "seeded\n"; }'
 
+echo "==> Seeding the canonical custom logo..."
+PGDS_LOGO_FIXTURE="/var/www/html/.pgds-scripts/fixtures/pgds-logo.png"
+PGDS_LOGO_KEY="pgds-local-canonical-logo"
+if [ ! -f "$PGDS_LOGO_FIXTURE" ]; then
+  echo "ERROR: canonical logo fixture is missing: $PGDS_LOGO_FIXTURE" >&2
+  exit 1
+fi
+PGDS_LOGO_ID="$($WP post list --post_type=attachment --post_status=inherit --meta_key=_pgds_local_fixture_key --meta_value="$PGDS_LOGO_KEY" --field=ID --posts_per_page=1)"
+if [ -z "$PGDS_LOGO_ID" ]; then
+  PGDS_LOGO_ID="$($WP media import "$PGDS_LOGO_FIXTURE" \
+    --title="Phật giáo và Đời sống" \
+    --alt="Phật giáo và Đời sống" \
+    --porcelain)"
+  $WP post meta update "$PGDS_LOGO_ID" _pgds_local_fixture_key "$PGDS_LOGO_KEY" >/dev/null
+fi
+$WP eval "set_theme_mod( 'custom_logo', $PGDS_LOGO_ID );"
+
 echo "==> Flushing rewrite rules (video-sitemap.xml)..."
 $WP rewrite flush --hard
 
@@ -59,13 +76,29 @@ $WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200 --dry-r
 echo "==> Performing the actual import..."
 $WP pgds import --file="$TOOLS/sample-data/data.sample.json" --batch=200
 
-echo "==> Marking the first post as Featured News (lead) so the homepage has data..."
-FIRST_ID=$($WP post list --post_type=post --posts_per_page=1 --field=ID --orderby=date --order=DESC)
-if [ -n "$FIRST_ID" ]; then
-  $WP post meta update "$FIRST_ID" _pgds_is_featured 1
-  $WP post meta update "$FIRST_ID" _pgds_feature_rank 1
-  $WP post meta update "$FIRST_ID" _pgds_photo_story 1
-fi
+echo "==> Seeding canonical homepage promotion metadata..."
+# Homepage queries deduplicate posts across blocks. Keep photo stories separate from
+# the featured lead and secondary cards so the Tin ảnh panel cannot be consumed first.
+POST_IDS="$($WP post list --post_type=post --post_status=publish --meta_key=_pgds_source_id --field=ID)"
+for id in $POST_IDS; do
+  $WP post meta delete "$id" _pgds_is_featured >/dev/null 2>&1 || true
+  $WP post meta delete "$id" _pgds_feature_rank >/dev/null 2>&1 || true
+  $WP post meta delete "$id" _pgds_photo_story >/dev/null 2>&1 || true
+done
+
+rank=1
+FEATURED_IDS="$($WP post list --post_type=post --post_status=publish --meta_key=_pgds_source_id --field=ID --orderby=date --order=DESC --posts_per_page=4)"
+for id in $FEATURED_IDS; do
+  $WP post meta update "$id" _pgds_is_featured 1 >/dev/null
+  $WP post meta update "$id" _pgds_feature_rank "$rank" >/dev/null
+  rank=$((rank + 1))
+done
+
+# Use the next two posts, which are not claimed by the featured query above.
+PHOTO_IDS="$($WP post list --post_type=post --post_status=publish --meta_key=_pgds_source_id --field=ID --orderby=date --order=DESC --posts_per_page=2 --offset=4)"
+for id in $PHOTO_IDS; do
+  $WP post meta update "$id" _pgds_photo_story 1 >/dev/null
+done
 
 # Idempotent, for the same reason as the teaching item below.
 #
@@ -118,6 +151,19 @@ if [ -z "$PGDS_TEACHING_ID" ]; then
 elif [ -z "$($WP post get "$PGDS_TEACHING_ID" --field=post_content | tr -d '[:space:]')" ]; then
   $WP post update "$PGDS_TEACHING_ID" --post_content="$PGDS_TEACHING_BODY" >/dev/null || true
 fi
+
+echo "==> Seeding invariant lunar/sidebar content..."
+PGDS_LUNAR_TITLE="Lịch âm cơ sở"
+PGDS_LUNAR_ID="$($WP post list --post_type=pgds_lunar_note --post_status=any --title="$PGDS_LUNAR_TITLE" --field=ID | head -1)"
+if [ -z "$PGDS_LUNAR_ID" ]; then
+  PGDS_LUNAR_ID="$($WP post create --post_type=pgds_lunar_note --post_status=publish \
+    --post_title="$PGDS_LUNAR_TITLE" --porcelain)"
+fi
+$WP post meta update "$PGDS_LUNAR_ID" _pgds_lunar_day "16" >/dev/null
+$WP post meta update "$PGDS_LUNAR_ID" _pgds_lunar_sub "Tháng 7 Bính Ngọ" >/dev/null
+$WP post meta update "$PGDS_LUNAR_ID" _pgds_menh "Sơn đầu hỏa" >/dev/null
+$WP post meta update "$PGDS_LUNAR_ID" _pgds_gio "Dần (3h-5h), Thìn (7h-9h), Tỵ (9h-11h)" >/dev/null
+$WP post meta update "$PGDS_LUNAR_ID" _pgds_quote "Tâm bình thì thế giới bình." >/dev/null
 
 echo ""
 echo "==> COMPLETE. Open http://localhost:8080  (admin/admin123 at /wp-admin)"

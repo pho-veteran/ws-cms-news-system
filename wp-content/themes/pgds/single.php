@@ -61,11 +61,22 @@ while ( have_posts() ) :
 				</header>
 
 				<?php if ( $vid ) : ?>
-					<figure class="pgds-video">
-						<div class="pgds-video__embed">
-							<?php echo wp_oembed_get( 'https://www.youtube.com/watch?v=' . rawurlencode( $vid ) ); ?>
-						</div>
-					</figure>
+					<?php
+					get_template_part(
+						'template-parts/video-facade',
+						null,
+						array(
+							'video_id'      => $vid,
+							'poster'        => (string) get_post_meta( $post_id, '_pgds_youtube_poster', true ),
+							'poster_id'     => (int) get_post_meta( $post_id, '_pgds_youtube_poster_id', true ),
+							'dur'           => $dur,
+							'title'         => (string) get_post_meta( $post_id, '_pgds_youtube_title', true ),
+							'caption'       => (string) get_post_meta( $post_id, '_pgds_image_caption', true ),
+							'fallback_post' => $post_id,
+							'unavailable'   => '1' === get_post_meta( $post_id, '_pgds_video_unavailable', true ),
+						)
+					);
+					?>
 				<?php elseif ( has_post_thumbnail() ) : ?>
 					<figure class="pgds-article__figure">
 						<?php the_post_thumbnail( 'pgds-lead', array( 'fetchpriority' => 'high' ) ); ?>

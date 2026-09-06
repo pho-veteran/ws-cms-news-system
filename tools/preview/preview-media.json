@@ -1,0 +1,632 @@
+{
+  "schema_version": 1,
+  "notice": "Development-only preview media. Import into the local WordPress Media Library only; never deploy these fixtures as newsroom media.",
+  "assets": [
+    {
+      "id": "photo-01",
+      "fixture": "pgds-seed-01.jpg",
+      "source_title": "File:Dai le vesak sa dec.JPG",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Dai_le_vesak_sa_dec.JPG",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Dai_le_vesak_sa_dec.JPG/960px-Dai_le_vesak_sa_dec.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Petertan",
+      "credit": "Own work",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "description": "Lễ Phật Đản tại Sa Đéc",
+      "alt": "Không gian trang hoàng mừng Đại lễ Phật đản tại Sa Đéc",
+      "original_width": 3264,
+      "original_height": 2448,
+      "sha256": "fcad7e5f6abe10a5352de7be6e1122896f98bd7784321bc9eb7d4d97a4a6531f"
+    },
+    {
+      "id": "photo-02",
+      "fixture": "pgds-seed-02.jpg",
+      "source_title": "File:Chùa Thiền Lâm Tự (cổng vào Thích Ca Phật Đài), Vũng Tàu, ngày 19 tháng 5 năm 2014 (1).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_Thi%E1%BB%81n_L%C3%A2m_T%E1%BB%B1_(c%E1%BB%95ng_v%C3%A0o_Th%C3%ADch_Ca_Ph%E1%BA%ADt_%C4%90%C3%A0i),_V%C5%A9ng_T%C3%A0u,_ng%C3%A0y_19_th%C3%A1ng_5_n%C4%83m_2014_(1).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Ch%C3%B9a_Thi%E1%BB%81n_L%C3%A2m_T%E1%BB%B1_%28c%E1%BB%95ng_v%C3%A0o_Th%C3%ADch_Ca_Ph%E1%BA%ADt_%C4%90%C3%A0i%29%2C_V%C5%A9ng_T%C3%A0u%2C_ng%C3%A0y_19_th%C3%A1ng_5_n%C4%83m_2014_%281%29.jpg/960px-Ch%C3%B9a_Thi%E1%BB%81n_L%C3%A2m_T%E1%BB%B1_%28c%E1%BB%95ng_v%C3%A0o_Th%C3%ADch_Ca_Ph%E1%BA%ADt_%C4%90%C3%A0i%29%2C_V%C5%A9ng_T%C3%A0u%2C_ng%C3%A0y_19_th%C3%A1ng_5_n%C4%83m_2014_%281%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Phương Huy",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Pagodas in Ba Ria-Vung Tau",
+      "alt": "Cổng Thiền Lâm Tự tại Vũng Tàu với biểu ngữ Đại lễ Phật đản",
+      "original_width": 2048,
+      "original_height": 1536,
+      "sha256": "4ddc658f5f066efc7aa13845f3b3122e77316de89ade7e3dd061c096ac34ef69"
+    },
+    {
+      "id": "photo-03",
+      "fixture": "pgds-seed-03.jpg",
+      "source_title": "File:Chùa Thành.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_Th%C3%A0nh.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Ch%C3%B9a_Th%C3%A0nh.jpg/960px-Ch%C3%B9a_Th%C3%A0nh.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Bùi Thụy Đào Nguyên",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Chùa Thành là một ngôi chùa cổ ở TP Lạng Sơn, Việt Nam.",
+      "alt": "Mặt tiền Chùa Thành dưới tán cây",
+      "original_width": 3543,
+      "original_height": 2362,
+      "sha256": "2f1ee966174250a752ee2f7d1148b52de5a797cd38fc8d1935d572f21e40a551"
+    },
+    {
+      "id": "photo-04",
+      "fixture": "pgds-seed-04.jpg",
+      "source_title": "File:Chùa Đại Giác (Biên Hòa).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_%C4%90%E1%BA%A1i_Gi%C3%A1c_(Bi%C3%AAn_H%C3%B2a).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Ch%C3%B9a_%C4%90%E1%BA%A1i_Gi%C3%A1c_%28Bi%C3%AAn_H%C3%B2a%29.jpg/960px-Ch%C3%B9a_%C4%90%E1%BA%A1i_Gi%C3%A1c_%28Bi%C3%AAn_H%C3%B2a%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Bùi Thụy Đào Nguyên",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Chùa Đại Giác là một cổ tự ở Cù lao Phố, TP Biên Hòa, VIệt Nam.",
+      "alt": "Sân Chùa Đại Giác với cây cổ thụ và cờ Phật giáo",
+      "original_width": 3543,
+      "original_height": 2362,
+      "sha256": "993dd801d6698c8eee870808ff2d2e53e1b32d5f0451de58915b5d0ddcc8d8d8"
+    },
+    {
+      "id": "photo-05",
+      "fixture": "pgds-seed-05.jpg",
+      "source_title": "File:An ancient bell in the grounds of the Thien Mu Pagoda (30992219743).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:An_ancient_bell_in_the_grounds_of_the_Thien_Mu_Pagoda_(30992219743).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/An_ancient_bell_in_the_grounds_of_the_Thien_Mu_Pagoda_%2830992219743%29.jpg/960px-An_ancient_bell_in_the_grounds_of_the_Thien_Mu_Pagoda_%2830992219743%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "shankar s. from Dubai, united arab emirates",
+      "credit": "An ancient bell in the grounds of the Thien Mu Pagoda",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "description": "A large bell hangs in a shrine next to the seven storeyed Thien Mu pagoda. I guess it is rung at prayer times and on special religious occasions. The small notice at the entrance was entirely in Vietnamese, a standard fe",
+      "alt": "Quả chuông cổ trong khuôn viên Chùa Thiên Mụ",
+      "original_width": 6000,
+      "original_height": 4000,
+      "sha256": "ac82873a4a04f126bbe23213bae319adb7b72f5fbe6083e6e8be349c1ef0eeae"
+    },
+    {
+      "id": "photo-06",
+      "fixture": "pgds-seed-06.jpg",
+      "source_title": "File:Lascar One Pillar Pagoda (4550966464).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Lascar_One_Pillar_Pagoda_(4550966464).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Lascar_One_Pillar_Pagoda_%284550966464%29.jpg/960px-Lascar_One_Pillar_Pagoda_%284550966464%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Jorge Láscar from Australia",
+      "credit": "One Pillar Pagoda",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "description": "Vietnamese:Chùa Một Cột, formally Diên Hựu tự 延祐寺 or Liên Hoa Đài 蓮花臺) is a historic Buddhist temple in Hanoi, the capital of Vietnam. It is regarded alongside the Perfume Pagoda, as one of Vietnam's two most iconic temp",
+      "alt": "Chùa Một Cột giữa khuôn viên xanh",
+      "original_width": 2592,
+      "original_height": 1944,
+      "sha256": "d1bb184d9c4878a072819313693bbf8173e49242406f18c2301366591ea184f0"
+    },
+    {
+      "id": "photo-08",
+      "fixture": "pgds-seed-08.jpg",
+      "source_title": "File:Cao Lãnh little girl (Unsplash).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Cao_L%C3%A3nh_little_girl_(Unsplash).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Cao_L%C3%A3nh_little_girl_%28Unsplash%29.jpg/960px-Cao_L%C3%A3nh_little_girl_%28Unsplash%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Mi PHAM phammi",
+      "credit": "https://unsplash.com/photos/KGiK9yOfRn0 Image at the Wayback Machine Gallery at the Wayback Machine",
+      "license": "CC0",
+      "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "description": "Cao Lãnh, Vietnam",
+      "alt": "Một em nhỏ ngồi đọc sách ngoài trời",
+      "original_width": 5136,
+      "original_height": 3272,
+      "sha256": "cdfd1b3879f4082c09a7bb7d5b8b860b5c1809cdecf34d60d572e09d7b26afe8"
+    },
+    {
+      "id": "photo-10",
+      "fixture": "pgds-seed-10.jpg",
+      "source_title": "File:BirG006-Dharamsala.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:BirG006-Dharamsala.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/BirG006-Dharamsala.jpg/960px-BirG006-Dharamsala.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Wojciech Kocot",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Dharamsala (India) in 2018 (photographed by Wojciech Kocot) - Buddhist monks of Vietnam",
+      "alt": "Hai vị tu sĩ Phật giáo đi trên phố",
+      "original_width": 3337,
+      "original_height": 2219,
+      "sha256": "ac106dafd2171aaa772789df954edf201852832c7e926b95cb9ef89bb31a0c0e"
+    },
+    {
+      "id": "photo-12",
+      "fixture": "pgds-seed-12.jpg",
+      "source_title": "File:Thich Trung Hieu dieu khac tu tay Chua Pho Lai.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Thich_Trung_Hieu_dieu_khac_tu_tay_Chua_Pho_Lai.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Thich_Trung_Hieu_dieu_khac_tu_tay_Chua_Pho_Lai.jpg/960px-Thich_Trung_Hieu_dieu_khac_tu_tay_Chua_Pho_Lai.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Nguyenngocthanhtoan",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Venerable Thich Trung Hieu inscribing calligraphic characters on the main hall wall during the construction of Pho Lai Pagoda in 2016",
+      "alt": "Nghệ nhân chạm khắc thủ công tại Chùa Phổ Lại",
+      "original_width": 1836,
+      "original_height": 2448,
+      "sha256": "5894ac2d2dde429e143a6985b5700a36e1c1ee3c9b890944e06ffdf7c7a2a5e9"
+    },
+    {
+      "id": "photo-13",
+      "fixture": "pgds-seed-13.jpg",
+      "source_title": "File:Chùa Bảo Đàm năm 2022 (Điện Quan Âm, hoa cúng) (3).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_B%E1%BA%A3o_%C4%90%C3%A0m_n%C4%83m_2022_(%C4%90i%E1%BB%87n_Quan_%C3%82m,_hoa_c%C3%BAng)_(3).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Ch%C3%B9a_B%E1%BA%A3o_%C4%90%C3%A0m_n%C4%83m_2022_%28%C4%90i%E1%BB%87n_Quan_%C3%82m%2C_hoa_c%C3%BAng%29_%283%29.jpg/960px-Ch%C3%B9a_B%E1%BA%A3o_%C4%90%C3%A0m_n%C4%83m_2022_%28%C4%90i%E1%BB%87n_Quan_%C3%82m%2C_hoa_c%C3%BAng%29_%283%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Phương Huy",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Offerings in Vietnam",
+      "alt": "Hoa cúng trong khuôn viên Chùa Bảo Đàm",
+      "original_width": 3024,
+      "original_height": 4032,
+      "sha256": "44a2582b45de4fbf143030376033960d6eba99068d5b56a8259c224e236f9c2e"
+    },
+    {
+      "id": "photo-14",
+      "fixture": "pgds-seed-14.jpg",
+      "source_title": "File:Chùa Di Lặc 2022 (lư trầm trong chánh điện) (10).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_Di_L%E1%BA%B7c_2022_(l%C6%B0_tr%E1%BA%A7m_trong_ch%C3%A1nh_%C4%91i%E1%BB%87n)_(10).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/Ch%C3%B9a_Di_L%E1%BA%B7c_2022_%28l%C6%B0_tr%E1%BA%A7m_trong_ch%C3%A1nh_%C4%91i%E1%BB%87n%29_%2810%29.jpg/960px-Ch%C3%B9a_Di_L%E1%BA%B7c_2022_%28l%C6%B0_tr%E1%BA%A7m_trong_ch%C3%A1nh_%C4%91i%E1%BB%87n%29_%2810%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Phương Huy",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Offerings in Vietnam",
+      "alt": "Lư trầm và tượng Phật trong chánh điện Chùa Di Lặc",
+      "original_width": 3024,
+      "original_height": 4032,
+      "sha256": "9b945c410166fa390772aa80f2c72229a617a942427b8caaa23a5c7164d418e8"
+    },
+    {
+      "id": "photo-15",
+      "fixture": "pgds-seed-15.jpg",
+      "source_title": "File:Anandabodhi2.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Anandabodhi2.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Anandabodhi2.jpg/960px-Anandabodhi2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "myself",
+      "credit": "Own work",
+      "license": "CC BY-SA 2.5",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.5",
+      "description": "Buddhist monks meditating under the Anandabodhi tree in Jetavana Monastery, Sravasti, Uttar Pradesh, India. This is one of the 3 most holy Bodhitrees in Buddhism. The original tree was a sapling of the Mahabodhi tree in ",
+      "alt": "Hai vị tu sĩ thiền tập dưới cây bồ đề",
+      "original_width": 1500,
+      "original_height": 2000,
+      "sha256": "f696d72a5918a4227d7861d2c0415ee449776443c138f05ae31c7f17dda1981b"
+    },
+    {
+      "id": "photo-16",
+      "fixture": "pgds-seed-16.jpg",
+      "source_title": "File:020 S Samantabhadra Meditating (28357550673).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:020_S_Samantabhadra_Meditating_(28357550673).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/020_S_Samantabhadra_Meditating_%2828357550673%29.jpg/960px-020_S_Samantabhadra_Meditating_%2828357550673%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Photo Dharma from Sadao, Thailand",
+      "credit": "020 S Samantabhadra Meditating",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "description": "020 S Samantabhadra Meditating, Bhadracari, Borobudur, photograph by Anandajoti Bhikkhu",
+      "alt": "Mảng chạm đá hình Phổ Hiền Bồ Tát",
+      "original_width": 4480,
+      "original_height": 1962,
+      "sha256": "b44517718551d494d61a9d96529cc1183e5a0ede3d7e624e31baa1ee851b0393"
+    },
+    {
+      "id": "photo-17",
+      "fixture": "pgds-seed-17.jpg",
+      "source_title": "File:Chill Out Vegie Spring Rolls.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Chill_Out_Vegie_Spring_Rolls.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Chill_Out_Vegie_Spring_Rolls.jpg/960px-Chill_Out_Vegie_Spring_Rolls.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Infrogmation of New Orleans",
+      "credit": "originally posted to Flickr as Chill Out Vegie Spring Rolls",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "description": "Chill Out Cafe, Maple Street, New Orleans. Vegie spring rolls.",
+      "alt": "Món chay được trình bày trên đĩa",
+      "original_width": 2816,
+      "original_height": 2112,
+      "sha256": "590e2adc004b382b9b626f0bc6c6521e6b42eff4e6409b0fd8ce4447486e591d"
+    },
+    {
+      "id": "photo-18",
+      "fixture": "pgds-seed-18.jpg",
+      "source_title": "File:Hoi An Full Moon Festival.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Hoi_An_Full_Moon_Festival.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Hoi_An_Full_Moon_Festival.jpg/960px-Hoi_An_Full_Moon_Festival.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Christophe95",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Lanterns on the Thu Bon River during the Hoi An Full Moon Festival.",
+      "alt": "Đèn hoa đăng trên sông trong lễ hội trăng rằm Hội An",
+      "original_width": 4032,
+      "original_height": 3024,
+      "sha256": "28e03071af0d80422c30cdbf3f7730eb5c76891a9b891f7293e62652131ab793"
+    },
+    {
+      "id": "photo-19",
+      "fixture": "pgds-seed-19.jpg",
+      "source_title": "File:Clean weeds from tea garden - Flickr - Son Hoa Nguyen.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Clean_weeds_from_tea_garden_-_Flickr_-_Son_Hoa_Nguyen.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Clean_weeds_from_tea_garden_-_Flickr_-_Son_Hoa_Nguyen.jpg/960px-Clean_weeds_from_tea_garden_-_Flickr_-_Son_Hoa_Nguyen.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Oliver Nguyen from Viet Nam",
+      "credit": "Clean weeds from tea garden",
+      "license": "CC0",
+      "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "description": "To clean weeds in the tea garden, use mechanical methods such as hand weeding, using a sickle or hoe to cut or pull out weeds; mulch with straw or cloth to block weeds; The worker is protected by a plastic sheet wrapped ",
+      "alt": "Người lao động chăm sóc vườn trà",
+      "original_width": 2048,
+      "original_height": 1152,
+      "sha256": "33a74a5448c66c5584d2d7b7cb8c0399be1b043e5ee9248b0364d649438fdbd7"
+    },
+    {
+      "id": "photo-20",
+      "fixture": "pgds-seed-20.jpg",
+      "source_title": "File:Youth ambassador Penny Clark with a construction worker at the Three Delta Towns water supply and sanitation project in Vietnam, 2007. Photo- Bart Verwey - AusAID (10661361813).jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Youth_ambassador_Penny_Clark_with_a_construction_worker_at_the_Three_Delta_Towns_water_supply_and_sanitation_project_in_Vietnam,_2007._Photo-_Bart_Verwey_-_AusAID_(10661361813).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Youth_ambassador_Penny_Clark_with_a_construction_worker_at_the_Three_Delta_Towns_water_supply_and_sanitation_project_in_Vietnam%2C_2007._Photo-_Bart_Verwey_-_AusAID_%2810661361813%29.jpg/960px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Department of Foreign Affairs and Trade",
+      "credit": "Youth ambassador Penny Clark with a construction worker at the Three Delta Towns water supply and sanitation project in Vietnam, 2007. Photo: Bart Verwey / AusA",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "description": "Youth ambassador Penny Clark with a construction worker at the Three Delta Towns water supply and sanitation project in Vietnam, 2007. Photo: Bart Verwey / AusAID",
+      "alt": "Công nhân và tình nguyện viên tại dự án cấp nước",
+      "original_width": 4064,
+      "original_height": 2704,
+      "sha256": "96a94f457e96ab27c2b801d4167b5c71e02a6cf5b5ad788dc1c52845c87dad36"
+    },
+    {
+      "id": "photo-21",
+      "fixture": "pgds-seed-21.jpg",
+      "source_title": "File:Vietnamese calligraphy in Ecopark 2016 02.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Vietnamese_calligraphy_in_Ecopark_2016_02.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Vietnamese_calligraphy_in_Ecopark_2016_02.jpg/960px-Vietnamese_calligraphy_in_Ecopark_2016_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Vuong Tri Binh",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "Vietnamese calligraphy in Ecopark 2016",
+      "alt": "Ông đồ viết thư pháp Việt Nam",
+      "original_width": 3072,
+      "original_height": 1728,
+      "sha256": "9446be1a2da2023e40596ee1d906374b5796758a95002eb1c6b8d564cc1a18db"
+    },
+    {
+      "id": "photo-22",
+      "fixture": "pgds-seed-22.jpg",
+      "source_title": "File:US Navy 071116-N-0807W-214 Mine countermeasures ship USS Patriot (MCM 7) and USS Guardian (MCM 5) Sailors renovate playground equipment at the School for Blind Children of Hai Phong, during a community service project.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:US_Navy_071116-N-0807W-214_Mine_countermeasures_ship_USS_Patriot_(MCM_7)_and_USS_Guardian_(MCM_5)_Sailors_renovate_playground_equipment_at_the_School_for_Blind_Children_of_Hai_Phong,_during_a_community_service_project.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/US_Navy_071116-N-0807W-214_Mine_countermeasures_ship_USS_Patriot_%28MCM_7%29_and_USS_Guardian_%28MCM_5%29_Sailors_renovate_playground_equipment_at_the_School_for_Blind_Children_of_Hai_Phong%2C_during_a_community_service_project.jpg/960px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "U.S. Navy photo by Mass Communication Specialist 2nd Class Joshua J. Wahl",
+      "credit": "This image was released by the United States Navy with the ID 071116-N-0807W-214 (next) . This tag does not indicate the copyright status of the attached work. ",
+      "license": "Public domain",
+      "license_url": "",
+      "description": "HAI PHONG, Vietnam (Nov. 16, 2007) Mine countermeasures ship USS Patriot (MCM 7) and USS Guardian (MCM 5) Sailors renovate playground equipment at the School for Blind Children of Hai Phong, during a community service pr",
+      "alt": "Tình nguyện viên sửa thiết bị sân chơi tại một trường học ở Hải Phòng",
+      "original_width": 1680,
+      "original_height": 1116,
+      "sha256": "32ddb0f02abc46c7aed8c491e226b0f500894b182e91355c624543330da20580"
+    },
+    {
+      "id": "photo-23",
+      "fixture": "pgds-seed-23.jpg",
+      "source_title": "File:USAID supports deworming education and medication distribution in Bac Giang Province.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:USAID_supports_deworming_education_and_medication_distribution_in_Bac_Giang_Province.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/USAID_supports_deworming_education_and_medication_distribution_in_Bac_Giang_Province.jpg/960px-USAID_supports_deworming_education_and_medication_distribution_in_Bac_Giang_Province.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "USAID Vietnam",
+      "credit": "https://www.flickr.com/photos/usaid_vietnam/8762274264/",
+      "license": "Public domain",
+      "license_url": "",
+      "description": "Deworming (sometimes known as worming or drenching) is the giving of an anthelmintic drug (a wormer, dewormer, or drench) to a human or animal to rid them of helminths parasites , such as roundworm , flukes and tapeworm ",
+      "alt": "Hoạt động chăm sóc sức khỏe học đường tại Bắc Giang",
+      "original_width": 4288,
+      "original_height": 2848,
+      "sha256": "9408fd6d73fa2de97497b6e9f71be7c335bc7c1823951b4adb7d2565eb9b8bb3"
+    },
+    {
+      "id": "photo-24",
+      "fixture": "pgds-seed-24.jpg",
+      "source_title": "File:US Navy 100812-N-8539M-209 Crypotlogic Technician 3rd Class Manuel Dominguez practices basic English phrases with children at a Da Nang primary school.jpg",
+      "source_url": "https://commons.wikimedia.org/wiki/File:US_Navy_100812-N-8539M-209_Crypotlogic_Technician_3rd_Class_Manuel_Dominguez_practices_basic_English_phrases_with_children_at_a_Da_Nang_primary_school.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ad/US_Navy_100812-N-8539M-209_Crypotlogic_Technician_3rd_Class_Manuel_Dominguez_practices_basic_English_phrases_with_children_at_a_Da_Nang_primary_school.jpg/960px-US_Navy_100812-N-8539M-209_Crypotlogic_Technician_3rd_Class_Manuel_Dominguez_practices_basic_English_phrases_with_children_at_a_Da_Nang_primary_school.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "U.S. Navy photo by Lt. Mike Morley",
+      "credit": "This image was released by the United States Navy with the ID 100812-N-8539M-209 (next) . This tag does not indicate the copyright status of the attached work. ",
+      "license": "Public domain",
+      "license_url": "",
+      "description": "DA NANG, Vietnam (Aug. 12, 2010) Crypotlogic Technician 3rd Class Manuel Dominguez, assigned to the guided-missile destroyer USS John S. McCain (DDG 56), practices basic English phrases with children at a Da Nang primary",
+      "alt": "Trẻ em tham gia hoạt động giao lưu tại một trường tiểu học ở Đà Nẵng",
+      "original_width": 2100,
+      "original_height": 1500,
+      "sha256": "0c903edaa93c893b372c68d6a42a3c29deff3cce5cbf908bb68fd16785a74305"
+    },
+    {
+      "id": "video-poster-0008",
+      "fixture": "pgds-video-A20Lx3sv8hs.jpg",
+      "source_title": "Hà Nội: Đại hội Phật giáo huyện Đông Anh lần thứ IX thành công tốt đẹp",
+      "source_url": "https://www.youtube.com/watch?v=A20Lx3sv8hs",
+      "author": "Phật Sự Online TV",
+      "credit": "YouTube video thumbnail",
+      "license": "YouTube Terms of Service",
+      "license_url": "https://www.youtube.com/static?template=terms",
+      "description": "Locally stored poster for the development-only embedded video fixture.",
+      "alt": "Khung hình video về Đại hội Phật giáo tại Hà Nội",
+      "original_width": 1280,
+      "original_height": 720,
+      "sha256": "cb4e79895aa0203d37e3b9b6d1e27adde5cbf36ca202aa423f5687924bce68d8"
+    },
+    {
+      "id": "video-poster-0012",
+      "fixture": "pgds-video-X3iS2L0Y_xw.jpg",
+      "source_title": "Lắng Nghe Để Thấu Hiểu: Phật Dạy Nghệ Thuật Giao Tiếp Chân Thành",
+      "source_url": "https://www.youtube.com/watch?v=X3iS2L0Y_xw",
+      "author": "Tranquil Mind 8",
+      "credit": "YouTube video thumbnail",
+      "license": "YouTube Terms of Service",
+      "license_url": "https://www.youtube.com/static?template=terms",
+      "description": "Locally stored poster for the development-only embedded video fixture.",
+      "alt": "Khung hình video về thực hành lắng nghe và giao tiếp",
+      "original_width": 1280,
+      "original_height": 720,
+      "sha256": "9928796afd93f0985b07050803952c21b238d451edea21f927724fa0b6f2a281"
+    },
+    {
+      "id": "video-poster-0019",
+      "fixture": "pgds-video-2ZSW6vPbEjo.jpg",
+      "source_title": "15 phút thiền hàng ngày - Chánh niệm hơi thở - Thiền cho người mới bắt đầu",
+      "source_url": "https://www.youtube.com/watch?v=2ZSW6vPbEjo",
+      "author": "Breath - Thiền định thật đơn giản",
+      "credit": "YouTube video thumbnail",
+      "license": "YouTube Terms of Service",
+      "license_url": "https://www.youtube.com/static?template=terms",
+      "description": "Locally stored poster for the development-only embedded video fixture.",
+      "alt": "Khung hình video hướng dẫn thiền chánh niệm hơi thở",
+      "original_width": 1280,
+      "original_height": 720,
+      "sha256": "71c08b2a5c6447fee532154a5dc56c0e041cb431ce3e44c05d3bf001964efb55"
+    },
+    {
+      "id": "video-poster-0039",
+      "fixture": "pgds-video-fTcmiAD_GwQ.jpg",
+      "source_title": "Chùa Thanh Lương Phú Yên – Ngôi Chùa Ven Biển Độc Đáo & Bình Yên",
+      "source_url": "https://www.youtube.com/watch?v=fTcmiAD_GwQ",
+      "author": "Chuột Mèo Tuy Vuy",
+      "credit": "YouTube video thumbnail",
+      "license": "YouTube Terms of Service",
+      "license_url": "https://www.youtube.com/static?template=terms",
+      "description": "Locally stored poster for the development-only embedded video fixture.",
+      "alt": "Khung hình video về Chùa Thanh Lương bên biển Phú Yên",
+      "original_width": 1280,
+      "original_height": 720,
+      "sha256": "c8c5c462797a59b7103c0b162bace7a92fdc5f41ca26963acf7e8aa5907b9108"
+    }
+  ],
+  "assignments": {
+    "featured": [
+      {
+        "source_id": "preview-2026-0001",
+        "asset_id": "photo-01"
+      },
+      {
+        "source_id": "preview-2026-0002",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-0003",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-0004",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-0005",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-0006",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-0007",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-0008",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-0009",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-0010",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-0011",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-0012",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-0013",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-0014",
+        "asset_id": "photo-06"
+      },
+      {
+        "source_id": "preview-2026-0015",
+        "asset_id": "photo-13"
+      },
+      {
+        "source_id": "preview-2026-0016",
+        "asset_id": "photo-05"
+      },
+      {
+        "source_id": "preview-2026-0017",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-0018",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-0019",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-0020",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-0021",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-0022",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-0023",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-0024",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-0025",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-0026",
+        "asset_id": null
+      },
+      {
+        "source_id": "preview-2026-0027",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-0028",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-0029",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-0030",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-0031",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-0032",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-0033",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-0034",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-0035",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-0036",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-0037",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-0038",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-0039",
+        "asset_id": "photo-06"
+      },
+      {
+        "source_id": "preview-2026-0040",
+        "asset_id": "photo-24"
+      }
+    ],
+    "inline_images": [
+      {
+        "source_id": "preview-2026-0001",
+        "asset_id": "photo-02",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-0002",
+        "asset_id": "photo-18",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-0007",
+        "asset_id": "photo-24",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-0012",
+        "asset_id": "photo-21",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-0018",
+        "asset_id": "photo-17",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-0023",
+        "asset_id": "photo-05",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-0033",
+        "asset_id": "photo-04",
+        "size": "large"
+      }
+    ],
+    "galleries": [
+      {
+        "source_id": "preview-2026-0023",
+        "asset_ids": [
+          "photo-04",
+          "photo-06"
+        ],
+        "columns": 2,
+        "size": "large"
+      }
+    ],
+    "video_posters": [
+      {
+        "source_id": "preview-2026-0008",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-0012",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-0019",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-0039",
+        "asset_id": "video-poster-0039"
+      }
+    ]
+  }
+}

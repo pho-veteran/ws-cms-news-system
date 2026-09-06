@@ -73,16 +73,6 @@ for id in $($WP post list --post_type=post --post_status=publish --field=ID --or
   echo "    photo story -> post $id"
 done
 
-echo "==> Seeding the perpetual-calendar note so the widget shows real lunar data..."
-lunar=$($WP post list --post_type=pgds_lunar_note --field=ID --posts_per_page=1)
-if [ -z "$lunar" ]; then
-  lunar=$($WP post create --post_type=pgds_lunar_note --post_status=publish \
-    --post_title="Lịch $(date +%d/%m/%Y)" --porcelain)
-fi
-$WP post meta update "$lunar" _pgds_lunar_day "16" >/dev/null
-$WP post meta update "$lunar" _pgds_lunar_sub "Tháng 7 Bính Ngọ" >/dev/null
-$WP post meta update "$lunar" _pgds_menh "Sơn đầu hỏa" >/dev/null
-$WP post meta update "$lunar" _pgds_gio "Dần (3h-5h), Thìn (7h-9h), Tỵ (9h-11h)" >/dev/null
 
 # Teachings are seeded WITH a body.
 #

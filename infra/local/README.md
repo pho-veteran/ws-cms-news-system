@@ -14,16 +14,46 @@ production uses Nginx FastCGI cache, see `infra/nginx/`.
 ```bash
 cd infra/local
 docker compose up -d                              # db + redis + wordpress (apache)
+./sync.sh                                         # copy repo files into the shared Docker volume
 
 # php -l across the theme and mu-plugins (catches syntax errors)
-docker compose run --rm wpcli /scripts/lint.sh
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/lint.sh'
 
-# install WP, activate the theme, seed categories, import sample data
-docker compose run --rm wpcli /scripts/setup.sh
+# install WP, activate the theme, seed canonical logo/lunar data, import sample data
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/setup.sh'
 ```
 
 Open http://localhost:8080 — the front page renders 11 blocks.
 Admin: http://localhost:8080/wp-admin (admin / admin123).
+
+## Development preview articles
+
+For a rich, reproducible article corpus, layer the development-only fixture bundle in
+[`tools/preview/`](../../tools/preview/) onto the canonical local setup. It contains 40
+synthetic Vietnamese articles, 21 checked-in licensed Wikimedia Commons photographs, and four local
+YouTube poster fixtures. The seed verifies every fixture checksum, imports the media into the Media
+Library, and assigns all article imagery through normal CMS fields.
+
+The bundle does not own the site's identity, header, footer, category setup, pages, menus,
+supporting post types, lunar/sidebar content, or homepage ordering. Those remain under `setup.sh`
+and normal WordPress administration. This is not production migration data and must never be
+deployed or imported into production.
+
+```bash
+cd infra/local
+docker compose up -d
+./sync.sh
+
+# Establish the original local site, then add the article fixtures.
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/setup.sh'
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/seed.sh'
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/verify.sh'
+```
+
+The article seed uses stable `preview-2026-` source IDs and stable Media Library asset keys. It
+never runs `wp pgds yt-sync` or contacts a remote media source. Re-run `./sync.sh` after changing
+files. To test content changes from an exact clean state, use `docker compose down -v`, start the
+stack again, and rerun the canonical setup before the preview article seed.
 
 ## Tear down
 
