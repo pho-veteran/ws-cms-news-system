@@ -12,6 +12,43 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Translate WordPress current-menu classes into the theme's nav state.
+ *
+ * The nav used to style `:first-child` as if it were active, which left
+ * "Trang chủ" highlighted on every archive. WordPress already knows which item
+ * matches the request, so read that instead of guessing from DOM position.
+ *
+ * @param array $classes Menu item classes from WordPress.
+ * @return array { class: string, current: bool }
+ */
+function pgds_nav_state_from_classes( $classes ) {
+	$exact = array( 'current-menu-item', 'current_page_item' );
+	foreach ( $exact as $needle ) {
+		if ( in_array( $needle, $classes, true ) ) {
+			return array(
+				'class'   => ' pgds-navitem--current',
+				'current' => true,
+			);
+		}
+	}
+
+	$ancestor = array( 'current-menu-parent', 'current-menu-ancestor', 'current_page_parent', 'current_page_ancestor' );
+	foreach ( $ancestor as $needle ) {
+		if ( in_array( $needle, $classes, true ) ) {
+			return array(
+				'class'   => ' pgds-navitem--current-ancestor',
+				'current' => false,
+			);
+		}
+	}
+
+	return array(
+		'class'   => '',
+		'current' => false,
+	);
+}
+
+/**
  * Walker for the main menu.
  */
 class PGDS_Nav_Walker extends Walker_Nav_Menu {
@@ -38,32 +75,26 @@ class PGDS_Nav_Walker extends Walker_Nav_Menu {
 		$output .= '</ul>';
 	}
 
-	/**
-	 * Open one item.
-	 *
-	 * @param string   $output Output.
-	 * @param WP_Post  $item   Item.
-	 * @param int      $depth  Depth.
-	 * @param stdClass $args   Args.
-	 * @param int      $id     ID.
-	 */
 	public function start_el( &$output, $item, $depth = 0, $args = null, $id = 0 ) {
-		$has_children = in_array( 'menu-item-has-children', (array) $item->classes, true );
+		$has_children     = in_array( 'menu-item-has-children', (array) $item->classes, true );
 		$this->current_id = $item->ID;
+		$state            = pgds_nav_state_from_classes( (array) $item->classes );
 
 		if ( 0 === $depth ) {
 			$output .= sprintf(
-				'<li class="pgds-navitem%s">',
-				$has_children ? ' pgds-navitem--parent' : ''
+				'<li class="pgds-navitem%s%s">',
+				$has_children ? ' pgds-navitem--parent' : '',
+				esc_attr( $state['class'] )
 			);
 			$output .= sprintf(
-				'<a class="pgds-navitem__link" href="%s"%s>%s</a>',
+				'<a class="pgds-navitem__link" href="%s"%s%s>%s</a>',
 				esc_url( $item->url ),
 				$has_children ? ' aria-haspopup="true"' : '',
+				$state['current'] ? ' aria-current="page"' : '',
 				esc_html( $item->title )
 			);
 			if ( $has_children ) {
-				$sid     = 'pgds-submenu-' . $item->ID;
+				$sid = 'pgds-submenu-' . $item->ID;
 				$output .= sprintf(
 					'<button class="pgds-navitem__disc" type="button" data-pgds="submenu-toggle" aria-expanded="false" aria-controls="%s"><span class="u-sr-only">%s</span>%s</button>',
 					esc_attr( $sid ),
@@ -74,10 +105,14 @@ class PGDS_Nav_Walker extends Walker_Nav_Menu {
 				);
 			}
 		} else {
-			$output .= '<li>';
 			$output .= sprintf(
-				'<a href="%s">%s</a>',
+				'<li class="pgds-dropdown__item%s">',
+				esc_attr( $state['class'] )
+			);
+			$output .= sprintf(
+				'<a class="pgds-dropdown__link" href="%s"%s>%s</a>',
 				esc_url( $item->url ),
+				$state['current'] ? ' aria-current="page"' : '',
 				esc_html( $item->title )
 			);
 		}
@@ -104,12 +139,18 @@ function pgds_nav_fallback( $args ) {
 	$menu_class = isset( $args['menu_class'] ) ? $args['menu_class'] : 'pgds-nav__list';
 	$menu_id    = isset( $args['menu_id'] ) ? $args['menu_id'] : 'pgds-primary-menu';
 
+	// The fallback has no menu items, so current state is derived from the request.
+	$queried      = is_category() ? get_queried_object() : null;
+	$current_slug = $queried instanceof WP_Term ? $queried->slug : '';
+
 	echo '<ul id="' . esc_attr( $menu_id ) . '" class="' . esc_attr( $menu_class ) . '">';
 
 	// Front page first.
 	printf(
-		'<li class="pgds-navitem"><a class="pgds-navitem__link" href="%s">%s</a></li>',
+		'<li class="pgds-navitem%s"><a class="pgds-navitem__link" href="%s"%s>%s</a></li>',
+		is_front_page() ? ' pgds-navitem--current' : '',
 		esc_url( home_url( '/' ) ),
+		is_front_page() ? ' aria-current="page"' : '',
 		esc_html__( 'Trang chủ', 'pgds' )
 	);
 
@@ -120,14 +161,27 @@ function pgds_nav_fallback( $args ) {
 		$url  = $term instanceof WP_Term ? get_term_link( $term ) : '#';
 		$has  = ! empty( $node['children'] );
 
+		$is_current  = $current_slug && $current_slug === $slug;
+		$is_ancestor = ! $is_current && $current_slug && $has
+			&& array_key_exists( $current_slug, (array) $node['children'] );
+
+		$state_class = '';
+		if ( $is_current ) {
+			$state_class = ' pgds-navitem--current';
+		} elseif ( $is_ancestor ) {
+			$state_class = ' pgds-navitem--current-ancestor';
+		}
+
 		printf(
-			'<li class="pgds-navitem%s">',
-			$has ? ' pgds-navitem--parent' : ''
+			'<li class="pgds-navitem%s%s">',
+			$has ? ' pgds-navitem--parent' : '',
+			esc_attr( $state_class )
 		);
 		printf(
-			'<a class="pgds-navitem__link" href="%s"%s>%s</a>',
+			'<a class="pgds-navitem__link" href="%s"%s%s>%s</a>',
 			esc_url( $url ),
 			$has ? ' aria-haspopup="true"' : '',
+			$is_current ? ' aria-current="page"' : '',
 			esc_html( $node['label'] )
 		);
 
@@ -143,7 +197,14 @@ function pgds_nav_fallback( $args ) {
 			foreach ( $node['children'] as $cslug => $clabel ) {
 				$cterm = get_term_by( 'slug', $cslug, 'category' );
 				$curl  = $cterm instanceof WP_Term ? get_term_link( $cterm ) : '#';
-				printf( '<li><a href="%s">%s</a></li>', esc_url( $curl ), esc_html( $clabel ) );
+				$child_current = $current_slug === $cslug;
+				printf(
+					'<li class="pgds-dropdown__item%s"><a class="pgds-dropdown__link" href="%s"%s>%s</a></li>',
+					$child_current ? ' pgds-navitem--current' : '',
+					esc_url( $curl ),
+					$child_current ? ' aria-current="page"' : '',
+					esc_html( $clabel )
+				);
 			}
 			echo '</ul>';
 		}

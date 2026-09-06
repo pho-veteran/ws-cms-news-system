@@ -45,27 +45,48 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</div>
 </header>
 
-<nav class="pgds-nav" aria-label="<?php esc_attr_e( 'Chuyên mục', 'pgds' ); ?>">
+<div class="pgds-nav-sentinel" data-pgds="nav-sentinel" aria-hidden="true"></div>
+
+<nav class="pgds-nav" aria-label="<?php esc_attr_e( 'Chuyên mục', 'pgds' ); ?>" data-pgds="primary-nav">
 	<div class="pgds-wrap pgds-nav__inner">
 		<button class="pgds-nav__toggle" type="button"
-			data-pgds="nav-toggle" aria-expanded="false" aria-controls="pgds-primary-menu">
-			<?php pgds_icon( 'menu', array( 'class' => 'pgds-nav__toggle-icon pgds-nav__toggle-icon--menu', 'size' => 18 ) ); ?>
-			<?php pgds_icon( 'close', array( 'class' => 'pgds-nav__toggle-icon pgds-nav__toggle-icon--close', 'size' => 18 ) ); ?>
+			data-pgds="nav-toggle" aria-expanded="false" aria-controls="pgds-primary-surface">
+			<?php pgds_icon( 'menu', array( 'class' => 'pgds-nav__toggle-icon', 'size' => 18 ) ); ?>
 			<span><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></span>
 		</button>
 
-		<?php
-		wp_nav_menu(
-			array(
-				'theme_location' => 'primary',
-				'container'      => false,
-				'menu_id'        => 'pgds-primary-menu',
-				'menu_class'     => 'pgds-nav__list',
-				'fallback_cb'    => 'pgds_nav_fallback',
-				'walker'         => new PGDS_Nav_Walker(),
-				'depth'          => 2,
-			)
-		);
-		?>
-	</div>
+		<div class="pgds-nav__surface" id="pgds-primary-surface" data-pgds="nav-surface">
+			<div class="pgds-nav__surface-head">
+				<strong id="pgds-nav-surface-title"><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></strong>
+				<button class="pgds-nav__close" type="button" data-pgds="nav-close">
+					<span class="u-sr-only"><?php esc_html_e( 'Đóng menu chuyên mục', 'pgds' ); ?></span>
+					<?php pgds_icon( 'close', array( 'size' => 20 ) ); ?>
+				</button>
+			</div>
+
+			<div class="pgds-nav__search">
+					<div class="pgds-nav__date"><?php echo esc_html( pgds_date_full_vi() ); ?></div>
+					<?php get_search_form(); ?>
+				</div>
+
+			<div class="pgds-nav__rail" data-pgds="nav-rail">
+				<?php
+				wp_nav_menu(
+					array(
+						'theme_location' => 'primary',
+						'container'      => false,
+						'menu_id'        => 'pgds-primary-menu',
+						'menu_class'     => 'pgds-nav__list',
+						'fallback_cb'    => 'pgds_nav_fallback',
+						'walker'         => new PGDS_Nav_Walker(),
+						'depth'          => 2,
+					)
+				);
+				?>
+			</div>
+		</div>
+
+		</div>
 </nav>
+
+<div class="pgds-nav-backdrop" data-pgds="nav-backdrop" aria-hidden="true"></div>

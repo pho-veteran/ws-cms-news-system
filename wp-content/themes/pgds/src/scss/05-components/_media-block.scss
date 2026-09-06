@@ -48,11 +48,15 @@
 }
 
 .pgds-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: $fs-3xs;
   color: var(--pgds-gilt-pale);
-  // Vertical padding is set so the control clears the 24px WCAG 2.2 target size
-  // minimum; the demo's 5px padding produced a 22px-tall tab.
-  padding: $sp-2 $sp-3;
+  // The comfortable target, not just the 24px WCAG floor: these are primary
+  // touch controls on the busiest block of the page.
+  min-block-size: $target-comfortable;
+  padding: 0 $sp-4;
   border-radius: $radius-pill;
   border: 1px solid var(--pgds-on-dark-25);
   background: none;
@@ -64,6 +68,10 @@
   &:hover {
     border-color: var(--pgds-gilt-light);
     color: var(--pgds-gilt-bright);
+  }
+
+  &:active {
+    transform: translateY(1px);
   }
 
   &[aria-selected='true'],

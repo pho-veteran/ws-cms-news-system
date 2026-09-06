@@ -8,7 +8,7 @@ export function initPhotoSlider(root = document) {
   if (!panel) return;
 
   const slides = Array.from(panel.querySelectorAll('.pgds-photo-panel__slide'));
-  const dots = Array.from(panel.querySelectorAll('.pgds-photo-panel__dots span'));
+  const dots = Array.from(panel.querySelectorAll('.pgds-photo-panel__dot'));
   if (slides.length < 2) return;
 
   let current = 0;
@@ -25,7 +25,16 @@ export function initPhotoSlider(root = document) {
     slides[current].removeAttribute('aria-hidden');
     slides[current].removeAttribute('tabindex');
 
-    dots.forEach((d, i) => d.classList.toggle('is-active', i === current));
+    dots.forEach((d, i) => {
+      const active = i === current;
+      d.classList.toggle('is-active', active);
+      // The dots are real buttons, so the selected one has to say so.
+      if (active) {
+        d.setAttribute('aria-current', 'true');
+      } else {
+        d.removeAttribute('aria-current');
+      }
+    });
   }
 
   dots.forEach((dot, i) => {
@@ -50,20 +59,34 @@ export function initPhotoSlider(root = document) {
 
   const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+  function stopTimer() {
+    clearInterval(timer);
+    timer = null;
+  }
+
   function startTimer() {
     if (mql.matches) return;
+    // Idempotent: hover/focus handlers used to be able to stack intervals, which
+    // made the panel advance several slides at once.
+    stopTimer();
     timer = setInterval(() => goTo(current + 1), 5000);
   }
 
   function resetTimer() {
-    clearInterval(timer);
     startTimer();
   }
 
-  panel.addEventListener('mouseenter', () => clearInterval(timer));
-  panel.addEventListener('mouseleave', () => startTimer());
-  panel.addEventListener('focusin', () => clearInterval(timer));
-  panel.addEventListener('focusout', () => startTimer());
+  panel.addEventListener('mouseenter', stopTimer);
+  panel.addEventListener('mouseleave', startTimer);
+  panel.addEventListener('focusin', stopTimer);
+  panel.addEventListener('focusout', (e) => {
+    // Moving focus between the panel's own dots must not restart the rotation.
+    if (panel.contains(e.relatedTarget)) return;
+    startTimer();
+  });
+
+  // Honour a preference switched on after load.
+  mql.addEventListener('change', () => (mql.matches ? stopTimer() : startTimer()));
 
   startTimer();
 }

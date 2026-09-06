@@ -2,14 +2,24 @@
  * Fetch the self-hosted .woff2 font files the theme expects in assets/fonts/.
  *
  * The theme self-hosts fonts (proposal §3.1.2) to remove a third-party origin and
- * control LCP. Google Fonts splits each family into per-subset files, so this
- * script requests the CSS with a browser User-Agent (which yields woff2), then
- * picks the file whose `unicode-range` covers Vietnamese for each family/weight.
+ * control LCP. Google Fonts splits each family into per-subset files, and there is
+ * no combined file to request: the `vietnamese` subset carries the precomposed
+ * Vietnamese vowels and the dong sign, while ordinary letters, digits, and
+ * punctuation live in `latin`. So every subset a Vietnamese news site renders has
+ * to be downloaded, and each has to be declared with its own `unicode-range`.
+ *
+ * Saving only the Vietnamese subset (as this script previously did) produces a
+ * font that has no glyph for "a": the browser silently falls back per character,
+ * so Latin text renders in a system face while diacritics come from the webfont,
+ * and the result looks broken in exactly the way a missing font does not.
+ *
+ * The emitted filenames are `<family>-<weight>-<subset>.woff2`, which is what the
+ * @font-face rules in src/scss/03-elements/_fonts.scss reference.
  *
  * Newsreader ships as a VARIABLE font: one file per subset spans the whole 400..700
  * axis, so the same URL is saved under both the 400 and 700 filenames the SCSS
  * references. That is intentional, not a copy/paste error -- the @font-face rules
- * in src/scss/03-elements/_fonts.scss declare static weights and each needs a file.
+ * declare static weights and each needs a file.
  *
  * Run: npm run fonts   (from wp-content/themes/pgds)
  */
@@ -31,10 +41,18 @@ const CSS_URL =
   '&family=Newsreader:opsz,wght@6..72,400;6..72,700' +
   '&display=swap';
 
-// The Vietnamese subset is identifiable by these codepoints, which appear in its
-// unicode-range and in no other Latin subset: U+1EA0..U+1EF9 (precomposed
-// Vietnamese vowels) and U+20AB (the dong sign).
-const VIETNAMESE_MARKERS = ['U+1EA0', 'U+20AB'];
+/*
+ * Subsets are identified by codepoints that appear in exactly one of them:
+ *   vietnamese  U+1EA0..U+1EF9 (precomposed vowels) and U+20AB (dong sign)
+ *   latin-ext   U+1E00..U+1E9F, without the Vietnamese markers
+ *   latin       U+0000..U+00FF (basic Latin: the letters, digits, punctuation)
+ * Order matters: the checks run most specific first.
+ */
+const SUBSETS = [
+  { name: 'vietnamese', match: (r) => r.includes('U+1EA0') || r.includes('U+20AB') },
+  { name: 'latin-ext', match: (r) => r.includes('U+1E00') },
+  { name: 'latin', match: (r) => r.includes('U+0000-00FF') },
+];
 
 /** Parse the Google Fonts CSS into { family, weight, unicodeRange, url } records. */
 function parseFaces(css) {
@@ -52,12 +70,8 @@ function parseFaces(css) {
   return faces;
 }
 
-function isVietnamese(face) {
-  return VIETNAMESE_MARKERS.some((m) => face.unicodeRange.includes(m));
-}
-
-/** Pick the Vietnamese-subset URL for one family/weight. */
-function pick(faces, family, weight) {
+/** Pick the URL for one family/weight/subset. */
+function pick(faces, family, weight, subset) {
   const forFamily = faces.filter((f) => f.family === family);
   if (forFamily.length === 0) {
     throw new Error(`No @font-face blocks found for "${family}".`);
@@ -69,20 +83,17 @@ function pick(faces, family, weight) {
   const exact = forFamily.filter((f) => f.weight === weight);
   const candidates = exact.length > 0 ? exact : forFamily;
 
-  const viet = candidates.find(isVietnamese);
-  if (viet) return { url: viet.url, subset: 'vietnamese' };
-
-  // No Vietnamese subset for this family: fall back to the widest Latin subset so
-  // the family still loads. Report it so the omission is visible, not silent.
-  return { url: candidates[0].url, subset: 'latin (no Vietnamese subset offered)' };
+  const rule = SUBSETS.find((s) => s.name === subset);
+  const hit = candidates.find((f) => rule.match(f.unicodeRange));
+  if (!hit) {
+    throw new Error(`"${family}" ${weight} offers no "${subset}" subset.`);
+  }
+  return hit.url;
 }
 
-const TARGETS = [
-  { file: 'be-vietnam-pro-400.woff2', family: 'Be Vietnam Pro', weight: 400 },
-  { file: 'be-vietnam-pro-600.woff2', family: 'Be Vietnam Pro', weight: 600 },
-  { file: 'be-vietnam-pro-700.woff2', family: 'Be Vietnam Pro', weight: 700 },
-  { file: 'newsreader-400.woff2', family: 'Newsreader', weight: 400 },
-  { file: 'newsreader-700.woff2', family: 'Newsreader', weight: 700 },
+const FAMILIES = [
+  { slug: 'be-vietnam-pro', family: 'Be Vietnam Pro', weights: [400, 600, 700] },
+  { slug: 'newsreader', family: 'Newsreader', weights: [400, 700] },
 ];
 
 const cssRes = await fetch(CSS_URL, { headers: { 'User-Agent': UA } });
@@ -97,26 +108,35 @@ if (faces.length === 0) {
 
 mkdirSync(FONT_DIR, { recursive: true });
 
-for (const target of TARGETS) {
-  const { url, subset } = pick(faces, target.family, target.weight);
-  const res = await fetch(url, { headers: { 'User-Agent': UA } });
-  if (!res.ok) {
-    throw new Error(`Download failed for ${target.file}: ${res.status} ${res.statusText}`);
-  }
-  const buf = Buffer.from(await res.arrayBuffer());
+let written = 0;
+for (const { slug, family, weights } of FAMILIES) {
+  for (const weight of weights) {
+    for (const { name: subset } of SUBSETS) {
+      const file = `${slug}-${weight}-${subset}.woff2`;
+      const url = pick(faces, family, weight, subset);
+      const res = await fetch(url, { headers: { 'User-Agent': UA } });
+      if (!res.ok) {
+        throw new Error(`Download failed for ${file}: ${res.status} ${res.statusText}`);
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
 
-  // Guard against saving an HTML error page under a .woff2 name. wOF2 files start
-  // with the ASCII signature "wOF2"; anything else means the response was not a font.
-  if (buf.subarray(0, 4).toString('latin1') !== 'wOF2') {
-    throw new Error(`${target.file} is not a woff2 file (bad signature). Aborting.`);
-  }
+      // Guard against saving an HTML error page under a .woff2 name. wOF2 files start
+      // with the ASCII signature "wOF2"; anything else means the response was not a font.
+      if (buf.subarray(0, 4).toString('latin1') !== 'wOF2') {
+        throw new Error(`${file} is not a woff2 file (bad signature). Aborting.`);
+      }
 
-  writeFileSync(join(FONT_DIR, target.file), buf);
-  const kb = (buf.length / 1024).toFixed(1);
-  console.log(`  ${target.file.padEnd(28)} ${String(kb).padStart(6)} KB  [${subset}]`);
+      writeFileSync(join(FONT_DIR, file), buf);
+      written++;
+      const kb = (buf.length / 1024).toFixed(1);
+      console.log(`  ${file.padEnd(36)} ${String(kb).padStart(6)} KB`);
+    }
+  }
 }
 
-console.log(`\n[pgds fonts] ${TARGETS.length} files written to assets/fonts/`);
-if (!existsSync(join(FONT_DIR, 'be-vietnam-pro-400.woff2'))) {
+console.log(`\n[pgds fonts] ${written} files written to assets/fonts/`);
+// The Latin subset is the one that renders ordinary text; its absence is the failure
+// mode that looks like a broken font rather than a missing one.
+if (!existsSync(join(FONT_DIR, 'be-vietnam-pro-400-latin.woff2'))) {
   throw new Error('Expected font files are missing after the run.');
 }

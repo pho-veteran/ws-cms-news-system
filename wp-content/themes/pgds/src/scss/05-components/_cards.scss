@@ -85,13 +85,48 @@
   gap: $sp-4;
   margin-top: $sp-5;
 
+  // Below md the three stories used to stack as three full-height cards, which
+  // pushed the rest of the front page far down the mobile scroll. They become a
+  // compact scan list instead: same three stories, less vertical cost. Scoped to
+  // this block so .pgds-grid-3 and the category cards keep their own treatment.
   @include mq-max(md) {
     grid-template-columns: 1fr;
+    gap: 0;
+    margin-top: $sp-4;
+
+    .pgds-card {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: $sp-3;
+      padding: $sp-3 0;
+      border-bottom: 1px solid var(--color-border);
+
+      &:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+    }
+
+    .pgds-card__media {
+      flex: none;
+      width: 104px;
+    }
+
+    .pgds-card .pgds-art {
+      margin-bottom: 0;
+    }
+
+    .pgds-card__title {
+      font-size: $fs-sm;
+      margin-bottom: $sp-1;
+    }
   }
 }
 
 // --- Shared card (grid3) -----------------------------------------------------
 .pgds-card {
+  // Also the containing block for the --bordered divider below.
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -101,12 +136,22 @@
   &__media {
     position: relative;
     display: block;
+    overflow: hidden;
+    border-radius: $radius-md;
   }
 
   .pgds-art {
     border-radius: $radius-md;
     margin-bottom: $sp-3;
     flex: none;
+    transition: transform $dur-base $ease-out;
+  }
+
+  // Feedback on the whole card, driven from either the media link or the title
+  // link, so pointer and keyboard users get the same response.
+  &:hover .pgds-art,
+  &:focus-within .pgds-art {
+    transform: scale(1.02);
   }
 
   &__title {
@@ -116,6 +161,15 @@
     margin-bottom: $sp-2;
     color: var(--color-text);
     @include line-clamp(2);
+
+    a {
+      transition: color $dur-fast $ease-out;
+    }
+  }
+
+  &:hover &__title a,
+  &:focus-within &__title a {
+    color: var(--color-brand);
   }
 
   &__sapo {
@@ -132,19 +186,31 @@
     margin-top: auto;
   }
 
-  // Variant in grid3: with divider
+  // Divider variant used in grid3.
+  //
+  // The rule is an absolutely positioned ::after sitting in the grid gap, which is
+  // what the approved mockup does (`.card:not(:last-child)::after` at
+  // `right:-11px`). It used to be `border-right` + `padding-right`, and that took
+  // 21px out of the content box of every card except the last one -- so the first
+  // two cards got a 230px-wide image and the third a 251px one. With a 16/10 ratio
+  // that made their images 144px tall against 157px, and the row looked uneven.
+  // A divider is decoration; it must not change how much width a card has.
   &--bordered {
-    border-right: 1px solid var(--color-border);
-    padding-right: $sp-5;
-
-    &:last-child {
-      border-right: 0;
-      padding-right: 0;
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      // Half the grid gap, so the rule is centred between the two columns.
+      right: calc(#{$sp-5} / -2);
+      width: 1px;
+      background: var(--color-border);
     }
 
     @include mq-max(lg) {
-      border-right: 0;
-      padding-right: 0;
+      &::after {
+        display: none;
+      }
     }
   }
 
@@ -256,14 +322,26 @@
     position: relative;
     display: flex;
     flex: 1;
+    // Without this the 629px-wide art frame could still push the flex item past
+    // the panel instead of being constrained by it.
+    min-width: 0;
 
     &.is-hidden {
       display: none;
     }
   }
 
+  // The slide stretches to fill the panel's remaining height, so `.pgds-art`'s
+  // aspect-ratio resolved the WRONG WAY: with a definite 393px height and an
+  // indefinite width, `aspect-ratio: 16/10` computed the WIDTH from the height
+  // (393 x 1.6 = 629px) inside a 320px panel. `overflow:hidden` then cropped the
+  // image and, because the caption is `left:0; right:0` against the slide, clipped
+  // the headline mid-word. Pinning the width and dropping the ratio here lets the
+  // frame follow the panel: the ratio class still governs every other use.
   .pgds-art {
     flex: 1;
+    width: 100%;
+    aspect-ratio: auto;
     min-height: 220px;
   }
 
@@ -283,21 +361,43 @@
   &__dots {
     display: flex;
     justify-content: center;
-    gap: $sp-2;
-    padding: $sp-3 0;
+    gap: $sp-1;
+    padding: $sp-1 0 $sp-2;
+  }
 
-    span {
+  // The visible mark stays a 6px dot; the button around it carries the target
+  // size, so the control is reachable by touch and keyboard without redrawing
+  // the panel's visual rhythm.
+  &__dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: $target-comfortable;
+    block-size: $target-min;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    &::before {
+      content: '';
       width: 6px;
       height: 6px;
       border-radius: $radius-full;
       background: var(--pgds-on-dark-35);
-      display: block;
+      // Colour only: animating the active dot's width would thrash layout for a
+      // 12px change nobody is watching.
+      transition: background-color $dur-fast $ease-out;
+    }
 
-      &.is-active {
-        background: var(--pgds-gilt-light);
-        width: 18px;
-        border-radius: 3px;
-      }
+    &:hover::before {
+      background: var(--pgds-gilt-pale);
+    }
+
+    &.is-active::before {
+      background: var(--pgds-gilt-light);
+      width: 18px;
+      border-radius: 3px;
     }
   }
 }

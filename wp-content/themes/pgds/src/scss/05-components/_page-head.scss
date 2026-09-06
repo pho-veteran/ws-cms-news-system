@@ -44,7 +44,7 @@
   }
 }
 
-// --- Child-category chips (category.php) --------------------------------------
+// --- Child-category chips (archive.php, search.php) --------------------------
 .pgds-subnav {
   display: flex;
   flex-wrap: wrap;
@@ -52,9 +52,13 @@
   margin-bottom: $sp-5;
 
   &__item {
+    display: inline-flex;
+    align-items: center;
     font-size: $fs-2xs;
-    // Clears the 24px WCAG 2.2 target minimum; the demo's 5px padding did not.
-    padding: $sp-2 $sp-3;
+    // The comfortable target rather than the bare 24px floor: these chips are a
+    // primary way readers move between sections on a phone.
+    min-block-size: $target-comfortable;
+    padding: 0 $sp-4;
     border: 1px solid var(--color-border);
     border-radius: $radius-pill;
     color: var(--color-brand);
@@ -64,6 +68,17 @@
     &:hover {
       background: var(--pgds-paper-deep);
       border-color: var(--color-accent);
+    }
+
+    &:active {
+      transform: translateY(1px);
+    }
+
+    &[aria-current='page'] {
+      background: var(--color-brand);
+      border-color: var(--color-brand);
+      color: var(--color-text-inverse);
+      font-weight: $fw-bold;
     }
   }
 }

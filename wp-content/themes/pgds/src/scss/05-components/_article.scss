@@ -176,23 +176,32 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 38px;
-    height: 38px;
+    min-width: $target-comfortable;
+    min-height: $target-comfortable;
     padding: 0 $sp-3;
     border: 1px solid var(--color-border);
     border-radius: $radius-sm;
     background: var(--color-bg-surface);
     font-size: $fs-xs;
     font-weight: $fw-medium;
+    transition: border-color $dur-fast $ease-out, background-color $dur-fast $ease-out;
 
+    // Core marks the current page with .current only, so the state carried colour
+    // alone. Weight plus the accent underline give it a second cue.
     &.current {
       background: var(--color-brand);
       color: var(--color-text-inverse);
       border-color: var(--color-brand);
+      font-weight: $fw-bold;
+      box-shadow: inset 0 -2px 0 var(--color-accent);
     }
 
     &:hover:not(.current) {
       border-color: var(--color-brand);
+    }
+
+    &:active:not(.current) {
+      transform: translateY(1px);
     }
   }
 }

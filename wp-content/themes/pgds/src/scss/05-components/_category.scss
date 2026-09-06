@@ -1,0 +1,227 @@
+// ============================================================================
+// 05-COMPONENTS / CATEGORY ARCHIVE
+// Section tabs, lead + supporting stories, ornament, and archive list treatment.
+// ============================================================================
+@use 'config' as *;
+
+.pgds-category {
+  &__head {
+    padding-top: $sp-5;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  &__tabs {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: $sp-3;
+    padding-bottom: 14px;
+  }
+
+  &__title,
+  &__parent {
+    margin: 0;
+    font-size: $fs-xl;
+    line-height: $lh-tight;
+    font-weight: $fw-bold;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: var(--color-brand-strong);
+  }
+
+  &__parent:hover,
+  &__child:hover {
+    color: var(--color-brand);
+  }
+
+  &__child {
+    margin: 0;
+    font-size: $fs-sm;
+    line-height: $lh-tight;
+    font-weight: $fw-semibold;
+    letter-spacing: .01em;
+    color: var(--color-text-meta);
+
+    &--current {
+      font-weight: $fw-bold;
+      color: var(--color-brand-strong);
+    }
+  }
+
+  &__separator {
+    font-size: $fs-sm;
+    color: var(--pgds-line-soft);
+  }
+
+  &__description {
+    max-width: 70ch;
+    padding: 0 0 $sp-4;
+    font-size: $fs-sm;
+    line-height: $lh-relax;
+    color: var(--color-text-muted);
+  }
+
+  &__ornament {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: $sp-7 0 $sp-6;
+    color: var(--color-accent);
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
+
+    .pgds-icon {
+      flex: none;
+    }
+  }
+
+  &__list {
+    .pgds-list__item {
+      gap: $sp-4;
+      padding: $sp-4 0;
+    }
+
+    .pgds-list__media {
+      width: 180px;
+    }
+
+    .pgds-art {
+      height: 110px;
+      aspect-ratio: auto;
+    }
+
+    .pgds-list__title {
+      font-size: 15.5px;
+      margin-bottom: 6px;
+    }
+
+    .pgds-list__meta {
+      display: none;
+    }
+
+    .pgds-list__sapo {
+      font-size: 12.8px;
+      line-height: $lh-relax;
+      color: var(--color-text-muted);
+    }
+  }
+
+  .pgds-pagination {
+    margin-top: 26px;
+
+    .page-numbers {
+      min-width: 34px;
+      height: 34px;
+      padding: 0 $sp-2;
+      border-radius: $radius-md;
+      font-weight: $fw-semibold;
+    }
+  }
+
+  @include mq-max(lg) {
+    &__list {
+      .pgds-list__item {
+        grid-template-columns: 1fr;
+      }
+
+      .pgds-list__media {
+        width: 100%;
+      }
+
+      .pgds-art {
+        height: 180px;
+      }
+    }
+  }
+}
+
+.pgds-category-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $sp-6;
+  align-items: stretch;
+  margin-bottom: $sp-2;
+
+  @include mq(lg) {
+    grid-template-columns: 1.3fr 1fr;
+  }
+
+  &__lead {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__lead-media,
+  &__card-media {
+    display: block;
+  }
+
+  &__lead-media .pgds-art {
+    margin-bottom: 14px;
+    border-radius: $radius-lg;
+  }
+
+  &__lead-title {
+    margin-bottom: $sp-2;
+    font-size: 22px;
+    line-height: 1.3;
+    font-weight: $fw-bold;
+    color: var(--color-brand-strong);
+    text-wrap: balance;
+  }
+
+  &__lead-sapo {
+    max-width: 70ch;
+    font-size: 13.5px;
+    line-height: $lh-loose;
+    color: var(--pgds-text-alt);
+  }
+
+  // A ratio rather than `height: 100%` on the media: the archive can hand the hero
+  // anywhere from one to four supporting cards, and a stretched card on a two-post
+  // child category blew a single thumbnail up to the full height of the lead.
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: $sp-4;
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__card-media {
+    display: block;
+  }
+
+  &__card-media .pgds-art {
+    aspect-ratio: 16 / 10;
+    height: auto;
+    margin-bottom: $sp-2;
+    border-radius: $radius-md;
+  }
+
+  &__card-title {
+    font-size: $fs-xs;
+    line-height: $lh-tight;
+    font-weight: $fw-bold;
+    color: var(--color-text);
+    @include line-clamp(2);
+  }
+
+  @include mq-max(sm) {
+    &__grid {
+      gap: $sp-3;
+    }
+  }
+}

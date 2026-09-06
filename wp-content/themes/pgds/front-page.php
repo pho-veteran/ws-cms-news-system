@@ -79,9 +79,26 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 						</a>
 					<?php endforeach; ?>
 				</div>
-				<div class="pgds-photo-panel__dots" aria-hidden="true">
+				<?php
+				/*
+				 * The dots were clickable <span>s inside an aria-hidden container: operable
+				 * with a mouse, invisible and unreachable for keyboard and screen-reader
+				 * users. They are real buttons now, with a named target and a full-size hit
+				 * area behind the small visual dot.
+				 */
+				?>
+				<div class="pgds-photo-panel__dots">
 					<?php foreach ( $B['photo'] as $i => $x ) : ?>
-						<span class="<?php echo 0 === $i ? 'is-active' : ''; ?>"></span>
+						<button class="pgds-photo-panel__dot<?php echo 0 === $i ? ' is-active' : ''; ?>"
+							type="button"
+							<?php echo 0 === $i ? 'aria-current="true"' : ''; ?>>
+							<span class="u-sr-only">
+								<?php
+								/* translators: %d: slide number in the photo panel. */
+								printf( esc_html__( 'Xem tin ảnh %d', 'pgds' ), (int) $i + 1 );
+								?>
+							</span>
+						</button>
 					<?php endforeach; ?>
 				</div>
 			</aside>
@@ -284,7 +301,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 									<?php pgds_art( $p, 'pgds-square', 'pgds-ratio-square' ); ?>
 								</a>
 								<div>
-									<h4><a href="<?php echo esc_url( get_permalink( $p ) ); ?>"><?php echo esc_html( get_the_title( $p ) ); ?></a></h4>
+									<h3><a href="<?php echo esc_url( get_permalink( $p ) ); ?>"><?php echo esc_html( get_the_title( $p ) ); ?></a></h3>
 									<div class="pgds-compact__meta"><?php echo esc_html( get_the_date( 'd/m/Y', $p ) ); ?></div>
 								</div>
 							</li>

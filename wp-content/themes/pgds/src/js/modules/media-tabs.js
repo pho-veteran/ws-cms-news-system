@@ -12,6 +12,9 @@ function activateTab(tabs, panels, index) {
     if (selected) tab.focus();
   });
   panels.forEach((panel, i) => {
+    // A tab whose aria-controls target is missing must not take the block down
+    // with it: skip the unresolved panel and leave its content as rendered.
+    if (!panel) return;
     panel.hidden = i !== index;
   });
 }

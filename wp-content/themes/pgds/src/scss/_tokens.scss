@@ -120,6 +120,16 @@ $sp-8:  32px;
 $sp-10: 40px;
 $sp-12: 48px;
 
+// ---------------------------------------------------------------------------
+// INTERACTIVE TARGET SIZE
+// $target-min is the WCAG 2.2 2.5.8 floor every control must clear.
+// $target-comfortable is the size primary touch controls use where the layout
+// allows it: search submit, submenu disclosure, media tabs, subnav pills,
+// pagination. Kept here so the number is not re-typed per component.
+// ---------------------------------------------------------------------------
+$target-min:         24px;
+$target-comfortable: 44px;
+
 // Layout
 $container-max: 1180px;
 $container-pad: 20px;

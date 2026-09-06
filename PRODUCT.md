@@ -1,79 +1,81 @@
-# PRODUCT.md — Phật giáo và Đời sống
+# Product — Phật giáo và Đời sống
 
-Durable product context for design work. Derived from the two proposals in
-`docs/initial_entries/` and the client's approved layout
-`Demo_layout_v12___Phật_giáo_và_Đời_sống.html`. Assumptions are labelled.
+<!-- impeccable:product-schema 1 -->
 
-## What it is
+## Platform
 
-A Vietnamese-language Buddhist news site — a **chuyên trang tin điện tử** covering
-Buddhist affairs, mindful living, heritage sites, media, and community good works.
-Structurally it is a mainstream news portal in the VnExpress mould: a dense
-multi-block front page, category archives, and article pages. Editorially it is
-narrower and slower than general news — the subject is a religious and cultural
-tradition, not the day's events.
+web
 
-Platform: WordPress 6.x classic theme (`pgds`), PHP 8.3, MariaDB, Redis object cache,
-Nginx FastCGI page cache. No FSE, no page builder, no parent theme.
+## Users
 
-## Who it serves
+- **Readers:** Vietnamese-speaking lay Buddhists and culturally interested general readers across a wide age range. They are *assumed* to be predominantly mobile visitors, often reading on mid-range Android devices over mobile data. Some read short updates; others read long-form features.
+- **Editors:** A small newsroom using WordPress administration to publish news, select the front-page lead, mark photo stories, and attach one canonical video per post. They need published edits to appear immediately for anonymous readers.
 
-- **Readers** — Vietnamese-speaking lay Buddhists and culturally interested general
-  readers, spanning a wide age range. Mobile-majority traffic, often on mid-range
-  Android over mobile data. Many read in short sessions; some read long features.
-- **Editors** — a small newsroom publishing through the WordPress admin. They set the
-  front-page lead, mark photo stories, and attach one canonical video per post. They
-  need edits to appear immediately, which the cache design guarantees.
+The reading context is frequently a bright mobile screen in daylight or indoors. Body text must remain comfortable at 200% zoom.
 
-The reading scene matters for design decisions: a bright screen in daylight, a warm
-paper-toned palette, and body text that survives 200% zoom.
+## Product Purpose
 
-## Scale and lifetime
+Phật giáo và Đời sống is a Vietnamese-language Buddhist electronic news publication covering Buddhist affairs, mindful living, heritage sites, media, and community good works.
 
-- 2,000 migrated posts at launch; 25–40 GB of media.
-- ~300k page views/month expected (≈0.12 req/s average, 5–10 req/s peak).
-- **Ephemeral: maximum 6 months.** There is a scheduled decommission date and a
-  mandatory export-before-destroy exit plan. This shapes what is worth building —
-  precise cache purging, HA, and media offload are all deliberately deferred.
-- Infrastructure budget: ~USD 85 gross for the whole lifetime.
+It exists to make these subjects accessible through a coherent news experience. Reader success is finding, understanding, and continuing to read relevant coverage; editorial success is publishing and correcting material without stale public pages.
 
-## What matters most
+## Positioning
 
-1. **Editorial changes are visible immediately** to anonymous readers. Solved by
-   explicit cache purges, not short TTLs.
-2. **Reading is the product.** Article typography, measure, and hierarchy outrank
-   decoration.
-3. **No layout shift.** Every image frame reserves its aspect ratio; the logo and
-   content images declare dimensions.
-4. **Accessible by keyboard and screen reader.** One `<main>` and one contextually
-   correct `<h1>` per page; dropdowns, mobile nav, and media tabs manage focus and
-   expose ARIA state.
-5. **Vietnamese renders correctly** — including diacritics in the display face, and
-   Vietnamese weekday and month names regardless of the WordPress locale.
+The product uses the familiar density and scanability of a Vietnamese general-news portal while concentrating on Buddhist and cultural life rather than the daily general-news cycle. The article-reading experience is the product’s primary value, not a secondary destination behind decorative presentation.
 
-## Constraints that bind design
+## Operating Context
 
-- **The client's layout is approved and pinned.** Its block order, widgets, and colour
-  tokens are given. Fonts and finer craft decisions are ours to choose.
-- Four breakpoints: 480, 768, 880, 1180px. Container max 1180px.
-- Colour is CSS custom properties (runtime themeable); spacing, type, radius, and
-  breakpoints are SCSS variables. Components must not hard-code either.
-- Vanilla ES2020, three JS modules only. No framework, no `@wordpress/*` packages.
-- Vietnamese appears only in reader-facing copy. All code, comments, and docs are
-  English.
+- A dense, multi-block front page directs readers to category archives and article pages.
+- Editors work through a WordPress 6.x classic-theme workflow.
+- Content includes text articles, photography, photo stories, and posts with one canonical YouTube video.
+- Production runs on AWS Lightsail with Nginx FastCGI page caching and a Redis object cache.
+- The launch includes approximately 2,000 migrated posts and 25–40 GB of media, with an expected volume of roughly 300,000 page views per month.
+- The service has a planned maximum lifetime of six months and requires export before decommissioning. Deliberately deferred infrastructure includes high availability and media offload.
 
-## Deliberately out of scope at launch
+## Capabilities and Constraints
 
-Dedicated `author.php`, `single-video.php`, `single-longform.php`, per-category
-templates, contact form, view counter, search suggestions, reading progress, share
-buttons, photo-panel slider, and a news sitemap. These are RUN-phase commitments, not
-silent drops.
+- The repository contains a WordPress classic theme named `pgds`; it has no full-site editing, parent theme, ACF, page builder, or WordPress core checkout.
+- The theme uses token-first ITCSS SCSS and vanilla ES2020 JavaScript. It must not add a JavaScript framework or `@wordpress/*` package.
+- Runtime colour values are CSS custom properties. Spacing, type, radii, and breakpoints are SCSS variables; components must use the established tokens rather than hard-coded replacements.
+- Required responsive breakpoints are 480px, 768px, 880px, and 1180px; the maximum content container is 1180px.
+- Every image frame reserves its aspect ratio to avoid layout shift.
+- A post can have only one canonical video, stored in `_pgds_youtube_id`. Video embeds use a click-to-load `youtube-nocookie.com` facade; unavailable videos are hidden and omitted from schema.
+- Scheduled YouTube metadata requests must batch at most 50 IDs and preserve stored metadata when the API returns empty values.
+- Content imports are idempotent through `_pgds_source_id`; a dry run with more than 2% errors must not proceed.
+- Published content changes purge the origin FastCGI cache through the cache-flush mu-plugin. The edge does not cache HTML.
+- All technical documentation, source code, comments, and developer-facing output must be English. Vietnamese is reserved for reader-facing copy and content.
+- Production domain selection remains undecided. SES and Cloudflare configuration currently use a placeholder pending that decision.
 
-## Assumptions
+## Brand Commitments
 
-- *Assumed:* traffic is mobile-majority. The proposals do not state a device split;
-  this follows from the Vietnamese consumer-news market.
-- *Assumed:* the reading scene is daylight/indoor on a bright screen, which is why the
-  palette stays light rather than offering a dark theme.
-- *Not yet decided by the client:* the production domain. SES and Cloudflare are
-  configured against a placeholder until one exists.
+- The publication’s name is **Phật giáo và Đời sống**.
+- The client-approved layout is binding: preserve its block order, widgets, and colour-token structure.
+- Vietnamese language rendering, including correct diacritics and localized weekday and month names, is mandatory.
+- The approved reference layouts are available in `docs/expected_design/` and the original proposal and approved demo are available in `docs/initial_entries/`.
+
+## Evidence on Hand
+
+- Product and implementation proposal: `docs/initial_entries/PROPOSAL_01_WEB_WORDPRESS.md`
+- Infrastructure and cost proposal: `docs/initial_entries/PROPOSAL_02_AWS_INFRA_COST.md`
+- Approved expected-layout references: `docs/expected_design/`
+- Operational procedures: `RUNBOOK.md`
+- Editorial training material: `docs/EDITOR_TRAINING.md`
+- Existing product and design records: `PRODUCT.md` and `DESIGN.md`
+
+Do not invent testimonials, readership claims beyond the stated estimate, editorial endorsements, external partnerships, or other proof not present in these materials.
+
+## Product Principles
+
+1. **Reading comes first.** Typography, hierarchy, and a stable article flow outrank decoration.
+2. **Editorial truth reaches readers quickly.** Corrections and updates must invalidate origin-cached pages reliably.
+3. **Respect the approved editorial structure.** Preserve the client’s information architecture and only refine within its documented constraints.
+4. **Make every route usable inclusively.** Vietnamese text, responsive behavior, keyboard access, and assistive-technology semantics are product requirements.
+5. **Fit the project’s finite lifetime.** Prefer maintainable, proportionate solutions over infrastructure and features that do not serve the scheduled six-month operation.
+
+## Accessibility & Inclusion
+
+- Meet the project’s documented keyboard and screen-reader requirements: one `<main>` and one contextually correct `<h1>` per route; managed focus and ARIA state for navigation and media tabs; and a visible focus indicator.
+- Interactive targets must meet the WCAG 2.2 24×24 CSS-pixel minimum.
+- Include a functional, labeled search form and a keyboard-accessible skip link.
+- Ensure Vietnamese language text and diacritics render correctly in all selected fonts.
+- Preserve accessible contrast and make body reading viable at 200% zoom.

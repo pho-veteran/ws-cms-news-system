@@ -34,11 +34,14 @@
   align-items: center;
   justify-content: space-between;
   gap: $sp-6;
-  padding: $sp-4 0;
+  // padding-block, not the shorthand: the shorthand also reset the inline padding
+  // this element inherits from .pgds-wrap, so the masthead ran edge-to-edge and
+  // the search field touched the right edge of the viewport on a phone.
+  padding-block: $sp-4;
 
   @include mq-max(sm) {
     gap: $sp-3;
-    padding: $sp-3 0;
+    padding-block: $sp-3;
   }
 }
 
@@ -69,6 +72,8 @@
   align-items: center;
   gap: $sp-5;
   margin-left: auto;
+
+  @include mq-max(lg) { display: none; }
 }
 
 .pgds-header__date {
@@ -83,13 +88,19 @@
 }
 
 // --- Search box --------------------------------------------------------------
+// Geometry follows the approved mockup: 4px radius, 210px wide, compact padding,
+// magnifier on the leading edge. The mockup has no submit control at all, but the
+// form needs one that is actually operable (searchform.php, proposal §2.3), so the
+// button is sized to the project's contractual 24px floor rather than the 44px
+// comfort target -- 44px forced the field to 46px tall and squeezed the
+// placeholder, which broke the approved composition.
 .pgds-search {
   display: flex;
   align-items: center;
   background: var(--pgds-white);
   border: 1px solid var(--pgds-line-soft);
-  border-radius: 20px;
-  padding: 7px 16px;
+  border-radius: $radius-sm;
+  padding: 4px 6px 4px $sp-3;
   width: 210px;
   transition: border-color $dur-base $ease-out, box-shadow $dur-base $ease-out;
 
@@ -104,13 +115,21 @@
     flex: none;
   }
 
-  &__input {
+  // input[type='search'] in the forms layer outranks a single class, so the
+  // selector has to match it to drop the 8px vertical padding the shell already
+  // provides -- otherwise the field renders 46px tall against the mockup's ~33px.
+  &__input[type='search'] {
     border: 0;
     outline: none;
     background: transparent;
     font-size: $fs-xs;
     width: 100%;
     padding: 0;
+    line-height: $lh-tight;
+    min-width: 0;
+    // On a phone the field shares its row with the masthead, so the placeholder
+    // can run out of room. Ellipsis is a cleaner truncation than a clipped glyph.
+    text-overflow: ellipsis;
 
     &:focus-visible {
       outline: none;
@@ -122,43 +141,59 @@
     }
   }
 
-  // Visually hidden but accessible for keyboard/screen-reader users.
+  // The mockup shows no submit control, but the form needs one that keyboard and
+  // screen-reader users can actually operate. It is sized to the project's 24px
+  // contractual floor so it fits inside the approved field geometry.
   &__submit {
-    @include visually-hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: $target-min;
+    block-size: $target-min;
+    padding: 0;
+    border: 0;
+    border-radius: $radius-xs;
+    background: none;
+    color: var(--color-brand);
+    cursor: pointer;
+    transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out;
+
+    &:hover {
+      background: var(--color-bg);
+      color: var(--color-brand-strong);
+    }
+
+    &:active {
+      transform: translateY(1px);
+    }
   }
 
   @include mq-max(md) {
-    width: 160px;
+    width: 190px;
   }
 
+  // Below sm the masthead and the field share one row, so a fixed width would
+  // squeeze the input down to a couple of characters. It takes the remaining row
+  // space instead.
   @include mq-max(sm) {
-    width: 120px;
-    padding: 6px 12px;
+    width: auto;
+    flex: 1;
+    min-width: 0;
   }
 
   &--block {
     width: 100%;
     max-width: 520px;
-    padding: $sp-2 $sp-3;
+    padding: $sp-2 $sp-2 $sp-2 $sp-3;
     border-radius: $radius-sm;
 
+    // The in-page form has room, so its submit takes the comfortable target.
     .pgds-search__submit {
-      position: static;
-      width: 24px;
-      height: 24px;
-      clip: auto;
-      clip-path: none;
-      overflow: visible;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex: none;
+      inline-size: $target-comfortable;
+      block-size: $target-comfortable;
       margin-left: $sp-1;
-      padding: 0;
-      border: 0;
-      background: none;
-      color: var(--color-brand);
-      cursor: pointer;
+      border-radius: $radius-sm;
     }
 
     @include mq-max(md) {
@@ -168,60 +203,231 @@
 }
 
 // --- Nav ---------------------------------------------------------------------
+.pgds-nav-sentinel {
+  block-size: 1px;
+  margin-block-end: -1px;
+  pointer-events: none;
+}
+
 .pgds-nav {
-  background: var(--color-brand);
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: $z-nav;
+  background: var(--color-brand);
+  transition: box-shadow $dur-base $ease-out;
+
+  &.is-stuck { box-shadow: $shadow-md; }
 
   &__inner {
+    position: relative;
     display: flex;
+    min-width: 0;
+    padding-inline: $container-pad;
+  }
+
+  &__toggle,
+  &__close {
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    &:focus-visible {
+      @include focus-ring;
+      outline-color: var(--pgds-gilt-bright);
+      outline-offset: -2px;
+    }
   }
 
   &__toggle {
     display: none;
-    color: var(--color-text-inverse);
-    padding: $sp-3 $sp-4;
-    font-size: $fs-sm;
-    font-weight: $fw-medium;
-    align-items: center;
+    min-block-size: $target-comfortable;
+    padding: $sp-2 $sp-5;
     gap: $sp-2;
-    background: none;
-    border: 0;
-    cursor: pointer;
+    color: var(--color-text-inverse);
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out;
 
-    @include mq-max(lg) {
-      display: inline-flex;
-    }
+    &:hover,
+    &:active { background: var(--pgds-on-dark-22); }
+  }
 
-    // Swap the menu glyph for a close glyph from the button's own ARIA state, so
-    // the icon can never disagree with what the button reports to assistive tech.
-    &-icon--close {
-      display: none;
-    }
+  &__surface {
+    min-width: 0;
+    flex: 1;
+  }
 
-    &[aria-expanded='true'] {
-      .pgds-nav__toggle-icon--menu {
-        display: none;
-      }
+  &__surface-head,
+  &__search { display: none; }
 
-      .pgds-nav__toggle-icon--close {
-        display: block;
-      }
-    }
+  &__rail {
+    position: relative;
+    min-width: 0;
   }
 
   &__list {
     display: flex;
+    min-width: max-content;
+  }
 
-    @include mq-max(lg) {
-      display: none;
-      flex-direction: column;
-      width: 100%;
+  @include mq(lg) {
+    &__rail {
+      overflow: visible;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
 
-      &.is-open {
-        display: flex;
+      &::-webkit-scrollbar { display: none; }
+
+      &::after {
+        content: '';
+        position: sticky;
+        right: 0;
+        float: right;
+        inline-size: $sp-8;
+        block-size: $target-comfortable;
+        margin-block-start: calc(#{$target-comfortable} * -1);
+        background: linear-gradient(90deg, transparent, var(--color-brand));
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity $dur-fast $ease-out;
       }
     }
+
+    &.has-rail-overflow &__rail {
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    &.has-rail-overflow &__rail::after { opacity: 1; }
+  }
+
+  @include mq-max(lg) {
+    &__inner { padding-inline: 0; }
+
+    &__toggle {
+      display: inline-flex;
+      width: 100%;
+    }
+
+    &__surface {
+      position: fixed;
+      z-index: calc(#{$z-nav} + 2);
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(100%, 420px);
+      display: flex;
+      flex-direction: column;
+      visibility: hidden;
+      opacity: 0;
+      transform: translateX(24px);
+      background: var(--color-bg-surface);
+      box-shadow: $shadow-lg;
+      transition: visibility 0s $dur-base, opacity $dur-base $ease-out,
+        transform $dur-base $ease-out;
+    }
+
+    &.is-menu-open &__surface {
+      visibility: visible;
+      opacity: 1;
+      transform: translateX(0);
+      transition-delay: 0s;
+    }
+
+    &__surface-head {
+      display: flex;
+      flex: none;
+      align-items: center;
+      justify-content: space-between;
+      min-block-size: 56px;
+      padding: $sp-2 $sp-5;
+      color: var(--color-brand-strong);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    &__surface-head strong {
+      font-size: $fs-md;
+      font-weight: $fw-bold;
+    }
+
+    &__close {
+      display: inline-flex;
+      inline-size: $target-comfortable;
+      block-size: $target-comfortable;
+      color: var(--color-brand-strong);
+      border-radius: $radius-sm;
+
+      &:hover { background: var(--color-bg); }
+
+      &:focus-visible {
+        outline-color: var(--color-accent);
+        outline-offset: -2px;
+      }
+    }
+
+    &__search {
+      display: grid;
+      flex: none;
+      gap: $sp-2;
+      padding: $sp-4 $sp-5 $sp-2;
+    }
+
+    &__date {
+      color: var(--pgds-moss);
+      font-size: $fs-xs;
+      font-weight: $fw-medium;
+      line-height: $lh-normal;
+    }
+
+    &__search .pgds-search {
+      width: 100%;
+      min-height: $target-comfortable;
+    }
+
+    &__rail {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: $sp-2 $sp-5 calc(#{$sp-8} + env(safe-area-inset-bottom));
+      scrollbar-color: var(--color-border) transparent;
+    }
+
+    &__list {
+      display: block;
+      min-width: 0;
+    }
+
+  }
+}
+
+.pgds-nav-backdrop {
+  position: fixed;
+  z-index: calc(#{$z-nav} - 1);
+  inset: 0;
+  visibility: hidden;
+  opacity: 0;
+  background: var(--pgds-shadow-flat);
+  cursor: pointer;
+  transition: visibility 0s $dur-base, opacity $dur-base $ease-out;
+
+  &.is-open {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
+  }
+
+  @include mq-max(sm) { display: none; }
+}
+
+body.pgds-nav-open { overflow: hidden; }
+
+@keyframes pgds-nav-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
   }
 }
 
@@ -230,80 +436,170 @@
 
   &__link {
     display: block;
-    padding: 13px $sp-5;
+    min-block-size: $target-comfortable;
+    padding: 13px $sp-3;
     color: var(--color-text-inverse);
     font-size: $fs-sm;
     font-weight: $fw-medium;
+    line-height: $lh-snug;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out,
+      border-color $dur-fast $ease-out;
   }
 
-  &:first-child &__link {
-    color: var(--pgds-gilt-light);
+  &--current > &__link,
+  &__link[aria-current='page'] {
+    color: var(--pgds-gilt-bright);
     font-weight: $fw-bold;
+    border-bottom-color: var(--pgds-gilt-bright);
   }
+
+  &--current-ancestor > &__link { color: var(--pgds-gilt-bright); }
 
   &__disc {
     display: none;
-    background: none;
+    padding: 0;
     border: 0;
-    padding: 0 $sp-2;
+    background: none;
     color: var(--color-text-inverse);
     cursor: pointer;
 
-    @include mq-max(lg) {
-      display: inline-flex;
-      align-items: center;
+    &:focus-visible {
+      @include focus-ring;
+      outline-color: var(--pgds-gilt-bright);
+      outline-offset: -2px;
     }
   }
 
-  &__disc-icon {
-    color: var(--color-text-inverse);
+  &__disc-icon { transition: transform $dur-fast $ease-out; }
+
+  &__disc[aria-expanded='true'] &__disc-icon { transform: rotate(180deg); }
+
+  @include mq(lg) {
+    &:hover > .pgds-navitem__link,
+    &:focus-within > .pgds-navitem__link {
+      background: var(--color-brand-strong);
+      color: var(--color-text-inverse);
+    }
   }
 
-  &:hover > &__link,
-  &:focus-within > &__link {
-    background: var(--color-brand-strong);
-    color: var(--color-text-inverse);
+  @include mq-max(lg) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 54px;
+    border-bottom: 1px solid var(--color-border-soft);
+
+    &__link {
+      flex: 1;
+      min-width: 0;
+      min-block-size: 54px;
+      padding: $sp-4 0;
+      color: var(--color-brand-strong);
+      white-space: normal;
+      border-bottom: 0 !important;
+    }
+
+    &--current > &__link,
+    &__link[aria-current='page'] {
+      position: relative;
+      padding-left: $sp-5;
+      color: var(--color-brand);
+      background: var(--pgds-gilt-pale);
+      border-radius: $radius-sm;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: $sp-2;
+        top: 50%;
+        inline-size: 5px;
+        block-size: 5px;
+        border-radius: $radius-full;
+        background: currentColor;
+        transform: translateY(-50%);
+      }
+    }
+
+    &--current-ancestor > &__link { color: var(--color-brand); }
+
+    &__disc {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: $target-comfortable;
+      block-size: $target-comfortable;
+      color: var(--color-brand-strong);
+      border-radius: $radius-sm;
+
+      &:hover { background: var(--color-bg); }
+
+      &:focus-visible { outline-color: var(--color-accent); }
+    }
   }
 }
 
-// Dropdown
 .pgds-dropdown {
   display: none;
   position: absolute;
   top: 100%;
   left: 0;
   min-width: 190px;
+  padding: $sp-2 0;
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-top: 3px solid var(--color-accent);
   box-shadow: $shadow-dropdown;
-  padding: $sp-2 0;
 
   .pgds-navitem:hover &,
   .pgds-navitem:focus-within &,
-  &.is-open {
-    display: block;
-  }
+  &.is-open { display: block; }
 
+  &__link,
   a {
     display: block;
-    padding: 9px 18px;
-    font-size: $fs-xs;
+    padding: 9px $sp-5;
     color: var(--color-text);
+    font-size: $fs-xs;
 
-    &:hover {
-      background: var(--color-bg);
+    &:hover,
+    &:focus-visible {
       color: var(--color-brand);
+      background: var(--color-bg);
     }
+  }
+
+  &__link[aria-current='page'],
+  a[aria-current='page'] {
+    color: var(--color-brand);
+    font-weight: $fw-bold;
   }
 
   @include mq-max(lg) {
     position: static;
+    flex-basis: 100%;
+    width: 100%;
+    padding: 0 0 $sp-2 $sp-4;
     border: 0;
     box-shadow: none;
-    padding-left: $sp-5;
-    background: var(--color-brand-strong);
+    background: transparent;
 
-    a { color: var(--color-text-inverse); }
+    &__item,
+    li { border-top: 1px solid var(--color-border-soft); }
+
+    &__link,
+    a {
+      min-block-size: 52px;
+      padding: 15px $sp-3;
+      color: var(--color-text);
+      font-size: $fs-sm;
+    }
+
+    &__link[aria-current='page'],
+    a[aria-current='page'] {
+      color: var(--color-brand);
+      background: var(--pgds-gilt-pale);
+    }
   }
 }

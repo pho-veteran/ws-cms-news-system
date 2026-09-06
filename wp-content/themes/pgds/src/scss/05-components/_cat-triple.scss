@@ -125,7 +125,10 @@
     flex: none;
   }
 
-  h4 {
+  // The row title is an h3: it sits directly under the section's h2, and the h4 it
+  // used to be skipped a level, which is the one heading-order failure Lighthouse
+  // reported on the front page.
+  h3 {
     font-size: 13.5px;
     font-weight: $fw-semibold;
     color: var(--color-text);

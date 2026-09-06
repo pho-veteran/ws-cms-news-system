@@ -80,13 +80,23 @@ function pgds_enqueue_assets() {
 add_action( 'wp_enqueue_scripts', 'pgds_enqueue_assets' );
 
 /**
- * Preload 2 critical fonts + preconnect (self-hosted, so it's same-origin only).
+ * Preload the critical fonts + preconnect (self-hosted, so it's same-origin only).
  * Font files live in assets/fonts/. If a file is missing, the browser will just skip the preload.
+ *
+ * Both the latin and vietnamese subsets of a weight are preloaded: Vietnamese body
+ * copy needs both files for a single sentence, so preloading one still leaves the
+ * other on the critical path.
+ *
+ * Newsreader was preloaded here until the display token moved to Be Vietnam Pro
+ * (d5df95b, matching the approved mockups), which left a font fetched at high
+ * priority on every request and used by nothing.
  */
 function pgds_preload_fonts() {
 	$fonts = array(
-		'/assets/fonts/be-vietnam-pro-400.woff2',
-		'/assets/fonts/newsreader-700.woff2',
+		'/assets/fonts/be-vietnam-pro-400-latin.woff2',
+		'/assets/fonts/be-vietnam-pro-400-vietnamese.woff2',
+		'/assets/fonts/be-vietnam-pro-700-latin.woff2',
+		'/assets/fonts/be-vietnam-pro-700-vietnamese.woff2',
 	);
 	foreach ( $fonts as $f ) {
 		$abs = PGDS_DIR . $f;

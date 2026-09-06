@@ -1,6 +1,6 @@
 <?php
 /**
- * Category archive: lead + 3-grid + list, pagination, sidebar.
+ * Category archive: section navigation, featured stories, list, pagination, sidebar.
  *
  * @package pgds
  */
@@ -11,110 +11,143 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 get_header();
 
-$term = get_queried_object();
-pgds_breadcrumb();
-?>
-<main id="pgds-main" class="pgds-wrap" role="main">
+$term       = get_queried_object();
+$is_paged   = is_paged();
+$children   = array();
+$parent     = null;
+$hero_posts = array();
+$list_posts = array();
 
-	<div class="pgds-page-head">
-		<h1><?php single_term_title(); ?></h1>
-	</div>
-	<?php if ( term_description() ) : ?>
-		<div class="pgds-page-head__desc"><?php echo wp_kses_post( term_description() ); ?></div>
-	<?php endif; ?>
+if ( $term instanceof WP_Term ) {
+	$parent = $term->parent ? get_term( $term->parent, 'category' ) : $term;
+	if ( is_wp_error( $parent ) ) {
+		$parent = $term;
+	}
 
-	<?php
-	// Sub-nav for child categories (if any).
 	$children = get_terms(
 		array(
 			'taxonomy'   => 'category',
-			'parent'     => $term->term_id,
+			'parent'     => $parent->term_id,
 			'hide_empty' => false,
 		)
 	);
-	if ( ! is_wp_error( $children ) && $children ) :
-		?>
-		<nav class="pgds-subnav" aria-label="<?php esc_attr_e( 'Chuyên mục con', 'pgds' ); ?>">
-			<?php foreach ( $children as $c ) : ?>
-				<a href="<?php echo esc_url( get_term_link( $c ) ); ?>"
-					class="pgds-subnav__item">
-					<?php echo esc_html( $c->name ); ?>
-				</a>
-			<?php endforeach; ?>
+	if ( is_wp_error( $children ) ) {
+		$children = array();
+	}
+}
+
+if ( have_posts() ) {
+	$archive_posts = $wp_query->posts;
+	if ( $is_paged ) {
+		$list_posts = $archive_posts;
+	} else {
+		$hero_posts = array_slice( $archive_posts, 0, 5 );
+		$list_posts = array_slice( $archive_posts, 5 );
+	}
+}
+
+pgds_breadcrumb();
+?>
+<main id="pgds-main" class="pgds-wrap pgds-category" role="main">
+	<header class="pgds-category__head">
+		<nav class="pgds-category__tabs" aria-label="<?php esc_attr_e( 'Chuyên mục con', 'pgds' ); ?>">
+			<?php if ( $parent instanceof WP_Term ) : ?>
+				<?php if ( $term->term_id === $parent->term_id ) : ?>
+					<h1 class="pgds-category__title"><?php echo esc_html( $parent->name ); ?></h1>
+				<?php else : ?>
+					<a class="pgds-category__parent" href="<?php echo esc_url( get_term_link( $parent ) ); ?>"><?php echo esc_html( $parent->name ); ?></a>
+				<?php endif; ?>
+
+				<?php foreach ( $children as $child ) : ?>
+					<span class="pgds-category__separator" aria-hidden="true">/</span>
+					<?php if ( $term->term_id === $child->term_id ) : ?>
+						<h1 class="pgds-category__child pgds-category__child--current"><?php echo esc_html( $child->name ); ?></h1>
+					<?php else : ?>
+						<a class="pgds-category__child" href="<?php echo esc_url( get_term_link( $child ) ); ?>"><?php echo esc_html( $child->name ); ?></a>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			<?php else : ?>
+				<h1 class="pgds-category__title"><?php single_term_title(); ?></h1>
+			<?php endif; ?>
 		</nav>
+
+		<?php if ( term_description() ) : ?>
+			<div class="pgds-category__description"><?php echo wp_kses_post( term_description() ); ?></div>
+		<?php endif; ?>
+	</header>
+
+	<?php if ( $hero_posts ) : ?>
+		<section class="pgds-category-hero" aria-label="<?php esc_attr_e( 'Bài viết nổi bật', 'pgds' ); ?>">
+			<?php
+			$lead     = $hero_posts[0];
+			$lead_url = get_permalink( $lead );
+			?>
+			<article class="pgds-category-hero__lead">
+				<a class="pgds-category-hero__lead-media" href="<?php echo esc_url( $lead_url ); ?>" tabindex="-1" aria-hidden="true">
+					<?php pgds_art( $lead, 'pgds-lead', 'pgds-ratio-video', true ); ?>
+				</a>
+				<h2 class="pgds-category-hero__lead-title">
+					<a href="<?php echo esc_url( $lead_url ); ?>"><?php echo esc_html( get_the_title( $lead ) ); ?></a>
+				</h2>
+				<p class="pgds-category-hero__lead-sapo"><?php echo esc_html( wp_trim_words( pgds_sapo( $lead ), 45 ) ); ?></p>
+			</article>
+
+			<?php if ( count( $hero_posts ) > 1 ) : ?>
+				<div class="pgds-category-hero__grid">
+					<?php foreach ( array_slice( $hero_posts, 1 ) as $hero_post ) : ?>
+						<?php $post_url = get_permalink( $hero_post ); ?>
+						<article class="pgds-category-hero__card">
+							<a class="pgds-category-hero__card-media" href="<?php echo esc_url( $post_url ); ?>" tabindex="-1" aria-hidden="true">
+								<?php pgds_art( $hero_post, 'pgds-card', 'pgds-ratio-card' ); ?>
+							</a>
+							<h3 class="pgds-category-hero__card-title">
+								<a href="<?php echo esc_url( $post_url ); ?>"><?php echo esc_html( get_the_title( $hero_post ) ); ?></a>
+							</h3>
+						</article>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+
+		<div class="pgds-category__ornament" aria-hidden="true">
+			<?php pgds_icon( 'sprout', array( 'size' => 22 ) ); ?>
+		</div>
 	<?php endif; ?>
 
 	<div class="pgds-content-grid">
-		<div>
-			<?php if ( have_posts() ) : ?>
-				<?php
-				/*
-				 * Layout: post 1 is a horizontal lead, posts 2-4 are a 3-up grid, the rest
-				 * are a list. Each wrapper is opened LAZILY, when a post that belongs in it
-				 * actually arrives, and closed from the same flag afterwards.
-				 *
-				 * The previous version opened the list wrapper as soon as post 4 rendered,
-				 * but only closed it when `$idx >= 5`. A category holding exactly FOUR posts
-				 * therefore emitted an unclosed <div>: measured on a purpose-built 4-post
-				 * category, <main> contained 39 opening and 38 closing div tags. Browsers
-				 * repair it, but the repair nests the pagination and the sidebar inside the
-				 * list, and it is invalid markup on a route that §13 requires to "render
-				 * correctly". 1-, 2- and 3-post categories were fine, which is why it
-				 * survived: the fixtures had no category in the 3-5 range.
-				 */
-				$idx       = 0;
-				$grid_open = false;
-				$list_open = false;
-				while ( have_posts() ) :
-					the_post();
-					$idx++;
-
-					if ( 1 === $idx ) {
-						// First post: horizontal lead.
-						get_template_part( 'template-parts/card-lead', null, array( 'post' => get_post(), 'eager' => true ) );
-					} elseif ( $idx <= 4 ) {
-						// Posts 2-4: 3-up grid.
-						if ( ! $grid_open ) {
-							echo '<div class="pgds-grid-3 pgds-grid-3--spaced">';
-							$grid_open = true;
-						}
-						get_template_part( 'template-parts/card-secondary', null, array( 'post' => get_post(), 'variant' => 'full', 'bordered' => true ) );
-					} else {
-						// Post 5 onwards: list. Closing the grid here rather than at post 4
-						// means the grid is closed exactly once, whatever the post count.
-						if ( $grid_open ) {
-							echo '</div>';
-							$grid_open = false;
-						}
-						if ( ! $list_open ) {
-							echo '<div class="pgds-list">';
-							$list_open = true;
-						}
-						get_template_part( 'template-parts/list-item', null, array( 'post' => get_post() ) );
-					}
-				endwhile;
-
-				if ( $grid_open ) {
-					echo '</div>';
-				}
-				if ( $list_open ) {
-					echo '</div>'; // close .pgds-list
-				}
-				?>
-
-				<?php
-				the_posts_pagination(
-					array(
-						'mid_size'  => 1,
-						'prev_text' => pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ) . __( 'Trước', 'pgds' ),
-						'next_text' => __( 'Sau', 'pgds' ) . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
-						'class'     => 'pgds-pagination',
-					)
-				);
-				?>
-			<?php else : ?>
-				<p><?php esc_html_e( 'Chưa có bài viết trong chuyên mục này.', 'pgds' ); ?></p>
+		<div class="pgds-category__archive">
+			<?php if ( $list_posts ) : ?>
+				<div class="pgds-list pgds-category__list">
+					<?php foreach ( $list_posts as $list_post ) : ?>
+						<?php get_template_part( 'template-parts/list-item', null, array( 'post' => $list_post ) ); ?>
+					<?php endforeach; ?>
+				</div>
+			<?php elseif ( ! $hero_posts ) : ?>
+				<section class="pgds-empty" aria-labelledby="pgds-category-empty-title">
+					<h2 class="pgds-empty__title" id="pgds-category-empty-title"><?php esc_html_e( 'Chuyên mục đang được cập nhật', 'pgds' ); ?></h2>
+					<p class="pgds-empty__body"><?php esc_html_e( 'Chưa có bài viết trong chuyên mục này. Mời bạn quay lại trang chủ để đọc những nội dung mới nhất.', 'pgds' ); ?></p>
+					<ul class="pgds-empty__links">
+						<li><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Về trang chủ', 'pgds' ); ?></a></li>
+					</ul>
+				</section>
 			<?php endif; ?>
+
+			<?php
+			/*
+			 * Pagination sits OUTSIDE the list branch. The hero consumes up to five posts, so a
+			 * site whose posts_per_page is five or lower leaves $list_posts empty on page 1 while
+			 * the category still spans several pages — nesting the call inside the list branch
+			 * would strand readers on page 1 with no way forward.
+			 */
+			the_posts_pagination(
+				array(
+					'mid_size'  => 1,
+					'prev_text' => pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ) . __( 'Trước', 'pgds' ),
+					'next_text' => __( 'Sau', 'pgds' ) . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
+					'class'     => 'pgds-pagination',
+				)
+			);
+			?>
 		</div>
 
 		<?php get_sidebar(); ?>

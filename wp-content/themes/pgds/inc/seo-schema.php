@@ -12,6 +12,45 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Fallback <meta name="description"> - ONLY when no SEO plugin owns it.
+ *
+ * Same division of labour as pgds_schema_article(): if an SEO plugin is active it
+ * emits the description and the theme must stay out of the way, because two
+ * description tags on one page is worse than none. With no plugin installed the
+ * category archives shipped without any description at all, which is the one SEO
+ * failure the audit of /category/song-an-lanh/ reported.
+ *
+ * The term description is author-entered and may contain markup, so it is stripped
+ * to plain text, trimmed to a search-snippet length, and escaped as an attribute.
+ */
+function pgds_meta_description() {
+	if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_PLUGIN_VERSION' ) ) {
+		return;
+	}
+
+	$text = '';
+
+	if ( is_category() || is_tax() || is_tag() ) {
+		$text = term_description();
+	} elseif ( is_singular( 'post' ) ) {
+		$text = pgds_sapo( get_queried_object_id() );
+	} elseif ( is_front_page() || is_home() ) {
+		$text = get_bloginfo( 'description' );
+	}
+
+	$text = trim( wp_strip_all_tags( (string) $text, true ) );
+	if ( '' === $text ) {
+		return;
+	}
+
+	printf(
+		'<meta name="description" content="%s">' . "\n",
+		esc_attr( wp_trim_words( $text, 30, '' ) )
+	);
+}
+add_action( 'wp_head', 'pgds_meta_description', 5 );
+
+/**
  * NewsMediaOrganization - site-wide, printed in <head>.
  */
 function pgds_schema_organization() {
