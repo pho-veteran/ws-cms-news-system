@@ -12,10 +12,6 @@ pgds_deploy_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... github-actions
 # so an apply cannot silently expose port 22. Use your own address with /32.
 ssh_admin_cidrs = ["203.0.113.10/32"]
 
-# From the bootstrap stack's outputs.
-backup_bucket_name = "pgds-backup-<account_id>"
-backup_bucket_arn  = "arn:aws:s3:::pgds-backup-<account_id>"
-
 # Budget alerts at $50 and $85 (Proposal 02 §8.4).
 budget_notification_emails = ["ops@example.com"]
 

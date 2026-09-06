@@ -2,6 +2,15 @@
 
 > ## ⚠ This is the design record, not a description of production
 >
+> ## Supersession notice — 2026-09-06
+> All application-backup, backup-bucket, backup-IAM/access-key, snapshot/DLM, restore/recovery,
+> schedule, teardown, and backup-cost design sections in this historical proposal are **not
+> implemented**. They are retained only as historical design material and must not be followed as
+> production instructions. Production intentionally has **no application backup or recovery
+> point**: the running EC2 origin and its attached root volume are the only application copy.
+> Loss or corruption is unrecoverable and requires rebuilding and reseeding. Current operational
+> documentation is `RUNBOOK.md`, `docs/ARCHITECTURE.md`, and `infra/terraform/README.md`.
+>
 > Written before the build. Several decisions below did **not** survive contact with the
 > account — most importantly the compute platform, which changes the cost model. The body
 > is preserved unedited because the reasoning is still what justifies the architecture; do

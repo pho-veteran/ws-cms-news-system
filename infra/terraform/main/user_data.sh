@@ -182,20 +182,9 @@ dpkg-reconfigure -f noninteractive unattended-upgrades
 # ---------------------------------------------------------------------------
 # 10. Scheduled jobs (/etc/cron.d/pgds).
 #
-# This file previously existed ONLY on the running origin, hand-created after
-# provisioning. RUNBOOK §7 documented the schedules as if they were part of the build,
-# but nothing in the repository created them — so rebuilding the instance from this
-# script silently produced a host with no database backups (§6.1), no RAM/disk
-# monitoring (§7), and no WP-Cron driver. The backups are the serious one: their absence
-# is invisible until a restore is attempted.
-#
-# Written unconditionally here so the schedule is a property of the build. The scripts
-# themselves are deployed separately (rsync from infra/scripts/, see RUNBOOK §7); cron
-# tolerates a missing target with a log line rather than failing, and the alternative —
-# no schedule at all — is worse.
-#
-# Times are deliberately off-the-hour and staggered: the 2 GB origin cannot absorb a
-# database dump, an image-processing sync and a traffic spike at once (§4.1).
+# This file previously existed only on the running origin, hand-created after
+# provisioning. Writing it here makes health monitoring and WP-Cron properties of every
+# replacement host. The health script is deployed separately from infra/scripts/.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # 10. Restricted application deployment boundary.
@@ -238,19 +227,14 @@ visudo -cf /etc/sudoers.d/pgds-deploy-release
 visudo -cf /etc/sudoers
 
 # ---------------------------------------------------------------------------
-# 11. System cron — backup, health alerting, and WP-Cron.
+# 11. System cron — health alerting and WP-Cron.
 # ---------------------------------------------------------------------------
 install -d -m 0755 /etc/cron.d
 cat > /etc/cron.d/pgds <<'CRON'
 SHELL=/bin/bash
-# /snap/bin is REQUIRED: the AWS CLI is installed from snap, and cron's default PATH
-# omits it. Without it pgds-db-backup.sh dumps fine and then fails at the upload with
-# "aws: command not found", and pgds-health-alert.sh detects alerts it cannot send.
+# /snap/bin is required because the AWS CLI used for SES alerts is installed from snap.
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin
 MAILTO=root
-
-# Database backup -> S3, twice daily (§6.1).
-17 3,15 * * * root /usr/local/sbin/pgds-db-backup.sh >/dev/null 2>&1
 
 # RAM / disk / swap thresholds + service liveness (§7). Replaces the CloudWatch agent.
 */10 * * * * root /usr/local/sbin/pgds-health-alert.sh >/dev/null 2>&1

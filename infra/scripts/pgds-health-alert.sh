@@ -2,17 +2,16 @@
 #
 # RAM / disk / swap threshold alerting (Proposal 02 §7).
 #
-# Why a cron script instead of CloudWatch: RAM and disk are NOT built-in Lightsail
-# metrics, so they would need the CloudWatch agent plus custom metrics. §7 costs that
-# out at ~$24 over six months — 28% of the budget, more than the entire backup spend —
-# to watch two numbers. This does the same job for ~$0 via SES.
+# Why a cron script instead of CloudWatch: RAM and disk are not built-in Lightsail
+# metrics, so they would need the CloudWatch agent plus custom metrics. This performs
+# the same checks without custom metric charges.
 #
 # What CloudWatch/Lightsail alarms still own (free, already configured): CPU
 # utilisation, burst capacity, and the status check. This script covers only the gaps.
 #
 # Install (as root on the origin):
 #   install -m 0750 pgds-health-alert.sh /usr/local/sbin/
-#   # reuses /root/.pgds-backup.env for credentials, plus PGDS_ALERT_TO / PGDS_ALERT_FROM
+#   # reads SES credentials plus PGDS_ALERT_TO / PGDS_ALERT_FROM from /root/.pgds-ses.env
 #   */10 * * * * /usr/local/sbin/pgds-health-alert.sh
 #
 # Thresholds are derived from §4.1's budget: the stack should sit at ~1.17GB of 2GB,
@@ -22,18 +21,10 @@
 
 set -uo pipefail
 
-# Same snap PATH trap as pgds-db-backup.sh: `aws sesv2 send-email` is unreachable under
-# cron's default PATH because the CLI lives in /snap/bin, so every alert would be
-# detected correctly and then silently fail to send.
+# `aws sesv2 send-email` is unreachable under cron's default PATH because the CLI
+# lives in /snap/bin, so every alert would be detected and then fail to send.
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
-ENV_FILE=/root/.pgds-backup.env
-# §10.2 requires the SES credentials be SEPARATE from the backup credentials, and they are:
-# pgds-backup is PutObject-only, pgds-ses is send-only. This script previously read only
-# the backup env file, so `aws sesv2 send-email` ran as pgds-backup and failed with
-#   AccessDeniedException: User .../pgds-backup is not authorized to perform ses:SendEmail
-# while the alert itself was detected correctly. Sourced AFTER the backup file so the SES
-# keys win for this process, leaving the backup keys untouched for pgds-db-backup.sh.
 SES_ENV_FILE=/root/.pgds-ses.env
 STATE_DIR=/var/lib/pgds
 LOG_TAG=pgds-health
@@ -50,14 +41,6 @@ log() { logger -t "$LOG_TAG" -- "$*"; }
 
 mkdir -p "$STATE_DIR"
 
-if [ -r "$ENV_FILE" ]; then
-  # shellcheck disable=SC1090
-  set -a; . "$ENV_FILE"; set +a
-fi
-# Sourced SECOND so the send-only SES keys override the PutObject-only backup keys for
-# this process. Without it the send ran as pgds-backup and AWS refused it — see the
-# comment on SES_ENV_FILE. The backup script keeps reading ENV_FILE alone, so the two
-# credentials stay separate on disk as §10.2 requires.
 if [ -r "$SES_ENV_FILE" ]; then
   # shellcheck disable=SC1090
   set -a; . "$SES_ENV_FILE"; set +a

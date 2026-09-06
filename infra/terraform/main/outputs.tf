@@ -23,7 +23,7 @@ output "compute_backend" {
 }
 
 output "ec2_instance_id" {
-  description = "EC2 instance ID, or null when running on Lightsail. Needed for snapshot/AMI operations and the §6.3 restore test."
+  description = "EC2 instance ID, or null when running on Lightsail. Used for direct instance administration."
   value       = length(aws_instance.app) > 0 ? aws_instance.app[0].id : null
 }
 
@@ -34,17 +34,6 @@ output "ssh_command" {
     ) : (
     length(aws_eip.app) > 0 ? "ssh -i ~/.ssh/${var.key_pair_name}.pem ubuntu@${aws_eip.app[0].public_ip}" : null
   )
-}
-
-output "backup_access_key_id" {
-  description = "Access key ID for the pgds-backup IAM user (PutObject only, no delete)."
-  value       = aws_iam_access_key.backup.id
-}
-
-output "backup_secret_access_key" {
-  description = "Secret access key for the pgds-backup IAM user. Store under /root on the instance, mode 600 (§10.2)."
-  value       = aws_iam_access_key.backup.secret
-  sensitive   = true
 }
 
 output "ses_access_key_id" {

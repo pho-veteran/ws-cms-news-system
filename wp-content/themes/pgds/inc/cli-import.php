@@ -220,9 +220,9 @@ class PGDS_CLI_Command {
 		 *
 		 * Unbounded is defensible when a human types the command and watches it; unattended
 		 * at 03:40 it is not. The first run after the §9 import faces ~2,000 posters to
-		 * fetch, each a download_url() + media_handle_sideload(), on a 2 GB origin, while
-		 * pgds-db-backup.sh runs from `17 3 * * *`. An OOM kill there is invisible: nobody
-		 * reads the output, and the only symptom is durations that quietly stop updating.
+		 * fetch, each a download_url() + media_handle_sideload(), on a 2 GB origin. An OOM
+		 * kill is invisible: nobody reads the output, and the only symptom is durations that
+		 * quietly stop updating.
 		 *
 		 * 0 = no limit, preserving the previous behaviour for an operator running it by hand.
 		 */

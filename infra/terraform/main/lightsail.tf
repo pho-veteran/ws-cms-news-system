@@ -1,8 +1,6 @@
 /**
  * Lightsail compute: the single instance, its static IP, and the firewall
- * (public ports). Snapshots are intentionally NOT managed here — Proposal
- * 02 §9.2 flags snapshots-in-Terraform as a perpetual-drift source; they are
- * created by a cron job on the instance instead (§6.1).
+ * (public ports). The instance has no automated snapshot add-on.
  *
  * This is the PREFERRED backend (§2: nothing is cheaper at this load). Every
  * resource is gated on `var.compute_backend == "lightsail"` because this account
@@ -29,7 +27,7 @@ resource "aws_lightsail_instance" "app" {
 
   add_on {
     type          = "AutoSnapshot"
-    status        = "Disabled" # snapshots are cron-driven on the instance, not Lightsail's own AutoSnapshot add-on (§6.1, §9.2)
+    status        = "Disabled" # No Lightsail snapshots are retained.
     snapshot_time = "06:00"
   }
 }

@@ -146,22 +146,6 @@ variable "cloudflare_ipv6_cidrs" {
   ]
 }
 
-variable "backup_bucket_name" {
-  description = "Name of the S3 backup bucket created by the bootstrap stack (its `backup_bucket_name` output)."
-  type        = string
-}
-
-variable "backup_bucket_arn" {
-  description = "ARN of the S3 backup bucket created by the bootstrap stack (its `backup_bucket_arn` output)."
-  type        = string
-}
-
-variable "backup_object_prefix" {
-  description = "Key prefix within the backup bucket that the backup IAM user may write to, e.g. \"db-dumps/*\"."
-  type        = string
-  default     = "db-dumps/*"
-}
-
 variable "domain_name" {
   description = "Production domain name, e.g. \"phatgiaovadoisong.example\". Leave \"\" (default) until a real domain is chosen — SES domain identity + DKIM resources are skipped entirely while this is empty, so a placeholder domain never creates broken/unverifiable identities."
   type        = string

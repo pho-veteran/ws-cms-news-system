@@ -151,7 +151,7 @@ resource "aws_vpc_security_group_ingress_rule" "ssh_admin" {
 }
 
 # Egress is unrestricted: the instance must reach apt, WordPress core updates, the
-# YouTube Data API, S3 for backups, and SES.
+# YouTube Data API, WordPress updates, and SES.
 resource "aws_vpc_security_group_egress_rule" "all_v4" {
   count             = local.ec2_instances
   security_group_id = aws_security_group.app[0].id
@@ -187,9 +187,8 @@ resource "aws_instance" "app" {
     volume_type = "gp3"
     encrypted   = true
 
-    # The disk holds the WordPress media library (25-40 GB per §4.2). Deleting it on
-    # instance termination would take the media with it; the snapshot cron (§6.1) is
-    # the intended recovery path, but keeping the volume avoids a one-keystroke loss.
+    # The disk holds the WordPress database and media library. It is the only application
+    # copy, so preserve it if the instance is terminated.
     delete_on_termination = false
   }
 
@@ -197,12 +196,8 @@ resource "aws_instance" "app" {
     http_tokens = "required" # IMDSv2 only: blocks SSRF-based credential theft.
   }
 
-  # IMPORTANT: Lightsail has no instance role, so §10.2 accepts static IAM keys on
-  # disk as a known weakness. EC2 does support instance roles, but they are
-  # deliberately NOT used here — the backup and SES credentials are consumed by
-  # scripts written for the Lightsail path, and swapping them for a role would mean
-  # rewriting that layer for a fallback we hope to abandon. The keys stay under /root
-  # mode 600 exactly as §10.2 prescribes. Revisit if EC2 becomes permanent.
+  # IMPORTANT: the SES health-alert user uses a static key stored under /root with mode
+  # 600, matching the Lightsail-compatible credential model accepted in §10.2.
 
   tags = {
     Name    = var.instance_name
