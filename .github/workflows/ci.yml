@@ -33,6 +33,7 @@ jobs:
               wp-content/themes/pgds \
               wp-content/plugins/pgds-lunar-calendar \
               wp-content/mu-plugins \
+              tools/tests \
               -type f -name '*.php' -print0
           )
           [ "${#php_files[@]}" -gt 0 ] || {
@@ -76,12 +77,37 @@ jobs:
         working-directory: wp-content/themes/pgds
         run: npm run lint:js
 
+  test-cms-editor:
+    name: Test CMS editor workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Boot WordPress and run isolated editor checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd infra/local
+          docker compose up -d
+          ./sync.sh
+          docker compose run --rm wpcli /var/www/html/.pgds-scripts/setup.sh
+          docker compose run --rm wpcli /var/www/html/.pgds-tools/tests/cms-editor-regression.sh
+
+      - name: Remove test containers and volumes
+        if: always()
+        shell: bash
+        run: |
+          cd infra/local
+          docker compose down --volumes --remove-orphans
+
   build:
     name: Build theme assets
     needs:
       - lint-php
       - lint-js
       - test-release-deploy
+      - test-cms-editor
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository

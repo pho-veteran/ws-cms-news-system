@@ -152,12 +152,12 @@ function pgds_admin_editor_hints( $hook ) {
 	if ( ! $screen || 'post' !== $screen->post_type ) {
 		return;
 	}
-	// Classic editor already shows the box in the sidebar; nothing to fix there.
+	// The classic editor renders normal-context boxes directly; only the block editor needs drawer hints.
 	if ( method_exists( $screen, 'is_block_editor' ) && ! $screen->is_block_editor() ) {
 		return;
 	}
 
-	$label = __( 'Thông tin PGDS — sa-pô, tin nổi bật, video', 'pgds' );
+	$label = __( 'Nội dung và hiển thị PGDS', 'pgds' );
 	?>
 	<style>
 		/* Give the drawer handle the weight of a real section heading: by default it
@@ -171,17 +171,52 @@ function pgds_admin_editor_hints( $hook ) {
 		#pgds_article_meta > .postbox-header > h2 {
 			font-weight: 600;
 		}
-		/* The fields are 100%-width inputs in a wide drawer; cap the measure so they
-		   do not stretch to 1400px and lose their association with the label. */
+		/* Keep labels, controls, and their helper text visually associated in the wide drawer. */
 		#pgds_article_meta .pgds-metabox {
-			max-width: 520px;
+			max-width: 680px;
 		}
-		/* THE ACTUAL FIX. Clicking the drawer toggle sets aria-expanded="true" but the
-		   drawer still rendered at ~0px, because the block editor persists the drawer
-		   HEIGHT in its own state, separately from the expanded attribute. Measured:
-		   drawerExpanded "true", boxVisible false, fieldsReachable 0 of 8. Giving the
-		   expanded area a real min-height is what makes the eight fields reachable.
-		   The editor still drags the handle to resize; this only sets the floor. */
+		#pgds_article_meta .pgds-metabox__group {
+			border: 1px solid #dcdcde;
+			margin: 0 0 16px;
+			padding: 12px 16px 4px;
+		}
+		#pgds_article_meta .pgds-metabox__group legend {
+			font-size: 14px;
+			font-weight: 600;
+			padding: 0 6px;
+		}
+		#pgds_article_meta .pgds-metabox__group-help {
+			color: #50575e;
+			margin: 0 0 14px;
+		}
+		#pgds_article_meta .pgds-metabox__field {
+			margin: 0 0 14px;
+		}
+		#pgds_article_meta .pgds-metabox__label {
+			display: block;
+			font-weight: 600;
+			margin-bottom: 5px;
+		}
+		#pgds_article_meta .pgds-metabox__choice {
+			display: inline-block;
+			margin-bottom: 2px;
+		}
+		#pgds_article_meta .pgds-metabox__readonly {
+			display: block;
+			padding: 4px 0;
+		}
+		#pgds_article_meta .notice.inline {
+			margin: 0 0 12px;
+		}
+		#pgds_article_meta .pgds-metabox__save-feedback {
+			scroll-margin-top: 32px;
+		}
+		#pgds_article_meta .pgds-metabox__feature-rank-state {
+			margin-top: 5px;
+		}
+		/* The block editor persists the drawer height separately from its expanded
+		   attribute. Give the expanded area a floor so every field remains reachable;
+		   editors can still drag the handle to resize it. */
 		.edit-post-layout__metaboxes:not(:empty),
 		.edit-post-meta-boxes-area,
 		.editor-meta-boxes-area {
@@ -193,7 +228,129 @@ function pgds_admin_editor_hints( $hook ) {
 	( function () {
 		'use strict';
 		var KEY = 'pgdsMetaDrawerOpened';
+		var BRIDGE_KEY = 'pgdsMetaFeedbackBridgeInstalled';
 		var tries = 0;
+		var bridgeTries = 0;
+
+		function urlMatches( first, second ) {
+			if ( ! first || ! second ) {
+				return false;
+			}
+
+			try {
+				return new URL( first, window.location.href ).href === new URL( second, window.location.href ).href;
+			} catch ( e ) {
+				return false;
+			}
+		}
+
+		function mirrorFeedback( markup ) {
+			var metaBox = document.getElementById( 'pgds_article_meta' );
+			if ( ! metaBox ) {
+				return;
+			}
+
+			var host = metaBox.querySelector( '.inside' ) || metaBox;
+			var template = document.createElement( 'template' );
+			template.innerHTML = markup;
+			var feedback = template.content.querySelectorAll( '.pgds-meta-feedback' );
+			var existing = host.querySelectorAll( '.pgds-meta-feedback' );
+			var i;
+
+			for ( i = 0; i < existing.length; i++ ) {
+				existing[ i ].remove();
+			}
+
+			if ( ! feedback.length ) {
+				return;
+			}
+
+			var fragment = document.createDocumentFragment();
+			for ( i = 0; i < feedback.length; i++ ) {
+				fragment.appendChild( feedback[ i ].cloneNode( true ) );
+			}
+
+			var firstNotice = host.querySelector( '.notice' );
+			host.insertBefore( fragment, firstNotice || host.firstChild );
+			var notice = host.querySelector( '.pgds-meta-feedback' );
+			if ( notice ) {
+				notice.classList.add( 'pgds-metabox__save-feedback' );
+				notice.setAttribute( 'role', 'alert' );
+				notice.setAttribute( 'tabindex', '-1' );
+				metaBox.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+				notice.focus( { preventScroll: true } );
+			}
+		}
+
+		function installFeedbackBridge() {
+			if ( window[ BRIDGE_KEY ] ) {
+				return;
+			}
+
+			if ( ! window.wp || ! window.wp.apiFetch || 'function' !== typeof window.wp.apiFetch.use ) {
+				bridgeTries++;
+				if ( bridgeTries < 40 ) {
+					window.setTimeout( installFeedbackBridge, 250 );
+				}
+				return;
+			}
+
+			window[ BRIDGE_KEY ] = true;
+			window.wp.apiFetch.use( function ( options, next ) {
+				var result = next( options );
+				var isMetaBoxUpdate =
+					'POST' === String( options.method || 'GET' ).toUpperCase() &&
+					urlMatches( options.url, window._wpMetaBoxUrl );
+
+				if ( ! isMetaBoxUpdate || ! result || 'function' !== typeof result.then ) {
+					return result;
+				}
+
+				return result.then( function ( response ) {
+					if ( ! response || 'function' !== typeof response.clone ) {
+						return response;
+					}
+
+					return response.clone().text().then(
+						function ( markup ) {
+							mirrorFeedback( markup );
+							return response;
+						},
+						function () {
+							return response;
+						}
+					);
+				} );
+			} );
+		}
+
+		function updateFeatureRankControl() {
+			var featured = document.getElementById( '_pgds_is_featured' );
+			var rank = document.getElementById( '_pgds_feature_rank' );
+			var state = document.querySelector( '.pgds-metabox__feature-rank-state' );
+			if ( ! featured || ! rank ) {
+				return;
+			}
+
+			var enabled = featured.checked;
+			rank.setAttribute( 'aria-disabled', enabled ? 'false' : 'true' );
+			if ( state ) {
+				state.textContent = enabled
+					? 'Chọn vị trí từ 1 đến 4 cho bài Tin nổi bật.'
+					: 'Chỉ cần chọn vị trí từ 1 đến 4 khi bật Tin nổi bật.';
+			}
+		}
+
+		function bindFeatureRankControl() {
+			var featured = document.getElementById( '_pgds_is_featured' );
+			if ( ! featured || featured.dataset.pgdsBound ) {
+				return;
+			}
+
+			featured.dataset.pgdsBound = '1';
+			featured.addEventListener( 'change', updateFeatureRankControl );
+			updateFeatureRankControl();
+		}
 
 		function findToggle() {
 			var buttons = document.querySelectorAll( 'button' );
@@ -207,6 +364,8 @@ function pgds_admin_editor_hints( $hook ) {
 		}
 
 		function run() {
+			installFeedbackBridge();
+			bindFeatureRankControl();
 			tries++;
 			var toggle = findToggle();
 			if ( ! toggle ) {

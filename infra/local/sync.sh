@@ -71,6 +71,7 @@ docker exec "$wp_container" sh -c '
   mv /tmp/pgds-scripts-sync /var/www/html/.pgds-scripts
   chmod +x /var/www/html/.pgds-scripts/*.sh
   chmod +x /var/www/html/.pgds-tools/preview/*.sh
+  chmod +x /var/www/html/.pgds-tools/tests/*.sh
 '
 
 echo "==> Sync complete."
