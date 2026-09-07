@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function pgds_art( $post, $size = 'pgds-card', $ratio_class = 'pgds-ratio-card', $eager = false ) {
 	$post = get_post( $post );
-	echo '<div class="pgds-art ' . esc_attr( $ratio_class ) . '">';
+	echo '<div class="art pgds-art ' . esc_attr( $ratio_class ) . '">';
 	if ( $post && has_post_thumbnail( $post ) ) {
 		$attr = array(
 			'loading'  => $eager ? 'eager' : 'lazy',
@@ -30,6 +30,8 @@ function pgds_art( $post, $size = 'pgds-card', $ratio_class = 'pgds-ratio-card',
 			$attr['fetchpriority'] = 'high';
 		}
 		echo get_the_post_thumbnail( $post, $size, $attr );
+	} else {
+		echo '<svg viewBox="0 0 100 100" width="40"><path d="M50 85C25 72 20 50 20 50c14 9 22 4 22 4s4 18 8 22c8-4 12-22 12-22s8 5 22-4c0 0-4 26-34 35Z" fill="#C9BB98"></path></svg>';
 	}
 	echo '</div>';
 }

@@ -35,8 +35,13 @@
   letter-spacing: -.01em;
 }
 
+.logo-img-link {
+  display: inline-block;
+}
+
 .pgds-logo__img,
-.custom-logo {
+.custom-logo,
+.logo-img {
   height: 64px;
   width: auto;
   display: block;

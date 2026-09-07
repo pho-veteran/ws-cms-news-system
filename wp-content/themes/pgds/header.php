@@ -27,9 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php the_custom_logo(); ?>
 		<?php else : ?>
 			<a class="pgds-logo logo-img-link" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
-				<span class="pgds-logo__text">
-					<?php bloginfo( 'name' ); ?>
-				</span>
+				<img class="logo-img" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/logo.png' ); ?>" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
 			</a>
 		<?php endif; ?>
 

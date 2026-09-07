@@ -77,22 +77,26 @@ function pgds_breadcrumbs( $items, $label = '' ) {
 
 	$label = $label ?: __( 'Đường dẫn trang', 'pgds' );
 	?>
-	<nav class="pgds-breadcrumb breadcrumb" aria-label="<?php echo esc_attr( $label ); ?>">
-		<ol class="pgds-breadcrumb__list">
-			<?php foreach ( $items as $index => $item ) : ?>
-				<li class="pgds-breadcrumb__item">
-					<?php if ( ! empty( $item['url'] ) && $index < count( $items ) - 1 ) : ?>
-						<a href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['label'] ); ?></a>
-					<?php else : ?>
-						<span class="current" aria-current="page"><?php echo esc_html( $item['label'] ); ?></span>
-					<?php endif; ?>
-						<?php if ( $index < count( $items ) - 1 ) : ?>
-							<span class="pgds-breadcrumb__separator sep" aria-hidden="true">›</span>
-						<?php endif; ?>
-				</li>
-			<?php endforeach; ?>
-		</ol>
-	</nav>
+	<div class="crumb-bar">
+		<div class="wrap">
+			<nav class="pgds-breadcrumb breadcrumb" aria-label="<?php echo esc_attr( $label ); ?>">
+				<ol class="pgds-breadcrumb__list">
+					<?php foreach ( $items as $index => $item ) : ?>
+						<li class="pgds-breadcrumb__item">
+							<?php if ( ! empty( $item['url'] ) && $index < count( $items ) - 1 ) : ?>
+								<a class="parent" href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['label'] ); ?></a>
+							<?php else : ?>
+								<span class="current" aria-current="page"><?php echo esc_html( $item['label'] ); ?></span>
+							<?php endif; ?>
+							<?php if ( $index < count( $items ) - 1 ) : ?>
+								<span class="pgds-breadcrumb__separator sep" aria-hidden="true">›</span>
+							<?php endif; ?>
+						</li>
+					<?php endforeach; ?>
+				</ol>
+			</nav>
+		</div>
+	</div>
 	<?php
 }
 

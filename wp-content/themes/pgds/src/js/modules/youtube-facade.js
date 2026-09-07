@@ -30,8 +30,8 @@ function activate(figure) {
   figure.dataset.pgdsActivated = '1';
 
   const iframe = buildIframe(videoId);
-  // Remove the poster + button, insert the iframe.
-  figure.querySelectorAll('.pgds-video__poster, .pgds-video__play, .pgds-video__dur').forEach((el) => el.remove());
+  // Remove the poster + button + duration + watermark, insert the iframe.
+  figure.querySelectorAll('.pgds-video__poster, .pgds-video__play, .pgds-video__dur, .pgds-video__watermark').forEach((el) => el.remove());
   figure.appendChild(iframe);
   iframe.focus();
 }
@@ -40,7 +40,15 @@ export function initYouTubeFacade(root = document) {
   const figures = root.querySelectorAll('[data-pgds="youtube-facade"]');
   figures.forEach((figure) => {
     const btn = figure.querySelector('.pgds-video__play');
-    if (!btn) return;
-    btn.addEventListener('click', () => activate(figure));
+    const poster = figure.querySelector('.pgds-video__poster');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        activate(figure);
+      });
+    }
+    if (poster) {
+      poster.addEventListener('click', () => activate(figure));
+    }
   });
 }

@@ -9,12 +9,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-get_header();
+$post_obj = get_queried_object();
+$layout   = pgds_detail_layout( $post_obj );
+
+if ( 'emagazine' === $layout ) {
+	get_header( 'emagazine' );
+} else {
+	get_header();
+}
 
 while ( have_posts() ) :
 	the_post();
-
-	$layout = pgds_detail_layout( get_post() );
 	get_template_part( 'template-parts/content-single-' . $layout );
 endwhile;
 

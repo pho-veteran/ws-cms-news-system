@@ -3,16 +3,78 @@
 // 05-COMPONENTS / COMMENTS
 // Comment section on single articles: title, listed comments, reply form.
 
+.comments-block {
+  padding: 18px 0 8px;
+  border-top: 1px solid var(--pgds-line, #D9CDAE);
+  margin-top: 16px;
+}
+
+.comments-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--pgds-robe-deep, #452A21);
+  margin-bottom: 14px;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.comment-quickbox {
+  background: #fff;
+  border: 1px solid var(--pgds-line, #D9CDAE);
+  border-radius: 10px;
+  padding: 16px;
+
+  textarea {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    border: 1px solid var(--pgds-line, #D9CDAE);
+    border-radius: 6px;
+    padding: 12px 14px;
+    outline: none;
+    background: #fff;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 13.5px;
+    color: var(--pgds-ink, #2A211B);
+    margin-bottom: 14px;
+
+    &:focus {
+      border-color: var(--pgds-robe, #5C3A2E);
+      box-shadow: 0 0 0 2px rgba(92, 58, 46, 0.12);
+    }
+
+    &::placeholder {
+      color: #9B8F79;
+    }
+  }
+
+  button,
+  .pgds-comments__submit {
+    background: var(--pgds-robe, #5C3A2E);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 11px 26px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--pgds-robe-deep, #452A21);
+    }
+  }
+}
+
 .pgds-comments {
   margin-top: $sp-8;
 
   &__title {
-    margin-bottom: $sp-4;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--pgds-robe);
-    color: var(--pgds-robe-deep);
-    font-size: 18px;
-    font-weight: $fw-bold;
+    margin-bottom: 14px;
+    padding-bottom: 0;
+    border-bottom: none;
+    color: var(--pgds-robe-deep, #452A21);
+    font-size: 15.5px;
+    font-weight: 700;
     line-height: $lh-snug;
   }
 

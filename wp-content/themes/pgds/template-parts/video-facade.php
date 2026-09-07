@@ -64,23 +64,15 @@ if ( ! empty( $args['unavailable'] ) ) {
 	return;
 }
 ?>
-<figure class="pgds-video" data-pgds="youtube-facade" data-video-id="<?php echo esc_attr( $vid ); ?>">
+<figure class="pgds-video video-player" data-pgds="youtube-facade" data-video-id="<?php echo esc_attr( $vid ); ?>">
 	<?php if ( $poster_id ) : ?>
 		<?php
-		/*
-		 * Rendered through wp_get_attachment_image() so the poster gets the attachment's
-		 * REAL width/height plus srcset. The previous hardcoded width="1280" height="720"
-		 * did not match any registered size (pgds-lead is 960x600), so the declared aspect
-		 * ratio was wrong and the browser reserved the wrong box.
-		 *
-		 * Not lazy-loaded: on a video article this is the LCP element, above the fold.
-		 */
 		echo wp_get_attachment_image(
 			$poster_id,
 			'pgds-lead',
 			false,
 			array(
-				'class'         => 'pgds-video__poster',
+				'class'         => 'pgds-video__poster art',
 				'alt'           => $title,
 				'decoding'      => 'async',
 				'loading'       => 'eager',
@@ -89,20 +81,40 @@ if ( ! empty( $args['unavailable'] ) ) {
 		);
 		?>
 	<?php elseif ( $poster ) : ?>
-		<img class="pgds-video__poster" src="<?php echo esc_url( $poster ); ?>"
+		<img class="pgds-video__poster art" src="<?php echo esc_url( $poster ); ?>"
 			width="1280" height="720" loading="lazy" decoding="async"
 			alt="<?php echo esc_attr( $title ); ?>">
 	<?php else : ?>
-		<div class="pgds-video__poster pgds-art pgds-ratio-video" aria-hidden="true"></div>
+		<div class="pgds-video__poster art" aria-hidden="true">
+			<svg viewBox="0 0 100 100" width="40"><path d="M50 85C25 72 20 50 20 50c14 9 22 4 22 4s4 18 8 22c8-4 12-22 12-22s8 5 22-4c0 0-4 26-34 35Z" fill="#C9BB98"></path></svg>
+		</div>
 	<?php endif; ?>
-	<button class="pgds-video__play" type="button"
+	<?php
+	$watermark_src = '';
+	if ( has_custom_logo() ) {
+		$custom_logo_id = get_theme_mod( 'custom_logo' );
+		$logo_url       = wp_get_attachment_image_src( $custom_logo_id, 'full' );
+		if ( ! empty( $logo_url[0] ) ) {
+			$watermark_src = $logo_url[0];
+		}
+	}
+	if ( ! $watermark_src ) {
+		$watermark_src = get_template_directory_uri() . '/assets/images/logo.png';
+	}
+	?>
+	<img class="pgds-video__watermark watermark" src="<?php echo 0 === strpos( $watermark_src, 'data:' ) ? esc_attr( $watermark_src ) : esc_url( $watermark_src ); ?>" alt="" aria-hidden="true">
+	<button class="pgds-video__play play-btn" type="button"
 		aria-label="<?php echo esc_attr( sprintf( __( 'Phát video: %s', 'pgds' ), $title ) ); ?>">
-		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>
+		<svg viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
+			<circle cx="32" cy="32" r="30" fill="#ffffff" fill-opacity="0.92"/>
+			<path d="M26 21L45 32L26 43V21Z" fill="#452A21"/>
+		</svg>
 	</button>
 	<?php if ( $dur_str ) : ?>
-		<span class="pgds-video__dur"><?php echo esc_html( $dur_str ); ?></span>
+		<span class="pgds-video__dur duration-badge"><?php echo esc_html( $dur_str ); ?></span>
 	<?php endif; ?>
 	<?php if ( $caption ) : ?>
 		<figcaption class="pgds-video__caption"><?php echo esc_html( $caption ); ?></figcaption>
 	<?php endif; ?>
 </figure>
+

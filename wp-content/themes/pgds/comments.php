@@ -21,10 +21,16 @@ if ( ! $has_comments && ! $comments_open ) {
 }
 ?>
 
-<section class="pgds-comments" id="comments" aria-labelledby="pgds-comments-title">
+<section class="pgds-comments comments-block" id="comments" aria-labelledby="pgds-comments-title">
 
-	<h2 class="pgds-comments__title related-head" id="pgds-comments-title">
-		<?php esc_html_e( 'Bình luận', 'pgds' ); ?>
+	<h2 class="pgds-comments__title comments-title" id="pgds-comments-title">
+		<?php
+		printf(
+			/* translators: %s: comment count */
+			esc_html__( 'Bình luận (%s)', 'pgds' ),
+			esc_html( number_format_i18n( get_comments_number() ) )
+		);
+		?>
 	</h2>
 
 	<?php if ( $has_comments ) : ?>
@@ -41,7 +47,7 @@ if ( ! $has_comments && ! $comments_open ) {
 	<?php endif; ?>
 
 	<?php if ( $comments_open ) : ?>
-		<div class="pgds-comments__form-wrap comment-box">
+		<div class="pgds-comments__form-wrap comment-box comment-quickbox">
 			<?php
 			$req      = get_option( 'require_name_email' );
 			$asterisk = $req ? ' <span class="required" aria-hidden="true">*</span>' : '';
