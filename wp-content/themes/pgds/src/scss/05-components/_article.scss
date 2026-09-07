@@ -4,14 +4,13 @@
 @use 'config' as *;
 
 .pgds-breadcrumb {
-  margin-block: $sp-4;
+  padding-top: $sp-4;
   color: var(--color-text-muted);
-  font-size: $fs-xs;
+  font-size: 12.5px;
 
   &__list {
     display: flex;
     flex-wrap: wrap;
-    gap: $sp-2;
     min-width: 0;
     margin: 0;
     padding: 0;
@@ -19,24 +18,47 @@
   }
 
   &__item {
+    display: inline-flex;
     min-width: 0;
     overflow-wrap: anywhere;
-
-    &:not(:last-child)::after {
-      content: '/';
-      margin-left: $sp-2;
-      color: var(--color-border);
-    }
   }
 
-  a:hover {
-    color: var(--color-brand);
+  &__separator {
+    flex: none;
+    margin: 0 6px;
+    color: var(--pgds-line-soft);
   }
+
+  a {
+    color: var(--pgds-moss);
+    font-weight: $fw-semibold;
+
+    &:hover { color: var(--color-brand); }
+  }
+
+  [aria-current='page'] { color: var(--pgds-text-soft); }
 }
 
 // --- Article page ------------------------------------------------------------
-#pgds-main:has(> .pgds-content-grid > .pgds-article) {
-  padding-top: 52px;
+#pgds-main:has(> .pgds-content-grid > .pgds-article),
+#pgds-main:has(> .article-layout) {
+  padding-top: 0;
+}
+
+.article-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  padding: 18px 0 40px;
+  align-items: start;
+
+  @include mq(lg) {
+    grid-template-columns: 1fr $sidebar-w;
+  }
+
+  @include mq-max(lg) {
+    grid-template-columns: 1fr;
+  }
 }
 
 // --- Category label (category color) ----------------------------------------
@@ -58,67 +80,134 @@
 
 // --- Article -----------------------------------------------------------------
 .pgds-article {
-  &__header {
-    margin-bottom: $sp-5;
+  &__header,
+  .article-head {
+    padding-bottom: 18px;
+    margin-bottom: 22px;
   }
 
-  &__title {
-    font-size: $fs-hero;
-    line-height: $lh-tight;
-    margin-bottom: $sp-3;
+  &__title,
+  h1 {
+    color: var(--pgds-robe-deep);
+    font-size: 30px;
+    font-weight: $fw-bold;
+    line-height: 1.28;
+    margin: 10px 0 10px;
 
-    @include mq-max(md) {
-      font-size: 28px;
+    @include mq-max(lg) { font-size: 24px; }
+  }
+
+  &__date,
+  .publish-time {
+    display: block;
+    margin-bottom: 12px;
+    color: #8a7f68;
+    font-size: 13px;
+    line-height: $lh-normal;
+  }
+
+  &__sapo,
+  .article-sapo {
+    margin: 0;
+    color: #5c5243;
+    font-size: 16.5px;
+    font-weight: 500;
+    line-height: 1.6;
+  }
+
+  &__figure,
+  .article-cover {
+    margin: 22px 0 8px;
+
+    > img,
+    .art {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border-radius: $radius-lg;
     }
-  }
-
-  &__sapo {
-    font-size: $fs-md;
-    font-weight: $fw-semibold;
-    color: var(--color-text-muted);
-    line-height: $lh-relax;
-    margin-bottom: $sp-4;
-  }
-
-  &__meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $sp-3;
-    font-size: $fs-2xs;
-    color: var(--color-text-meta);
-    border-top: 1px solid var(--color-border);
-    border-bottom: 1px solid var(--color-border);
-    padding: $sp-3 0;
-    margin-bottom: $sp-5;
-  }
-
-  &__figure {
-    margin-bottom: $sp-5;
 
     figcaption {
-      font-size: $fs-2xs;
-      color: var(--color-text-meta);
-      padding-top: $sp-2;
+      margin-top: 8px;
+      padding-top: 0;
+      color: #8a7f68;
+      font-size: 12.5px;
+      font-style: italic;
       text-align: center;
     }
   }
 
-  // Article body
-  &__body {
-    max-width: $content-max;
-    font-size: $fs-base;
-    line-height: $lh-loose;
-    color: var(--color-text);
+  &__body,
+  .article-body {
+    max-width: none;
+    margin-top: 22px;
+    color: #3a3128;
+    font-size: 16px;
+    line-height: 1.85;
 
-    p { margin-bottom: $sp-4; }
+    > blockquote {
+      width: 100%;
+      margin: 28px 0;
+      padding: 18px 22px;
+      border: 0;
+      border-left: 3px solid var(--pgds-gilt);
+      background: var(--pgds-paper-deep);
+      color: var(--pgds-robe-deep);
+      font-family: $font-body;
+      font-size: 17px;
+      font-style: italic;
+      font-weight: $fw-semibold;
+      line-height: 1.6;
+      text-align: left;
 
-    h2 { font-size: $fs-xl; margin: $sp-6 0 $sp-3; }
-    h3 { font-size: $fs-lg; margin: $sp-5 0 $sp-3; }
+      &::before {
+        content: none;
+      }
 
-    img { border-radius: $radius-md; height: auto; }
+      p {
+        margin: 0;
+        color: inherit;
+        font: inherit;
+        text-align: inherit;
+      }
+    }
 
-    figure { margin: $sp-5 0; }
+    p {
+      margin-bottom: 20px;
+      text-align: justify;
+    }
+
+    h2 {
+      margin: 32px 0 14px;
+      color: var(--pgds-robe-deep);
+      font-size: 21px;
+      font-weight: $fw-bold;
+      line-height: $lh-snug;
+    }
+
+    h3 { margin: $sp-6 0 $sp-3; }
+
+    img { border-radius: $radius-lg; height: auto; }
+
+    figure,
+    .article-figure {
+      margin: 26px 0;
+
+      .art {
+        aspect-ratio: 16 / 10;
+        border-radius: 8px;
+        width: 100%;
+      }
+
+      figcaption {
+        font-size: 12.5px;
+        color: #8a7f68;
+        text-align: center;
+        margin-top: 8px;
+        font-style: italic;
+      }
+    }
 
     a {
       color: var(--color-brand);
@@ -126,44 +215,88 @@
       text-underline-offset: 2px;
     }
 
-    ul, ol {
-      margin: 0 0 $sp-4 $sp-5;
+    ul,
+    ol {
+      margin: 0 0 $sp-5;
+      padding-left: 0;
     }
 
-    ul { list-style: disc; }
-    ol { list-style: decimal; }
+    ul { list-style: none; }
+    ol { list-style: decimal; padding-left: $sp-6; }
 
-    li { margin-bottom: $sp-1; }
+    li {
+      margin-bottom: 10px;
+      line-height: 1.85;
+    }
+
+    ul li {
+      display: flex;
+      gap: 10px;
+
+      &::before {
+        content: '';
+        flex: none;
+        width: 6px;
+        height: 6px;
+        margin-top: 9px;
+        border-radius: $radius-full;
+        background: var(--pgds-gilt);
+      }
+    }
   }
 
-  &__tags {
-    margin-top: $sp-6;
+  .related-head:not(.pgds-comments__title) {
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--pgds-robe);
+    color: var(--pgds-robe-deep);
+    font-size: 18px;
+    font-weight: $fw-bold;
+
+    h2 {
+      margin: 0;
+      color: inherit;
+      font-size: inherit;
+      line-height: inherit;
+    }
+  }
+
+  &__tags,
+  .tag-list {
     display: flex;
     flex-wrap: wrap;
-    gap: $sp-2;
+    gap: 8px;
+    margin: 28px 0 26px;
 
     a {
-      font-size: $fs-2xs;
-      background: var(--color-bg-surface);
-      border: 1px solid var(--color-border);
-      border-radius: $radius-pill;
-      padding: $sp-1 $sp-3;
+      padding: 6px 14px;
+      border-radius: 14px;
+      background: var(--pgds-paper-deep);
+      color: #6b5f4a;
+      font-size: 12.5px;
+      font-weight: 600;
+
+      &:hover {
+        background: var(--pgds-robe);
+        color: #fff;
+      }
     }
   }
 
   &__source {
     margin-top: $sp-4;
-    font-size: $fs-2xs;
     color: var(--color-text-meta);
+    font-size: $fs-2xs;
     font-style: italic;
   }
 
-  &__author {
-    text-align: right;
-    font-weight: $fw-bold;
+  &__author,
+  .article-author {
+    margin-top: 8px;
     color: var(--pgds-ink);
-    margin-top: $sp-2;
-    font-size: $fs-sm;
+    font-size: 16px;
+    font-weight: $fw-bold;
+    text-align: right !important;
   }
 }
 
@@ -210,38 +343,6 @@
 }
 
 // --- Next/Prev ---------------------------------------------------------------
-.pgds-post-nav {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $sp-4;
-  margin: $sp-7 0;
-
-  @include mq-max(md) {
-    grid-template-columns: 1fr;
-  }
-
-  a {
-    display: block;
-    padding: $sp-4;
-    border: 1px solid var(--color-border);
-    border-radius: $radius-md;
-    background: var(--color-bg-surface);
-  }
-
-  &__dir {
-    font-size: $fs-3xs;
-    text-transform: uppercase;
-    letter-spacing: $ls-wide;
-    color: var(--color-text-meta);
-  }
-
-  &__title {
-    font-size: $fs-sm;
-    font-weight: $fw-semibold;
-    @include line-clamp(2);
-  }
-}
-
 // A page (not a post) with no sidebar: centre the measure instead of letting it run
 // the full container width, which would push the body far past a readable line length.
 .pgds-article--standalone {
@@ -312,10 +413,11 @@
   figcaption,
   .wp-element-caption {
     margin-top: $sp-2;
-    font-size: $fs-2xs;
+    color: var(--color-text-muted);
+    font-size: 12.5px;
+    font-style: italic;
     line-height: $lh-relax;
-    color: var(--color-text-meta);
-    text-align: left;
+    text-align: center;
   }
 
   // --- Lists ----------------------------------------------------------------
@@ -377,42 +479,41 @@
   }
 
   // --- Pull quote -----------------------------------------------------------
-  // Distinct from blockquote: centred, wider, and the loudest voice in the article.
   .wp-block-pullquote {
-    margin: $sp-8 0;
-    padding: $sp-6 0;
-    border-top: 2px solid var(--color-accent);
-    border-bottom: 2px solid var(--color-accent);
-    text-align: center;
+    margin: 28px 0;
+    padding: 18px 22px;
+    border: 0;
+    border-left: 3px solid var(--pgds-gilt);
+    background: var(--pgds-paper-deep);
+    color: var(--pgds-robe-deep);
+    text-align: left;
 
     blockquote {
       margin: 0;
       padding: 0;
       border: 0;
 
-      // The blockquote element style adds a hanging quote mark; a centred pull quote
-      // does not want it hanging off to one side.
-      &::before {
-        content: none;
-      }
+      &::before { content: none; }
     }
 
     p {
-      font-family: $font-display;
-      font-size: $fs-xl;
-      line-height: $lh-snug;
-      color: var(--color-brand-strong);
-      margin-bottom: $sp-3;
+      margin: 0;
+      color: inherit;
+      font-family: $font-body;
+      font-size: 17px;
+      font-style: italic;
+      font-weight: $fw-semibold;
+      line-height: 1.6;
+      text-align: left;
     }
 
     cite {
       display: block;
+      margin-top: $sp-2;
+      color: var(--color-text-meta);
       font-family: $font-body;
       font-size: $fs-2xs;
       font-style: normal;
-      letter-spacing: $ls-wide;
-      text-transform: uppercase;
-      color: var(--color-text-meta);
     }
   }
 

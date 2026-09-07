@@ -4,7 +4,8 @@
 // ============================================================================
 @use 'config' as *;
 
-.pgds-content-grid {
+.pgds-content-grid,
+.article-layout {
   display: grid;
   min-width: 0;
 
@@ -16,6 +17,7 @@
 
   @include mq(lg) {
     grid-template-columns: 1fr $sidebar-w;
+    gap: $sp-8;
   }
 }
 
@@ -33,6 +35,7 @@
 
   @include mq(lg) {
     grid-template-columns: 1fr $sidebar-w;
+    gap: $sp-8;
   }
 }
 
@@ -43,7 +46,8 @@
 // blocks consume posts first), and a fixed `repeat(3, 1fr)` then reserved two empty
 // columns and stretched one card's image across a third of the page. Editorially a
 // short row should fill the width instead of advertising the shortfall.
-.pgds-grid-3 {
+.pgds-grid-3,
+.related-grid {
   display: grid;
   min-width: 0;
 

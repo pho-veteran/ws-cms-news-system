@@ -53,15 +53,6 @@ function pgds_admin_column_content( $col, $post_id ) {
 add_action( 'manage_post_posts_custom_column', 'pgds_admin_column_content', 10, 2 );
 
 /**
- * Allow sorting by feature_rank.
- */
-function pgds_admin_sortable( $cols ) {
-	$cols['pgds_flags'] = 'pgds_flags';
-	return $cols;
-}
-add_filter( 'manage_edit-post_sortable_columns', 'pgds_admin_sortable' );
-
-/**
  * "Featured posts only" filter on the post list.
  */
 function pgds_admin_filter_ui() {
@@ -184,6 +175,21 @@ function pgds_admin_editor_hints( $hook ) {
 			font-size: 14px;
 			font-weight: 600;
 			padding: 0 6px;
+		}
+		#pgds_article_meta .pgds-metabox__group-toggle {
+			background: transparent;
+			border: 0;
+			color: inherit;
+			cursor: pointer;
+			font: inherit;
+			padding: 0;
+		}
+		#pgds_article_meta .pgds-metabox__group-toggle::after {
+			content: '▸';
+			margin-left: 6px;
+		}
+		#pgds_article_meta .pgds-metabox__group-toggle[aria-expanded="true"]::after {
+			content: '▾';
 		}
 		#pgds_article_meta .pgds-metabox__group-help {
 			color: #50575e;
@@ -352,6 +358,25 @@ function pgds_admin_editor_hints( $hook ) {
 			updateFeatureRankControl();
 		}
 
+		function bindGroupToggles() {
+			var toggles = document.querySelectorAll( '#pgds_article_meta .pgds-metabox__group-toggle' );
+			for ( var i = 0; i < toggles.length; i++ ) {
+				if ( toggles[ i ].dataset.pgdsBound ) {
+					continue;
+				}
+
+				toggles[ i ].dataset.pgdsBound = '1';
+				toggles[ i ].addEventListener( 'click', function () {
+					var content = document.getElementById( this.getAttribute( 'aria-controls' ) );
+					var expanded = this.getAttribute( 'aria-expanded' ) === 'true';
+					this.setAttribute( 'aria-expanded', expanded ? 'false' : 'true' );
+					if ( content ) {
+						content.hidden = expanded;
+					}
+				} );
+			}
+		}
+
 		function findToggle() {
 			var buttons = document.querySelectorAll( 'button' );
 			for ( var i = 0; i < buttons.length; i++ ) {
@@ -366,6 +391,7 @@ function pgds_admin_editor_hints( $hook ) {
 		function run() {
 			installFeedbackBridge();
 			bindFeatureRankControl();
+			bindGroupToggles();
 			tries++;
 			var toggle = findToggle();
 			if ( ! toggle ) {

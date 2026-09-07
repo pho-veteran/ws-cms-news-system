@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$popular = pgds_query_popular( 5 );
+$popular = pgds_query_popular( 4 );
 $lunar   = get_posts(
 	array(
 		'post_type'      => 'pgds_lunar_note',

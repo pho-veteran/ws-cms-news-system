@@ -189,12 +189,19 @@ function pgds_setup() {
 		add_image_size( $name, $spec[0], $spec[1], $spec[2] );
 	}
 
-	register_nav_menus(
-		array(
-			'footer' => __( 'Menu chân trang', 'pgds' ),
-		)
-	);
 }
+
+
+/**
+ * Hide the unused menu-management screen.
+ *
+ * The frontend navigation is derived from canonical categories. Footer links use
+ * the same category tree, so no registered menu location is required.
+ */
+function pgds_remove_menu_management() {
+	remove_submenu_page( 'themes.php', 'nav-menus.php' );
+}
+add_action( 'admin_menu', 'pgds_remove_menu_management', 999 );
 add_action( 'after_setup_theme', 'pgds_setup' );
 
 /**

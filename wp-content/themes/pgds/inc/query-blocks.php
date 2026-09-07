@@ -393,7 +393,7 @@ function pgds_home_blocks() {
 	$mixed_list = pgds_query_posts( '', 5 );
 
 	// (7) Sidebar: popular (may overlap), teaching CPT, lunar CPT.
-	$popular  = pgds_query_popular( 5 );
+	$popular  = pgds_query_popular( 4 );
 	$teaching = get_posts(
 		array(
 			'post_type'      => 'pgds_teaching',
