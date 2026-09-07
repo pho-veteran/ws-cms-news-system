@@ -246,9 +246,8 @@ function pgds_validate_primary_category( $term_id, array $assigned_ids ) {
 
 	$term_id      = (int) $term_id;
 	$assigned_ids = array_map( 'intval', $assigned_ids );
-	$term          = get_term( $term_id, 'category' );
 
-	if ( ! pgds_validate_primary_category_id( $term_id, $post_id, $assigned_ids ) ) {
+	if ( ! pgds_validate_primary_category_id( $term_id, 0, $assigned_ids ) ) {
 		return new WP_Error( 'pgds_invalid_primary_category' );
 	}
 

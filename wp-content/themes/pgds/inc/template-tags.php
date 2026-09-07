@@ -90,7 +90,7 @@ function pgds_has_editorial_sapo( $post ) {
  *
  * @param mixed      $value        Candidate term ID.
  * @param int        $post_id      Post ID. Zero checks only the canonical vocabulary.
- * @param int[]|null $assigned_ids Optional assigned category IDs.
+ * @param int[]|null $assigned_ids Optional assigned category IDs; when supplied, validates assignment.
  * @return int Valid term ID or zero.
  */
 function pgds_validate_primary_category_id( $value, $post_id = 0, $assigned_ids = null ) {
@@ -104,13 +104,11 @@ function pgds_validate_primary_category_id( $value, $post_id = 0, $assigned_ids 
 		return 0;
 	}
 
-	if ( $post_id ) {
-		if ( null === $assigned_ids ) {
-			$assigned_ids = wp_get_post_categories( $post_id );
-		}
-		if ( ! in_array( $term_id, array_map( 'intval', (array) $assigned_ids ), true ) ) {
-			return 0;
-		}
+	if ( $post_id && null === $assigned_ids ) {
+		$assigned_ids = wp_get_post_categories( $post_id );
+	}
+	if ( null !== $assigned_ids && ! in_array( $term_id, array_map( 'intval', (array) $assigned_ids ), true ) ) {
+		return 0;
 	}
 
 	return $term_id;
