@@ -19,6 +19,9 @@ if ( ! $p instanceof WP_Post ) {
 	return;
 }
 $variant  = $args['variant'] ?? 'full';
+$variant  = in_array( $variant, array( 'full', 'compact' ), true ) ? $variant : 'full';
+$tag      = $args['tag'] ?? 'h3';
+$tag      = in_array( $tag, array( 'h2', 'h3', 'h4', 'h5', 'h6' ), true ) ? $tag : 'h3';
 $bordered = ! empty( $args['bordered'] );
 $url      = get_permalink( $p );
 $vid      = pgds_video_id( $p );
@@ -42,9 +45,9 @@ if ( 'compact' === $variant ) {
 		}
 		?>
 	</a>
-	<h3 class="pgds-card__title">
+	<<?php echo esc_html( $tag ); ?> class="pgds-card__title">
 		<a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( get_the_title( $p ) ); ?></a>
-	</h3>
+	</<?php echo esc_html( $tag ); ?>>
 	<?php if ( 'full' === $variant ) : ?>
 		<p class="pgds-card__sapo"><?php echo esc_html( wp_trim_words( pgds_sapo( $p ), 26 ) ); ?></p>
 		<div class="pgds-card__meta"><?php echo esc_html( pgds_time_ago( $p ) ); ?></div>

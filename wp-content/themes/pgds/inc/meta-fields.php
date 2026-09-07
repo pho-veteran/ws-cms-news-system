@@ -144,8 +144,9 @@ function pgds_register_meta() {
 		'_pgds_display_author'    => 'string',
 	);
 	$sanitizers = array(
-		'_pgds_sapo' => 'sanitize_textarea_field',
-		'string'     => 'sanitize_text_field',
+		'_pgds_sapo'        => 'sanitize_textarea_field',
+		'_pgds_primary_cat' => 'pgds_sanitize_primary_category_meta',
+		'string'            => 'sanitize_text_field',
 		'integer'    => 'absint',
 		'boolean'    => 'rest_sanitize_boolean',
 	);
@@ -245,9 +246,8 @@ function pgds_validate_primary_category( $term_id, array $assigned_ids ) {
 
 	$term_id      = (int) $term_id;
 	$assigned_ids = array_map( 'intval', $assigned_ids );
-	$term          = get_term( $term_id, 'category' );
 
-	if ( is_wp_error( $term ) || ! $term || ! in_array( $term_id, $assigned_ids, true ) ) {
+	if ( ! pgds_validate_primary_category_id( $term_id, 0, $assigned_ids ) ) {
 		return new WP_Error( 'pgds_invalid_primary_category' );
 	}
 

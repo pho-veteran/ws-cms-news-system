@@ -8,7 +8,7 @@
     "primary_cat": "tin-phat-su",
     "cats": [
       "tin-phat-su",
-      "su-kien-le-hoi"
+      "tin-phat-su"
     ],
     "tags": [
       "Phật đản",
@@ -54,7 +54,7 @@
     "primary_cat": "phat-tich",
     "cats": [
       "phat-tich",
-      "chua-am"
+      "phat-tich"
     ],
     "tags": [
       "kiến trúc",
@@ -123,7 +123,7 @@
     "primary_cat": "media",
     "cats": [
       "media",
-      "infographic-emagazine"
+      "emagazine"
     ],
     "tags": [
       "ăn chay",
@@ -146,7 +146,7 @@
     "primary_cat": "tot-doi-dep-dao",
     "cats": [
       "tot-doi-dep-dao",
-      "thien-nguyen"
+      "tot-doi-dep-dao"
     ],
     "tags": [
       "thiện nguyện",
@@ -169,7 +169,7 @@
     "primary_cat": "tot-doi-dep-dao",
     "cats": [
       "tot-doi-dep-dao",
-      "nguoi-tot-viec-tot"
+      "tot-doi-dep-dao"
     ],
     "tags": [
       "thiện nguyện",
@@ -192,7 +192,7 @@
     "primary_cat": "phat-tich",
     "cats": [
       "phat-tich",
-      "di-tich-danh-thang"
+      "phat-tich"
     ],
     "tags": [
       "Trúc Lâm",
@@ -282,7 +282,7 @@
     "primary_cat": "tin-phat-su",
     "cats": [
       "tin-phat-su",
-      "tin-giao-hoi"
+      "tin-phat-su"
     ],
     "tags": [
       "an cư",
@@ -305,7 +305,7 @@
     "primary_cat": "tin-phat-su",
     "cats": [
       "tin-phat-su",
-      "su-kien-le-hoi"
+      "tin-phat-su"
     ],
     "tags": [
       "thiện nguyện"
@@ -327,7 +327,7 @@
     "primary_cat": "tin-phat-su",
     "cats": [
       "tin-phat-su",
-      "tin-giao-hoi"
+      "tin-phat-su"
     ],
     "tags": [
       "hội nghị",
@@ -419,7 +419,7 @@
     "primary_cat": "media",
     "cats": [
       "media",
-      "infographic-emagazine"
+      "emagazine"
     ],
     "tags": [
       "infographic",
@@ -442,7 +442,7 @@
     "primary_cat": "media",
     "cats": [
       "media",
-      "infographic-emagazine"
+      "emagazine"
     ],
     "tags": [
       "Vu Lan",
@@ -510,7 +510,7 @@
     "primary_cat": "phat-tich",
     "cats": [
       "phat-tich",
-      "di-tich-danh-thang"
+      "phat-tich"
     ],
     "tags": [
       "chùa Hương",
@@ -533,7 +533,7 @@
     "primary_cat": "tot-doi-dep-dao",
     "cats": [
       "tot-doi-dep-dao",
-      "thien-nguyen"
+      "tot-doi-dep-dao"
     ],
     "tags": [
       "hiến máu",

@@ -15,7 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$note = $args['post'] ?? null;
+$note       = $args['post'] ?? null;
+$note       = $note instanceof WP_Post ? $note : null;
+$heading_id = sanitize_html_class( (string) ( $args['heading_id'] ?? wp_unique_id( 'pgds-lunar-' ) ) );
 
 $greg_day = date_i18n( 'd' );
 $greg_sub = pgds_month_year_vi();
@@ -39,9 +41,9 @@ if ( ! $quote ) {
 	$quote = __( '"Tâm bình thì thế giới bình." — Lời Phật dạy', 'pgds' );
 }
 ?>
-<section class="pgds-side-block pgds-side-block--flush" aria-labelledby="pgds-lunar-title">
+<section class="pgds-side-block pgds-side-block--flush" aria-labelledby="<?php echo esc_attr( $heading_id ); ?>">
 	<div class="pgds-lunar">
-		<div class="pgds-lunar__header" id="pgds-lunar-title"><?php esc_html_e( 'Lịch Vạn Niên', 'pgds' ); ?></div>
+		<div class="pgds-lunar__header" id="<?php echo esc_attr( $heading_id ); ?>"><?php esc_html_e( 'Lịch Vạn Niên', 'pgds' ); ?></div>
 		<div class="pgds-lunar__body">
 			<div class="pgds-lunar__col">
 				<div class="pgds-lunar__label"><?php esc_html_e( 'Dương Lịch', 'pgds' ); ?></div>

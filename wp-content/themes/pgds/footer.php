@@ -28,23 +28,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</p>
 		</div>
 
-		<div>
-			<h4><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></h4>
-			<ul>
-				<li><a href="<?php echo esc_url( get_term_link( 'tin-phat-su', 'category' ) ); ?>"><?php esc_html_e( 'Tin Phật sự', 'pgds' ); ?></a></li>
-				<li><a href="<?php echo esc_url( get_term_link( 'song-an-lanh', 'category' ) ); ?>"><?php esc_html_e( 'Sống an lành', 'pgds' ); ?></a></li>
-				<li><a href="<?php echo esc_url( get_term_link( 'phat-tich', 'category' ) ); ?>"><?php esc_html_e( 'Phật tích', 'pgds' ); ?></a></li>
-			</ul>
-		</div>
-
-		<div>
-			<h4><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></h4>
-			<ul>
-				<li><a href="<?php echo esc_url( get_term_link( 'media', 'category' ) ); ?>"><?php esc_html_e( 'Media', 'pgds' ); ?></a></li>
-				<li><a href="<?php echo esc_url( get_term_link( 'tot-doi-dep-dao', 'category' ) ); ?>"><?php esc_html_e( 'Tốt đời – đẹp đạo', 'pgds' ); ?></a></li>
-				<li><a href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>"><?php esc_html_e( 'Phật giáo Việt Nam', 'pgds' ); ?></a></li>
-			</ul>
-		</div>
+		<?php $footer_categories = pgds_category_tree(); ?>
+		<?php foreach ( array_chunk( $footer_categories, 3, true ) as $category_group ) : ?>
+			<div>
+				<h4><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></h4>
+				<ul>
+					<?php foreach ( $category_group as $slug => $node ) : ?>
+						<?php $term = pgds_category_term( $slug ); ?>
+						<?php if ( $term instanceof WP_Term ) : ?>
+							<?php $term_url = get_term_link( $term ); ?>
+							<?php if ( ! is_wp_error( $term_url ) ) : ?>
+								<li><a href="<?php echo esc_url( $term_url ); ?>"><?php echo esc_html( $node['label'] ); ?></a></li>
+							<?php endif; ?>
+						<?php endif; ?>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endforeach; ?>
 
 		<div>
 			<h4><?php esc_html_e( 'Liên hệ', 'pgds' ); ?></h4>

@@ -312,7 +312,7 @@ function pgds_home_blocks() {
 	PGDS_Used_Ids::mark( $photo->posts );
 
 	// (3) Media block: 1 feature + 4 thumbs (video category), 3 bullets (infographic only).
-	// Bullets query 'infographic-emagazine' SEPARATELY (don't query the parent 'media' to
+	// Bullets query 'emagazine' SEPARATELY (don't query the parent 'media' to
 	// avoid stealing video posts from the thumbs).
 	// The media block is topped up from the wider 'media' parent rather than the whole
 	// site: a text news post in a video thumbnail grid (with a play badge over it)
@@ -326,7 +326,7 @@ function pgds_home_blocks() {
 			pgds_query_posts( 'media', 4 - count( $media_thumbs ) )
 		);
 	}
-	$media_bullets = pgds_query_posts( 'infographic-emagazine', 3 );
+	$media_bullets = pgds_query_posts( 'emagazine', 3 );
 
 	/*
 	 * Tabs 2 and 3 of the media block.
@@ -338,7 +338,7 @@ function pgds_home_blocks() {
 	 * shows all three as content groups, and §2.2 specifies "3 tabs".
 	 *
 	 * Split by TAG, not by category: §4.1 fixes the taxonomy at one combined
-	 * `infographic-emagazine` child, and the seed data already distinguishes the two with
+	 * `emagazine` child, and the seed data already distinguishes the two with
 	 * `infographic` and `emagazine` tags. Adding categories would contradict §4.1 (and the
 	 * import now refuses slugs outside that set), so the tag is the available signal.
 	 *

@@ -15,6 +15,7 @@ if ( ! $p instanceof WP_Post ) {
 	return;
 }
 $tag = $args['tag'] ?? 'h5';
+$tag = in_array( $tag, array( 'h2', 'h3', 'h4', 'h5', 'h6' ), true ) ? $tag : 'h5';
 $url = get_permalink( $p );
 ?>
 <div class="pgds-mini">

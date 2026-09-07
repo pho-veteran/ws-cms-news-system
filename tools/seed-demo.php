@@ -12,7 +12,7 @@ $plan = array(
 	'tot-doi-dep-dao'  => array( 5, 'Tốt đời đẹp đạo' ),
 	'vietnam-buddhism' => array( 3, 'Vietnam Buddhism' ),
 	'video'            => array( 4, 'Video' ),
-	'infographic-emagazine' => array( 3, 'Emagazine' ),
+	'emagazine'       => array( 3, 'E-magazine' ),
 );
 
 $created = 0;
@@ -22,9 +22,8 @@ foreach ( $plan as $cat_slug => $spec ) {
 	if ( ! $term ) {
 		continue;
 	}
-	// Parent category (to assign a sensible primary category).
-	$primary_slug = $term->parent ? get_term( $term->parent, 'category' )->slug : $cat_slug;
-	$primary_id   = $term->parent ? $term->parent : $term->term_id;
+	// The leaf term drives detail routing; its root remains assigned for broad queries.
+	$primary_id = (int) $term->term_id;
 
 	for ( $i = 1; $i <= $n; $i++ ) {
 		$sid = "demo-{$cat_slug}-{$i}";
@@ -32,14 +31,14 @@ foreach ( $plan as $cat_slug => $spec ) {
 		if ( $q->posts ) {
 			continue; // already exists
 		}
-		$is_media = in_array( $cat_slug, array( 'video', 'infographic-emagazine' ), true );
+		$is_media = in_array( $cat_slug, array( 'video', 'emagazine' ), true );
 		$cat_ids  = array( $term->term_id );
 		if ( $is_media ) {
 			$media = get_term_by( 'slug', 'media', 'category' );
 			if ( $media ) {
 				$cat_ids[] = $media->term_id;
 			}
-			$primary_id = $media ? $media->term_id : $term->term_id;
+			$primary_id = (int) $term->term_id;
 		}
 
 		$pid = wp_insert_post(

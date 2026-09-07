@@ -1,6 +1,6 @@
 <?php
 /**
- * Header + logo + search + 7-item nav.
+ * Header, logo, search, and canonical six-category navigation.
  *
  * @package pgds
  */
@@ -71,17 +71,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="pgds-nav__rail" data-pgds="nav-rail">
 				<?php
-				wp_nav_menu(
-					array(
-						'theme_location' => 'primary',
-						'container'      => false,
-						'menu_id'        => 'pgds-primary-menu',
-						'menu_class'     => 'pgds-nav__list',
-						'fallback_cb'    => 'pgds_nav_fallback',
-						'walker'         => new PGDS_Nav_Walker(),
-						'depth'          => 2,
-					)
-				);
+				pgds_primary_navigation();
 				?>
 			</div>
 		</div>

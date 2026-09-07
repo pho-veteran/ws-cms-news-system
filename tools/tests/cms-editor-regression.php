@@ -149,19 +149,11 @@ function pgds_cms_editor_assert_rest_error( $response, $expected_code, $expected
 	);
 }
 
-/**
- * Remove every temporary record created by this suite.
- *
- * @return void
- */
 function pgds_cms_editor_cleanup() {
-	global $pgds_cms_editor_posts, $pgds_cms_editor_terms, $pgds_cms_editor_users, $pgds_cms_editor_user_id;
+	global $pgds_cms_editor_posts, $pgds_cms_editor_users, $pgds_cms_editor_user_id;
 
 	foreach ( array_reverse( $pgds_cms_editor_posts ) as $post_id ) {
 		wp_delete_post( $post_id, true );
-	}
-	foreach ( array_reverse( $pgds_cms_editor_terms ) as $term_id ) {
-		wp_delete_term( $term_id, 'category' );
 	}
 	if ( ! function_exists( 'wp_delete_user' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
@@ -204,14 +196,14 @@ try {
 	}
 	wp_set_current_user( (int) $administrators[0] );
 
-	$token            = strtolower( str_replace( '-', '', wp_generate_uuid4() ) );
-	$valid_category   = wp_insert_term( 'PGDS CMS editor valid ' . $token, 'category' );
-	$invalid_category = wp_insert_term( 'PGDS CMS editor invalid ' . $token, 'category' );
-	if ( is_wp_error( $valid_category ) || is_wp_error( $invalid_category ) ) {
-		throw new RuntimeException( 'The regression suite could not create isolated categories.' );
+	$token        = strtolower( str_replace( '-', '', wp_generate_uuid4() ) );
+	$valid_term   = pgds_category_term( 'tin-phat-su' );
+	$invalid_term = pgds_category_term( 'video' );
+	if ( ! $valid_term instanceof WP_Term || ! $invalid_term instanceof WP_Term ) {
+		throw new RuntimeException( 'The regression suite requires the canonical categories.' );
 	}
-	$pgds_cms_editor_terms[] = (int) $valid_category['term_id'];
-	$pgds_cms_editor_terms[] = (int) $invalid_category['term_id'];
+	$valid_category   = array( 'term_id' => (int) $valid_term->term_id );
+	$invalid_category = array( 'term_id' => (int) $invalid_term->term_id );
 
 	$post_id = wp_insert_post(
 		array(

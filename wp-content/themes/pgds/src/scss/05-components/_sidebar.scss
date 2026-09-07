@@ -15,6 +15,13 @@
     overflow: hidden;
   }
 
+  &__empty {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: $fs-xs;
+    line-height: $lh-normal;
+  }
+
   &__title {
     font-size: $fs-xs;
     letter-spacing: $ls-wider;
@@ -29,6 +36,7 @@
 // --- Rank (Most read) -------------------------------------------------------
 .pgds-rank {
   display: flex;
+  min-width: 0;
   gap: $sp-3;
   padding: $sp-3 0;
   border-bottom: 1px solid var(--color-border-soft);
@@ -54,6 +62,8 @@
   }
 
   h4 {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-size: $fs-xs;
     line-height: $lh-tight;
     font-weight: $fw-semibold;

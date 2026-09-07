@@ -86,25 +86,131 @@ function pgds_has_editorial_sapo( $post ) {
 }
 
 /**
- * Primary category: _pgds_primary_cat meta, falls back to the first category.
+ * Validate a primary category against the canonical vocabulary and post assignment.
+ *
+ * @param mixed      $value        Candidate term ID.
+ * @param int        $post_id      Post ID. Zero checks only the canonical vocabulary.
+ * @param int[]|null $assigned_ids Optional assigned category IDs; when supplied, validates assignment.
+ * @return int Valid term ID or zero.
+ */
+function pgds_validate_primary_category_id( $value, $post_id = 0, $assigned_ids = null ) {
+	$term_id = absint( $value );
+	if ( ! $term_id ) {
+		return 0;
+	}
+
+	$term = get_term( $term_id, 'category' );
+	if ( ! $term instanceof WP_Term || ! in_array( $term->slug, pgds_category_slugs(), true ) ) {
+		return 0;
+	}
+
+	if ( $post_id && null === $assigned_ids ) {
+		$assigned_ids = wp_get_post_categories( $post_id );
+	}
+	if ( null !== $assigned_ids && ! in_array( $term_id, array_map( 'intval', (array) $assigned_ids ), true ) ) {
+		return 0;
+	}
+
+	return $term_id;
+}
+
+/**
+ * Sanitize primary-category meta written through REST or other meta APIs.
+ *
+ * Normal writes validate the closed vocabulary here and validate assignment after the
+ * post write. The reconciler may preserve a legacy ID temporarily so it can migrate it.
+ *
+ * @param mixed  $value          Candidate term ID.
+ * @param string $meta_key       Registered meta key.
+ * @param string $object_type    Registered object type.
+ * @param string $object_subtype Registered object subtype.
+ * @return int
+ */
+
+function pgds_sanitize_primary_category_meta( $value, $meta_key = '', $object_type = '', $object_subtype = '' ) {
+	unset( $meta_key, $object_type, $object_subtype );
+
+	if ( pgds_category_migration_context() ) {
+		return absint( $value );
+	}
+
+	return pgds_validate_primary_category_id( $value );
+}
+
+/**
+ * Remove stale primary-category metadata after category assignments change.
+ *
+ * @param int $post_id Post ID.
+ */
+function pgds_reconcile_post_primary_category( $post_id ) {
+	if ( pgds_category_migration_context() || 'post' !== get_post_type( $post_id ) ) {
+		return;
+	}
+
+	$stored = (int) get_post_meta( $post_id, '_pgds_primary_cat', true );
+	if ( $stored && ! pgds_validate_primary_category_id( $stored, $post_id ) ) {
+		delete_post_meta( $post_id, '_pgds_primary_cat' );
+	}
+}
+add_action( 'set_object_terms', 'pgds_reconcile_post_primary_category', 20, 1 );
+add_action( 'wp_after_insert_post', 'pgds_reconcile_post_primary_category', 20, 1 );
+add_action( 'added_post_meta', 'pgds_validate_saved_primary_category_meta', 20, 4 );
+add_action( 'updated_post_meta', 'pgds_validate_saved_primary_category_meta', 20, 4 );
+
+/**
+ * Enforce assignment after a primary-category meta write.
+ *
+ * @param int    $meta_id    Metadata row ID.
+ * @param int    $post_id    Post ID.
+ * @param string $meta_key   Metadata key.
+ * @param mixed  $meta_value Metadata value.
+ */
+function pgds_validate_saved_primary_category_meta( $meta_id, $post_id, $meta_key, $meta_value ) {
+	unset( $meta_id );
+	if ( '_pgds_primary_cat' !== $meta_key || pgds_category_migration_context() ) {
+		return;
+	}
+	if ( ! pgds_validate_primary_category_id( $meta_value, $post_id ) ) {
+		delete_post_meta( $post_id, '_pgds_primary_cat' );
+	}
+}
+
+/**
+ * Return an assigned canonical primary category with a deterministic fallback.
  *
  * @param int|WP_Post $post Post.
  * @return WP_Term|null
  */
 function pgds_primary_cat( $post ) {
 	$post = get_post( $post );
-	if ( ! $post ) {
+	if ( ! $post || 'post' !== $post->post_type ) {
 		return null;
 	}
-	$id = (int) get_post_meta( $post->ID, '_pgds_primary_cat', true );
-	if ( $id ) {
-		$term = get_term( $id, 'category' );
-		if ( $term instanceof WP_Term ) {
-			return $term;
+
+	$assigned_ids = array_map( 'intval', wp_get_post_categories( $post->ID ) );
+	$primary_id   = pgds_validate_primary_category_id( get_post_meta( $post->ID, '_pgds_primary_cat', true ), $post->ID, $assigned_ids );
+	if ( $primary_id ) {
+		$term = get_term( $primary_id, 'category' );
+		return $term instanceof WP_Term ? $term : null;
+	}
+
+	$canonical_order = array_flip( pgds_category_slugs() );
+	$candidates      = array();
+	foreach ( $assigned_ids as $assigned_id ) {
+		$term = get_term( $assigned_id, 'category' );
+		if ( $term instanceof WP_Term && isset( $canonical_order[ $term->slug ] ) ) {
+			$candidates[] = $term;
 		}
 	}
-	$cats = get_the_category( $post->ID );
-	return $cats ? $cats[0] : null;
+
+	usort(
+		$candidates,
+		static function ( $left, $right ) use ( $canonical_order ) {
+			return $canonical_order[ $left->slug ] <=> $canonical_order[ $right->slug ];
+		}
+	);
+
+	return $candidates[0] ?? null;
 }
 
 /**
@@ -263,14 +369,70 @@ function pgds_reading_time( $post ) {
 }
 
 /**
- * The post's canonical YouTube ID.
+ * Validate a canonical YouTube video ID.
+ *
+ * @param mixed $value Candidate ID.
+ * @return string Valid ID or an empty string.
+ */
+function pgds_validate_youtube_id( $value ) {
+	$value = trim( (string) $value );
+	return preg_match( '/^[A-Za-z0-9_-]{11}$/', $value ) ? $value : '';
+}
+
+/**
+ * Return the post's syntactically valid canonical YouTube ID.
  *
  * @param int|WP_Post $post Post.
  * @return string
  */
 function pgds_video_id( $post ) {
 	$post = get_post( $post );
-	return $post ? (string) get_post_meta( $post->ID, '_pgds_youtube_id', true ) : '';
+	return $post ? pgds_validate_youtube_id( get_post_meta( $post->ID, '_pgds_youtube_id', true ) ) : '';
+}
+
+/**
+ * Return the closed detail-layout policy value for a post.
+ *
+ * Specialized layouts require an explicitly stored, valid, assigned primary category.
+ * Deterministic category fallback is intentionally not used for layout classification.
+ *
+ * @param int|WP_Post $post Post.
+ * @return string article|emagazine|video|vietnam-buddhism
+ */
+function pgds_detail_layout( $post ) {
+	$post = get_post( $post );
+	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
+		return 'article';
+	}
+
+	$primary_id = pgds_validate_primary_category_id(
+		get_post_meta( $post->ID, '_pgds_primary_cat', true ),
+		$post->ID
+	);
+	if ( ! $primary_id ) {
+		return 'article';
+	}
+
+	$primary = get_term( $primary_id, 'category' );
+	if ( ! $primary instanceof WP_Term ) {
+		return 'article';
+	}
+
+	if ( 'emagazine' === $primary->slug ) {
+		return 'emagazine';
+	}
+	if ( 'vietnam-buddhism' === $primary->slug ) {
+		return 'vietnam-buddhism';
+	}
+	if (
+		'video' === $primary->slug &&
+		pgds_video_id( $post ) &&
+		'1' !== (string) get_post_meta( $post->ID, '_pgds_video_unavailable', true )
+	) {
+		return 'video';
+	}
+
+	return 'article';
 }
 
 /**
