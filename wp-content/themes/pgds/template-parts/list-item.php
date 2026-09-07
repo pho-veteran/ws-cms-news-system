@@ -27,9 +27,9 @@ $term = pgds_primary_cat( $p );
 		</h3>
 		<div class="pgds-list__meta">
 			<?php if ( $term ) : ?>
-				<span class="cat"><?php echo esc_html( $term->name ); ?></span> ·
+				<span class="cat"><?php echo esc_html( pgds_category_display_label( $term->slug, $term->name ) ); ?></span> ·
 			<?php endif; ?>
-			<?php echo esc_html( pgds_time_ago( $p ) ); ?>
+			<?php echo esc_html( pgds_reader_time_ago( $p ) ); ?>
 		</div>
 		<p class="pgds-list__sapo"><?php echo esc_html( wp_trim_words( pgds_sapo( $p ), 28 ) ); ?></p>
 	</div>

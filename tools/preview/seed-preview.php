@@ -87,4 +87,32 @@ if ( $unavailable_id ) {
 	delete_post_meta( $unavailable_id, '_pgds_youtube_poster' );
 }
 
+$english_detail_id = $preview_post_id( 'preview-2026-0026' );
+if ( $english_detail_id ) {
+	$comment_marker = 'pgds-preview-comment-0026';
+	$comments       = get_comments(
+		array(
+			'post_id'    => $english_detail_id,
+			'status'     => 'all',
+			'meta_key'   => '_pgds_preview_comment_id',
+			'meta_value' => $comment_marker,
+			'number'     => 1,
+		)
+	);
+	if ( ! $comments ) {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'      => $english_detail_id,
+				'comment_author'       => 'Độc giả preview',
+				'comment_author_email' => 'preview-comment@example.test',
+				'comment_content'      => 'Nội dung bình luận do CMS quản lý phải được giữ nguyên tiếng Việt.',
+				'comment_approved'     => 1,
+			)
+		);
+		if ( $comment_id ) {
+			update_comment_meta( $comment_id, '_pgds_preview_comment_id', $comment_marker );
+		}
+	}
+}
+
 WP_CLI::success( 'Development preview article metadata complete.' );

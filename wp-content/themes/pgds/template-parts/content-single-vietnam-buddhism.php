@@ -2,8 +2,8 @@
 /**
  * Vietnam Buddhism detail entry point.
  *
- * Editorial content is rendered verbatim. The dedicated English reader interface is
- * implemented by issue #11 without translating CMS content automatically.
+ * Editorial content remains verbatim while shared theme-owned interface elements use
+ * the request-scoped English reader presentation.
  *
  * @package pgds
  */

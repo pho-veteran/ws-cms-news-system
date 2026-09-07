@@ -20,7 +20,7 @@ $note       = $note instanceof WP_Post ? $note : null;
 $heading_id = sanitize_html_class( (string) ( $args['heading_id'] ?? wp_unique_id( 'pgds-lunar-' ) ) );
 
 $greg_day = date_i18n( 'd' );
-$greg_sub = pgds_month_year_vi();
+$greg_sub = pgds_reader_month_year();
 
 if ( function_exists( 'pgds_lunar_get_today' ) ) {
 	$data      = pgds_lunar_get_today();

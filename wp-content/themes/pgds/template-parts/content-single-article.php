@@ -27,7 +27,7 @@ $display_author = pgds_display_author( get_post() );
 		$term_url = get_term_link( $term );
 		if ( ! is_wp_error( $term_url ) ) {
 			$breadcrumbs[] = array(
-				'label' => $term->name,
+				'label' => pgds_category_display_label( $term->slug, $term->name ),
 				'url'   => $term_url,
 			);
 		}
@@ -41,7 +41,7 @@ $display_author = pgds_display_author( get_post() );
 				<h1 class="pgds-article__title"><?php the_title(); ?></h1>
 
 				<time class="pgds-article__date publish-time" datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
-					<?php echo esc_html( pgds_time_ago( $post_id ) ); ?>
+					<?php echo esc_html( pgds_reader_time_ago( $post_id ) ); ?>
 				</time>
 
 				<?php $sapo = pgds_has_editorial_sapo( $post_id ) ? pgds_sapo( $post_id ) : ''; ?>
@@ -106,18 +106,22 @@ $display_author = pgds_display_author( get_post() );
 				}
 			}
 			?>
-			<?php if ( $related ) : ?>
+			<?php if ( $related || pgds_is_english_reader_request() ) : ?>
 				<section class="pgds-section pgds-section--spaced" aria-labelledby="pgds-related-title" style="margin-top:34px;">
 					<div class="related-head"><h2 id="pgds-related-title"><?php esc_html_e( 'Cùng chuyên mục', 'pgds' ); ?></h2></div>
-					<div class="pgds-grid-3 related-grid">
-						<?php foreach ( $related as $related_post ) : ?>
-							<?php get_template_part(
+					<?php if ( $related ) : ?>
+						<div class="pgds-grid-3 related-grid">
+							<?php foreach ( $related as $related_post ) : ?>
+								<?php get_template_part(
 									'template-parts/card-secondary',
 									null,
 									array( 'post' => $related_post, 'variant' => 'related', 'tag' => 'h4' )
 								); ?>
-						<?php endforeach; ?>
-					</div>
+							<?php endforeach; ?>
+						</div>
+					<?php else : ?>
+						<p><?php esc_html_e( 'Chưa có bài viết liên quan.', 'pgds' ); ?></p>
+					<?php endif; ?>
 				</section>
 			<?php endif; ?>
 		</article>

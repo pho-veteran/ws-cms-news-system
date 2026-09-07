@@ -41,7 +41,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<?php if ( $term instanceof WP_Term ) : ?>
 							<?php $term_url = get_term_link( $term ); ?>
 							<?php if ( ! is_wp_error( $term_url ) ) : ?>
-								<li><a href="<?php echo esc_url( $term_url ); ?>"><?php echo esc_html( $node['label'] ); ?></a></li>
+								<li><a href="<?php echo esc_url( $term_url ); ?>"><?php echo esc_html( pgds_category_display_label( $slug, $node['label'] ) ); ?></a></li>
 							<?php endif; ?>
 						<?php endif; ?>
 					<?php endforeach; ?>

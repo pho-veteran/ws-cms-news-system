@@ -34,7 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php endif; ?>
 
 		<div class="pgds-header__right header-right">
-			<div class="pgds-header__date header-date"><?php echo esc_html( pgds_date_full_vi() ); ?></div>
+			<div class="pgds-header__date header-date"><?php echo esc_html( pgds_reader_date_full() ); ?></div>
 
 			<?php get_search_form(); ?>
 		</div>
@@ -61,7 +61,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 
 			<div class="pgds-nav__search">
-					<div class="pgds-nav__date"><?php echo esc_html( pgds_date_full_vi() ); ?></div>
+					<div class="pgds-nav__date"><?php echo esc_html( pgds_reader_date_full() ); ?></div>
 					<?php get_search_form(); ?>
 				</div>
 

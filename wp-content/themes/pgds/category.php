@@ -52,21 +52,21 @@ if ( have_posts() ) {
 		<nav class="pgds-category__tabs" aria-label="<?php esc_attr_e( 'Chuyên mục con', 'pgds' ); ?>">
 			<?php if ( $parent instanceof WP_Term ) : ?>
 				<?php if ( $term->term_id === $parent->term_id ) : ?>
-					<h1 class="pgds-category__title"><?php echo esc_html( $parent->name ); ?></h1>
+					<h1 class="pgds-category__title"><?php echo esc_html( pgds_category_display_label( $parent->slug, $parent->name ) ); ?></h1>
 				<?php else : ?>
-					<a class="pgds-category__parent" href="<?php echo esc_url( get_term_link( $parent ) ); ?>"><?php echo esc_html( $parent->name ); ?></a>
+					<a class="pgds-category__parent" href="<?php echo esc_url( get_term_link( $parent ) ); ?>"><?php echo esc_html( pgds_category_display_label( $parent->slug, $parent->name ) ); ?></a>
 				<?php endif; ?>
 
 				<?php foreach ( $children as $child ) : ?>
 					<span class="pgds-category__separator" aria-hidden="true">/</span>
 					<?php if ( $term->term_id === $child->term_id ) : ?>
-						<h1 class="pgds-category__child pgds-category__child--current"><?php echo esc_html( $child->name ); ?></h1>
+						<h1 class="pgds-category__child pgds-category__child--current"><?php echo esc_html( pgds_category_display_label( $child->slug, $child->name ) ); ?></h1>
 					<?php else : ?>
-						<a class="pgds-category__child" href="<?php echo esc_url( get_term_link( $child ) ); ?>"><?php echo esc_html( $child->name ); ?></a>
+						<a class="pgds-category__child" href="<?php echo esc_url( get_term_link( $child ) ); ?>"><?php echo esc_html( pgds_category_display_label( $child->slug, $child->name ) ); ?></a>
 					<?php endif; ?>
 				<?php endforeach; ?>
 			<?php else : ?>
-				<h1 class="pgds-category__title"><?php single_term_title(); ?></h1>
+				<h1 class="pgds-category__title"><?php echo esc_html( pgds_category_display_label( $term instanceof WP_Term ? $term->slug : '', single_term_title( '', false ) ) ); ?></h1>
 			<?php endif; ?>
 		</nav>
 

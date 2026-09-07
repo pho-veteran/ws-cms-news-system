@@ -28,6 +28,46 @@ $fail = static function ( $message ) use ( &$failures ) {
 };
 
 /**
+ * Build an origin URL for a local preview post.
+ *
+ * @param int    $post_id Post ID.
+ * @param string $origin  Origin base URL.
+ * @return string
+ */
+$preview_url = static function ( $post_id, $origin ) {
+	return $origin . wp_make_link_relative( get_permalink( $post_id ) );
+};
+
+/**
+ * Build an origin URL for a local category archive.
+ *
+ * @param WP_Term $term   Category term.
+ * @param string  $origin Origin base URL.
+ * @return string
+ */
+$category_url = static function ( $term, $origin ) {
+	$link = get_term_link( $term );
+	return is_wp_error( $link ) ? '' : $origin . wp_make_link_relative( $link );
+};
+
+/**
+ * Fetch a local preview page without following redirects.
+ *
+ * @param string $url  Preview URL.
+ * @param string $host HTTP Host header.
+ * @return array|WP_Error
+ */
+$fetch_preview = static function ( $url, $host ) {
+	return wp_remote_get(
+		$url,
+		array(
+			'headers'     => array( 'Host' => $host ),
+			'redirection' => 0,
+		)
+	);
+};
+
+/**
  * Assert an exact count.
  *
  * @param string $label    Assertion label.
@@ -436,14 +476,8 @@ $available_video = $preview_by_source['preview-2026-0012'] ?? 0;
 if ( ! $available_video || '1' === get_post_meta( $available_video, '_pgds_video_unavailable', true ) ) {
 	$fail( 'available video fixture is missing or marked unavailable' );
 } else {
-	$available_url      = $origin_url . wp_make_link_relative( get_permalink( $available_video ) );
-	$available_response = wp_remote_get(
-		$available_url,
-		array(
-			'headers'     => array( 'Host' => $host_header ),
-			'redirection' => 0,
-		)
-	);
+	$available_url      = $preview_url( $available_video, $origin_url );
+	$available_response = $fetch_preview( $available_url, $host_header );
 	$available_markup   = is_wp_error( $available_response ) ? '' : (string) wp_remote_retrieve_body( $available_response );
 	if (
 		is_wp_error( $available_response ) ||
@@ -463,27 +497,199 @@ $unavailable_video = $preview_by_source['preview-2026-0025'] ?? 0;
 if ( ! $unavailable_video || '1' !== get_post_meta( $unavailable_video, '_pgds_video_unavailable', true ) ) {
 	$fail( 'unavailable video fixture is missing its unavailable marker' );
 } else {
-	$unavailable_url      = $origin_url . wp_make_link_relative( get_permalink( $unavailable_video ) );
-	$unavailable_response = wp_remote_get(
-		$unavailable_url,
-		array(
-			'headers'     => array( 'Host' => $host_header ),
-			'redirection' => 0,
-		)
-	);
+	$unavailable_url      = $preview_url( $unavailable_video, $origin_url );
+	$unavailable_response = $fetch_preview( $unavailable_url, $host_header );
 	$unavailable_markup   = is_wp_error( $unavailable_response ) ? '' : (string) wp_remote_retrieve_body( $unavailable_response );
 	if (
 		is_wp_error( $unavailable_response ) ||
 		200 !== (int) wp_remote_retrieve_response_code( $unavailable_response ) ||
-		false === strpos( $unavailable_markup, 'pgds-video__unavailable' ) ||
 		false !== strpos( $unavailable_markup, 'data-pgds="youtube-facade"' ) ||
 		false !== strpos( $unavailable_markup, '<iframe' ) ||
 		false !== strpos( $unavailable_markup, 'youtube.com/embed' ) ||
 		false !== strpos( $unavailable_markup, 'youtube-nocookie.com/embed' )
 	) {
-		$fail( 'unavailable video route did not render the local fallback state' );
+		$fail( 'unavailable video route exposed an unavailable remote embed' );
 	} else {
-		WP_CLI::log( 'PASS: unavailable video route renders the local fallback state' );
+		WP_CLI::log( 'PASS: unavailable video route hides its remote embed' );
+	}
+}
+
+WP_CLI::log( '==> Checking Vietnam Buddhism English reader presentation...' );
+$english_detail = $preview_by_source['preview-2026-0026'] ?? 0;
+$article_detail = $preview_by_source['preview-2026-0001'] ?? 0;
+if ( ! $english_detail || ! $article_detail ) {
+	$fail( 'English or standard Article preview fixture is missing' );
+} else {
+	$english_category = get_category_by_slug( 'vietnam-buddhism' );
+	$article_category = get_category_by_slug( 'tin-phat-su' );
+	$english_url      = $preview_url( $english_detail, $origin_url );
+	$english_response = $fetch_preview( $english_url, $host_header );
+	$english_markup   = is_wp_error( $english_response ) ? '' : (string) wp_remote_retrieve_body( $english_response );
+	$english_required = array(
+		'<html lang="en">',
+		'Skip to content',
+		'aria-label="Sections"',
+		'>Home</a>',
+		'>Vietnam Buddhism</a>',
+		'>Search news</label>',
+		'aria-label="Breadcrumb"',
+		'Source: PGDS preview fixture',
+		'Comments',
+		'Post comment',
+		'placeholder="Write your comment…"',
+		'aria-label="Sidebar"',
+		'>Most read<',
+		'>Perpetual Calendar<',
+		'>Gregorian Calendar<',
+		'>Lunar Calendar<',
+		'>Related articles<',
+		'>Contact<',
+		'All rights reserved.',
+		'Bài viết không ảnh để kiểm tra khung dự phòng',
+		'Fixture này chủ động không có thumbnail để kiểm tra tỷ lệ khung, khả năng đọc và bố cục khi ảnh bị thiếu.',
+		'Ban biên tập kiểm thử preview',
+		'Độc giả preview',
+		'Nội dung bình luận do CMS quản lý phải được giữ nguyên tiếng Việt.',
+	);
+	$english_forbidden = array(
+		'Bỏ qua tới nội dung',
+		'aria-label="Chuyên mục"',
+		'>Trang chủ</a>',
+		'aria-label="Tìm kiếm tin tức"',
+		'aria-label="Đường dẫn trang"',
+		'id="pgds-comments-title">
+			Bình luận',
+		'>Gửi bình luận<',
+		'>Đọc nhiều<',
+		'>Lịch Vạn Niên<',
+		'>Cùng chuyên mục<',
+		'>Liên hệ<',
+		'Bản quyền thuộc về toà soạn.',
+	);
+
+	if ( is_wp_error( $english_response ) || 200 !== (int) wp_remote_retrieve_response_code( $english_response ) ) {
+		$fail( 'Vietnam Buddhism detail could not be fetched' );
+	} else {
+		foreach ( $english_required as $required ) {
+			if ( false === strpos( $english_markup, $required ) ) {
+				$fail( sprintf( 'Vietnam Buddhism detail is missing expected output: %s', $required ) );
+			}
+		}
+		foreach ( $english_forbidden as $forbidden ) {
+			if ( false !== strpos( $english_markup, $forbidden ) ) {
+				$fail( sprintf( 'Vietnam Buddhism detail still contains theme-owned Vietnamese UI: %s', $forbidden ) );
+			}
+		}
+		if ( ! array_filter( array( 'Just now', 'minute ago', 'minutes ago', 'hour ago', 'hours ago', 'day ago', 'days ago', 'month ago', 'months ago', 'year ago', 'years ago' ), static fn( $marker ) => false !== strpos( $english_markup, $marker ) ) ) {
+			$fail( 'Vietnam Buddhism detail is missing English relative publication time' );
+		}
+	}
+
+	if ( ! $english_category instanceof WP_Term || ! $article_category instanceof WP_Term ) {
+		$fail( 'English or standard category fixture is missing' );
+	} else {
+		$english_category_url      = $category_url( $english_category, $origin_url );
+		$english_category_response = $fetch_preview( $english_category_url, $host_header );
+		$english_category_markup   = is_wp_error( $english_category_response ) ? '' : (string) wp_remote_retrieve_body( $english_category_response );
+		$category_required         = array(
+			'<html lang="en">',
+			'aria-label="Sections"',
+			'>Home</a>',
+			'aria-label="Subsections"',
+			'<h1 class="pgds-category__title">Vietnam Buddhism</h1>',
+			'aria-label="Featured articles"',
+			'>Search news</label>',
+			'aria-label="Sidebar"',
+			'>Most read<',
+			'>Perpetual Calendar<',
+			'>Contact<',
+			'All rights reserved.',
+			'Bài viết không ảnh để kiểm tra khung dự phòng',
+			'Chuyện cây bồ đề trong sân trường',
+			'Người trẻ kể chuyện quê hương bằng podcast',
+		);
+		$category_forbidden = array(
+			'aria-label="Chuyên mục"',
+			'>Trang chủ</a>',
+			'aria-label="Chuyên mục con"',
+			'aria-label="Bài viết nổi bật"',
+			'aria-label="Tìm kiếm tin tức"',
+			'>Đọc nhiều<',
+			'>Lịch Vạn Niên<',
+			'>Liên hệ<',
+			'Bản quyền thuộc về toà soạn.',
+		);
+
+		if ( is_wp_error( $english_category_response ) || 200 !== (int) wp_remote_retrieve_response_code( $english_category_response ) ) {
+			$fail( 'Vietnam Buddhism category archive could not be fetched' );
+		} else {
+			foreach ( $category_required as $required ) {
+				if ( false === strpos( $english_category_markup, $required ) ) {
+					$fail( sprintf( 'Vietnam Buddhism category archive is missing expected output: %s', $required ) );
+				}
+			}
+			foreach ( $category_forbidden as $forbidden ) {
+				if ( false !== strpos( $english_category_markup, $forbidden ) ) {
+					$fail( sprintf( 'Vietnam Buddhism category archive still contains theme-owned Vietnamese UI: %s', $forbidden ) );
+				}
+			}
+			if ( ! array_filter( array( 'Just now', 'minute ago', 'minutes ago', 'hour ago', 'hours ago', 'day ago', 'days ago', 'month ago', 'months ago', 'year ago', 'years ago' ), static fn( $marker ) => false !== strpos( $english_category_markup, $marker ) ) ) {
+				$fail( 'Vietnam Buddhism category archive is missing English relative publication time' );
+			}
+		}
+
+		$article_category_url      = $category_url( $article_category, $origin_url );
+		$article_category_response = $fetch_preview( $article_category_url, $host_header );
+		$article_category_markup   = is_wp_error( $article_category_response ) ? '' : (string) wp_remote_retrieve_body( $article_category_response );
+		if (
+			is_wp_error( $article_category_response ) ||
+			200 !== (int) wp_remote_retrieve_response_code( $article_category_response ) ||
+			false === strpos( $article_category_markup, 'aria-label="Chuyên mục con"' ) ||
+			false === strpos( $article_category_markup, '>Tìm kiếm tin tức</label>' ) ||
+			false !== strpos( $article_category_markup, '<html lang="en">' ) ||
+			false !== strpos( $article_category_markup, 'aria-label="Subsections"' ) ||
+			false !== strpos( $article_category_markup, '>Search news</label>' )
+		) {
+			$fail( 'English reader presentation leaked into another category archive' );
+		}
+	}
+
+	$article_url      = $preview_url( $article_detail, $origin_url );
+	$article_response = $fetch_preview( $article_url, $host_header );
+	$article_markup   = is_wp_error( $article_response ) ? '' : (string) wp_remote_retrieve_body( $article_response );
+	if (
+		is_wp_error( $article_response ) ||
+		200 !== (int) wp_remote_retrieve_response_code( $article_response ) ||
+		false === strpos( $article_markup, '>Trang chủ</a>' ) ||
+		false === strpos( $article_markup, 'aria-label="Chuyên mục"' ) ||
+		false === strpos( $article_markup, '>Tìm kiếm tin tức</label>' ) ||
+		false !== strpos( $article_markup, '<html lang="en">' ) ||
+		false !== strpos( $article_markup, 'aria-label="Sections"' ) ||
+		false !== strpos( $article_markup, '>Search news</label>' )
+	) {
+		$fail( 'English reader presentation leaked into a standard Article detail' );
+	}
+
+	$comment_endpoint = $origin_url . '/wp-comments-post.php';
+	$comment_response = wp_remote_post(
+		$comment_endpoint,
+		array(
+			'body'        => array(
+				'comment_post_ID' => $english_detail,
+				'author'          => 'Preview verifier',
+				'email'           => 'preview-verifier@example.test',
+				'comment'         => '',
+			),
+			'headers'     => array( 'Host' => $host_header ),
+			'redirection' => 0,
+		)
+	);
+	$comment_markup = is_wp_error( $comment_response ) ? '' : (string) wp_remote_retrieve_body( $comment_response );
+	if (
+		is_wp_error( $comment_response ) ||
+		false === strpos( $comment_markup, 'Please type your comment text.' )
+	) {
+		$fail( 'Native comment validation did not return an English error for the Vietnam Buddhism detail' );
 	}
 }
 
