@@ -9,23 +9,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 ?>
-<footer class="pgds-footer" role="contentinfo">
-	<div class="pgds-wrap pgds-footer__grid">
+<footer class="pgds-footer block" role="contentinfo">
+	<div class="pgds-wrap pgds-footer__grid footer-grid wrap">
 		<div>
 			<h4><?php bloginfo( 'name' ); ?></h4>
 			<p class="pgds-footer__intro">
-				<?php echo esc_html( get_bloginfo( 'description' ) ); ?>
+				<?php echo esc_html( __( 'Chuyên trang tin điện tử - tin tức, đời sống và văn hóa Phật giáo', 'pgds' ) ); ?>
 			</p>
-			<p class="pgds-footer__legal">
-				<?php
-				/*
-				 * REQUIRED before go-live (Decree 72/2013 + Press Law 2016):
-				 * license number, governing body, Editor-in-Chief, address, phone, email.
-				 * Set via the Customizer/'pgds_footer_legal' option so editors can update it.
-				 */
-				echo wp_kses_post( get_option( 'pgds_footer_legal', __( '[Cần bổ sung: Giấy phép hoạt động, Cơ quan chủ quản, Tổng biên tập, Địa chỉ, Điện thoại, Email]', 'pgds' ) ) );
-				?>
-			</p>
+			<?php
+			/*
+			 * REQUIRED before go-live (Decree 72/2013 + Press Law 2016):
+			 * license number, governing body, Editor-in-Chief, address, phone, email.
+			 * Set via the Customizer/'pgds_footer_legal' option so editors can update it.
+			 */
+			$footer_legal = get_option( 'pgds_footer_legal', '' );
+			if ( $footer_legal && false === strpos( $footer_legal, '[Cần bổ sung' ) ) :
+			?>
+				<p class="pgds-footer__legal">
+					<?php echo wp_kses_post( $footer_legal ); ?>
+				</p>
+			<?php endif; ?>
 		</div>
 
 		<?php $footer_categories = pgds_category_tree(); ?>
@@ -49,13 +52,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div>
 			<h4><?php esc_html_e( 'Liên hệ', 'pgds' ); ?></h4>
 			<ul>
-				<li><?php echo esc_html( get_option( 'pgds_editor_name', __( 'Tổng biên tập: [Họ tên]', 'pgds' ) ) ); ?></li>
-				<li><?php echo esc_html( get_option( 'pgds_contact_email', 'toasoan@phatgiaovadoisong.vn' ) ); ?></li>
+				<?php
+				$editor_name = get_option( 'pgds_editor_name', __( 'Tổng biên tập: [Họ tên]', 'pgds' ) );
+				if ( $editor_name && false === strpos( $editor_name, '[Cần bổ sung' ) ) :
+				?>
+					<li><?php echo esc_html( $editor_name ); ?></li>
+				<?php endif; ?>
+				<?php
+				$contact_email = get_option( 'pgds_contact_email', 'toasoan@phatgiaovadoisong.vn' );
+				if ( $contact_email && false === strpos( $contact_email, '[Cần bổ sung' ) ) :
+				?>
+					<li><?php echo esc_html( $contact_email ); ?></li>
+				<?php endif; ?>
 			</ul>
 		</div>
 	</div>
 
-	<div class="pgds-footer__bottom">
+	<div class="pgds-footer__bottom footer-bottom">
 		<?php
 		printf(
 			/* translators: %1$s year, %2$s site name */

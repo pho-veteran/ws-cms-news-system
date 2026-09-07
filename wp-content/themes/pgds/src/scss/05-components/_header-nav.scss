@@ -3,26 +3,6 @@
 // ============================================================================
 @use 'config' as *;
 
-// --- Guide bar ---------------------------------------------------------------
-.pgds-guide {
-  background: var(--color-brand-strong);
-  color: var(--pgds-paper);
-  padding: 8px $sp-5;
-  font-size: $fs-xs;
-  text-align: center;
-  line-height: $lh-normal;
-
-  p {
-    margin: 0;
-    opacity: .8;
-  }
-
-  b {
-    color: var(--pgds-gilt-light);
-    opacity: 1;
-  }
-}
-
 // --- Header ------------------------------------------------------------------
 .pgds-header {
   background: var(--color-bg);

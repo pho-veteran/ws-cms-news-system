@@ -21,24 +21,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <a class="pgds-skip-link" href="#pgds-main"><?php esc_html_e( 'Bỏ qua tới nội dung', 'pgds' ); ?></a>
 
-<div class="pgds-guide">
-	<p><?php esc_html_e( 'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.', 'pgds' ); ?></p>
-</div>
-
-<header class="pgds-header" role="banner">
-	<div class="pgds-wrap pgds-header__inner">
+<header class="pgds-header site block" role="banner">
+	<div class="pgds-wrap pgds-header__inner header-inner">
 		<?php if ( has_custom_logo() ) : ?>
 			<?php the_custom_logo(); ?>
 		<?php else : ?>
-			<a class="pgds-logo" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
+			<a class="pgds-logo logo-img-link" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
 				<span class="pgds-logo__text">
 					<?php bloginfo( 'name' ); ?>
 				</span>
 			</a>
 		<?php endif; ?>
 
-		<div class="pgds-header__right">
-			<div class="pgds-header__date"><?php echo esc_html( pgds_date_full_vi() ); ?></div>
+		<div class="pgds-header__right header-right">
+			<div class="pgds-header__date header-date"><?php echo esc_html( pgds_date_full_vi() ); ?></div>
 
 			<?php get_search_form(); ?>
 		</div>
@@ -47,8 +43,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <div class="pgds-nav-sentinel" data-pgds="nav-sentinel" aria-hidden="true"></div>
 
-<nav class="pgds-nav" aria-label="<?php esc_attr_e( 'Chuyên mục', 'pgds' ); ?>" data-pgds="primary-nav">
-	<div class="pgds-wrap pgds-nav__inner">
+<nav class="pgds-nav cats block" aria-label="<?php esc_attr_e( 'Chuyên mục', 'pgds' ); ?>" data-pgds="primary-nav">
+	<div class="pgds-wrap pgds-nav__inner wrap">
 		<button class="pgds-nav__toggle" type="button"
 			data-pgds="nav-toggle" aria-expanded="false" aria-controls="pgds-primary-surface">
 			<?php pgds_icon( 'menu', array( 'class' => 'pgds-nav__toggle-icon', 'size' => 18 ) ); ?>

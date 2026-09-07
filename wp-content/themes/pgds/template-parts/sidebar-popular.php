@@ -15,12 +15,12 @@ $heading_id = sanitize_html_class( (string) ( $args['heading_id'] ?? wp_unique_i
 $tag        = $args['heading_tag'] ?? 'h3';
 $tag        = in_array( $tag, array( 'h2', 'h3', 'h4', 'h5', 'h6' ), true ) ? $tag : 'h3';
 ?>
-<section class="pgds-side-block" aria-labelledby="<?php echo esc_attr( $heading_id ); ?>">
-	<<?php echo esc_html( $tag ); ?> class="pgds-side-block__title" id="<?php echo esc_attr( $heading_id ); ?>"><?php esc_html_e( 'Đọc nhiều nhất', 'pgds' ); ?></<?php echo esc_html( $tag ); ?>>
+<section class="pgds-side-block side-block block" aria-labelledby="<?php echo esc_attr( $heading_id ); ?>">
+	<<?php echo esc_html( $tag ); ?> class="pgds-side-block__title side-title" id="<?php echo esc_attr( $heading_id ); ?>"><?php esc_html_e( 'Đọc nhiều', 'pgds' ); ?></<?php echo esc_html( $tag ); ?>>
 	<?php if ( $posts ) : ?>
 		<?php foreach ( $posts as $p ) : $url = get_permalink( $p ); ?>
-		<div class="pgds-rank">
-			<a class="pgds-rank__media" href="<?php echo esc_url( $url ); ?>" tabindex="-1" aria-hidden="true">
+		<div class="pgds-rank rank-item">
+			<a class="pgds-rank__media art rank-thumb" href="<?php echo esc_url( $url ); ?>" tabindex="-1" aria-hidden="true">
 				<?php pgds_art( $p, 'pgds-rank', 'pgds-ratio-card' ); ?>
 			</a>
 			<h4>

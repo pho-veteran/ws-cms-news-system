@@ -20,21 +20,21 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function pgds_meta_fields() {
 	return array(
-		'_pgds_sapo'          => array(
+		'_pgds_sapo'           => array(
 			'group'    => 'editorial',
 			'label'    => 'Sa-pô',
 			'help'     => 'Viết phần tóm tắt ngắn xuất hiện cùng bài trên trang chủ và đầu bài viết.',
 			'type'     => 'textarea',
 			'editable' => true,
 		),
-		'_pgds_primary_cat'   => array(
+		'_pgds_primary_cat'    => array(
 			'group'    => 'editorial',
 			'label'    => 'Chuyên mục chính',
 			'help'     => 'Chỉ hiện các chuyên mục đã được đánh dấu trong mục Chuyên mục của bài viết. Hãy chọn chuyên mục trước nếu danh sách đang trống.',
 			'type'     => 'category',
 			'editable' => true,
 		),
-		'_pgds_source'        => array(
+		'_pgds_source'         => array(
 			'group'    => 'editorial',
 			'label'    => 'Nguồn tin',
 			'help'     => 'Ghi tên nguồn nếu bài viết sử dụng nội dung từ đơn vị khác; có thể để trống.',
@@ -48,14 +48,14 @@ function pgds_meta_fields() {
 			'type'     => 'text',
 			'editable' => true,
 		),
-		'_pgds_is_featured'   => array(
+		'_pgds_is_featured'    => array(
 			'group'    => 'homepage',
 			'label'    => 'Tin nổi bật',
 			'help'     => 'Bật để bài viết có thể xuất hiện trong khối Tin nổi bật trên trang chủ.',
 			'type'     => 'checkbox',
 			'editable' => true,
 		),
-		'_pgds_feature_rank'  => array(
+		'_pgds_feature_rank'   => array(
 			'group'    => 'homepage',
 			'label'    => 'Vị trí Tin nổi bật',
 			'help'     => 'Chọn từ 1 đến 4. Vị trí 1 là tin chính; các vị trí 2–4 là tin phụ.',
@@ -65,21 +65,28 @@ function pgds_meta_fields() {
 			'max'      => 4,
 			'step'     => 1,
 		),
-		'_pgds_photo_story'   => array(
+		'_pgds_photo_story'    => array(
 			'group'    => 'homepage',
 			'label'    => 'Tin ảnh',
 			'help'     => 'Bật để bài viết có thể xuất hiện trong khối Tin ảnh.',
 			'type'     => 'checkbox',
 			'editable' => true,
 		),
-		'_pgds_youtube_id'    => array(
+		'_pgds_youtube_id'     => array(
 			'group'    => 'video',
 			'label'    => 'Video YouTube',
 			'help'     => 'Dán đường dẫn YouTube hoặc mã video gồm 11 ký tự. Mỗi bài chỉ dùng một video.',
 			'type'     => 'text',
 			'editable' => true,
 		),
-		'_pgds_youtube_dur'   => array(
+		'_pgds_youtube_title'  => array(
+			'group'    => 'video',
+			'label'    => 'Tiêu đề YouTube',
+			'help'     => 'PGDS tự cập nhật tiêu đề video; người biên tập không cần nhập.',
+			'type'     => 'readonly',
+			'editable' => false,
+		),
+		'_pgds_youtube_dur'    => array(
 			'group'    => 'video',
 			'label'    => 'Thời lượng',
 			'help'     => 'PGDS tự cập nhật thời lượng; người biên tập không cần nhập.',
@@ -103,6 +110,7 @@ function pgds_meta_groups() {
 		'homepage'  => array(
 			'label'       => 'Điều kiện và vị trí hiển thị trang chủ',
 			'description' => 'Bạn chọn nơi bài có thể xuất hiện; các khối trên trang chủ sẽ tự lấy bài phù hợp.',
+			'collapsed'   => true,
 		),
 		'video'     => array(
 			'label'       => 'Video',
@@ -687,87 +695,96 @@ function pgds_render_article_warnings( array $warnings ) {
 }
 
 function pgds_render_meta_field( $post_id, $key, array $field ) {
-	$value = get_post_meta( $post_id, $key, true );
-	$id    = esc_attr( $key );
+	$value    = get_post_meta( $post_id, $key, true );
+	$id       = esc_attr( $key );
+	$editable = ! empty( $field['editable'] );
 
 	echo '<div class="pgds-metabox__field">';
-	printf( '<label class="pgds-metabox__label" for="%s">%s</label>', $id, esc_html( $field['label'] ) );
+	if ( $editable ) {
+		printf( '<label class="pgds-metabox__label" for="%s">%s</label>', $id, esc_html( $field['label'] ) );
+	} else {
+		printf( '<span class="pgds-metabox__label" id="%s-label">%s</span>', $id, esc_html( $field['label'] ) );
+	}
 
-	switch ( $field['type'] ) {
-		case 'textarea':
-			printf(
-				'<textarea class="widefat" id="%s" name="%s" rows="3">%s</textarea>',
-				$id,
-				$id,
-				esc_textarea( (string) $value )
-			);
-			break;
-
-		case 'checkbox':
-			printf(
-				'<label class="pgds-metabox__choice"><input type="checkbox" id="%s" name="%s" value="1" %s> <span>%s</span></label>',
-				$id,
-				$id,
-				checked( $value, '1', false ),
-				esc_html__( 'Bật', 'pgds' )
-			);
-			break;
-
-		case 'number':
-			printf(
-				'<input class="small-text" type="number" id="%s" name="%s" value="%s" min="%d" max="%d" step="%d" aria-describedby="%s-help">',
-				$id,
-				$id,
-				esc_attr( (string) $value ),
-				(int) $field['min'],
-				(int) $field['max'],
-				(int) $field['step'],
-				$id
-			);
-			break;
-
-		case 'category':
-			$assigned_ids = wp_get_post_categories( $post_id, array( 'fields' => 'ids' ) );
-			$selected     = (int) $value;
-			$allowed_ids  = is_array( $assigned_ids ) ? array_map( 'intval', $assigned_ids ) : array();
-			$categories   = get_categories(
-				array(
-					'hide_empty' => 0,
-					'include'    => $allowed_ids,
-				)
-			);
-
-			printf( '<select class="widefat" id="%s" name="%s" aria-describedby="%s-help">', $id, $id, $id );
-			echo '<option value="0">— Chọn chuyên mục chính —</option>';
-			foreach ( $categories as $category ) {
+	if ( ! $editable ) {
+		$readonly_value = 'duration' === $field['type'] ? pgds_format_video_duration( $value ) : (string) $value;
+		if ( '' === $readonly_value ) {
+			$readonly_value = 'Chưa có dữ liệu';
+		}
+		printf( '<output id="%s-value" class="pgds-metabox__readonly" aria-labelledby="%s-label">%s</output>', $id, $id, esc_html( $readonly_value ) );
+	} else {
+		switch ( $field['type'] ) {
+			case 'textarea':
 				printf(
-					'<option value="%d"%s>%s</option>',
-					(int) $category->term_id,
-					selected( $selected, (int) $category->term_id, false ),
-					esc_html( $category->name )
+					'<textarea class="widefat" id="%s" name="%s" rows="3">%s</textarea>',
+					$id,
+					$id,
+					esc_textarea( (string) $value )
 				);
-			}
-			echo '</select>';
-			break;
+				break;
 
-		case 'duration':
-			printf( '<output id="%s" class="pgds-metabox__readonly">%s</output>', $id, esc_html( pgds_format_video_duration( $value ) ) );
-			break;
+			case 'checkbox':
+				printf(
+					'<label class="pgds-metabox__choice"><input type="checkbox" id="%s" name="%s" value="1" %s> <span>%s</span></label>',
+					$id,
+					$id,
+					checked( $value, '1', false ),
+					esc_html__( 'Bật', 'pgds' )
+				);
+				break;
 
-		default:
-			printf(
-				'<input class="widefat" type="text" id="%s" name="%s" value="%s" aria-describedby="%s-help">',
-				$id,
-				$id,
-				esc_attr( (string) $value ),
-				$id
-			);
+			case 'number':
+				printf(
+					'<input class="small-text" type="number" id="%s" name="%s" value="%s" min="%d" max="%d" step="%d" aria-describedby="%s-help">',
+					$id,
+					$id,
+					esc_attr( (string) $value ),
+					(int) $field['min'],
+					(int) $field['max'],
+					(int) $field['step'],
+					$id
+				);
+				break;
+
+			case 'category':
+				$assigned_ids = wp_get_post_categories( $post_id, array( 'fields' => 'ids' ) );
+				$selected     = (int) $value;
+				$allowed_ids  = is_array( $assigned_ids ) ? array_map( 'intval', $assigned_ids ) : array();
+				$categories   = get_categories(
+					array(
+						'hide_empty' => 0,
+						'include'    => $allowed_ids,
+					)
+				);
+
+				printf( '<select class="widefat" id="%s" name="%s" aria-describedby="%s-help">', $id, $id, $id );
+				echo '<option value="0">— Chọn chuyên mục chính —</option>';
+				foreach ( $categories as $category ) {
+					printf(
+						'<option value="%d"%s>%s</option>',
+						(int) $category->term_id,
+						selected( $selected, (int) $category->term_id, false ),
+						esc_html( $category->name )
+					);
+				}
+				echo '</select>';
+				break;
+
+			default:
+				printf(
+					'<input class="widefat" type="text" id="%s" name="%s" value="%s" aria-describedby="%s-help">',
+					$id,
+					$id,
+					esc_attr( (string) $value ),
+					$id
+				);
+		}
 	}
 
 	if ( ! empty( $field['help'] ) ) {
 		printf( '<p class="description" id="%s-help">%s</p>', $id, esc_html( $field['help'] ) );
 	}
-	if ( 'number' === $field['type'] ) {
+	if ( $editable && 'number' === $field['type'] ) {
 		echo '<p class="description pgds-metabox__feature-rank-state" aria-live="polite"></p>';
 	}
 	echo '</div>';
@@ -780,6 +797,9 @@ function pgds_render_meta_field( $post_id, $key, array $field ) {
  */
 function pgds_render_meta_box( $post ) {
 	wp_nonce_field( 'pgds_meta_save', 'pgds_meta_nonce' );
+	printf( '<input type="hidden" name="pgds_meta_groups[]" value="editorial">' );
+	printf( '<input type="hidden" name="pgds_meta_groups[]" value="homepage">' );
+	printf( '<input type="hidden" name="pgds_meta_groups[]" value="video">' );
 
 	$feedback = $GLOBALS['pgds_meta_feedback'] ?? array();
 	if ( (int) ( $feedback['post_id'] ?? 0 ) === (int) $post->ID ) {
@@ -791,8 +811,15 @@ function pgds_render_meta_box( $post ) {
 	$fields = pgds_meta_fields();
 	echo '<div class="pgds-metabox">';
 	foreach ( pgds_meta_groups() as $group_key => $group ) {
-		printf( '<fieldset class="pgds-metabox__group pgds-metabox__group--%s">', esc_attr( $group_key ) );
-		printf( '<legend>%s</legend>', esc_html( $group['label'] ) );
+		$collapsed = ! empty( $group['collapsed'] );
+		printf( '<fieldset class="pgds-metabox__group pgds-metabox__group--%s%s">', esc_attr( $group_key ), $collapsed ? ' is-collapsed' : '' );
+		if ( $collapsed ) {
+			printf( '<legend><button class="pgds-metabox__group-toggle" type="button" aria-expanded="false" aria-controls="pgds-meta-group-%s">%s</button></legend>', esc_attr( $group_key ), esc_html( $group['label'] ) );
+			printf( '<div id="pgds-meta-group-%s" class="pgds-metabox__group-content" hidden>', esc_attr( $group_key ) );
+		} else {
+			printf( '<legend>%s</legend>', esc_html( $group['label'] ) );
+			echo '<div class="pgds-metabox__group-content">';
+		}
 		printf( '<p class="pgds-metabox__group-help">%s</p>', esc_html( $group['description'] ) );
 
 		foreach ( $fields as $key => $field ) {
@@ -809,6 +836,7 @@ function pgds_render_meta_box( $post ) {
 			echo '</div>';
 		}
 
+		echo '</div>';
 		echo '</fieldset>';
 	}
 	echo '</div>';
@@ -817,9 +845,9 @@ function pgds_render_meta_box( $post ) {
 /**
  * Save editor-owned article metadata after WordPress applies final categories.
  *
- * @param int          $post_id    Post ID.
- * @param WP_Post      $post       Post after the save.
- * @param bool         $update     Whether this is an existing post.
+ * @param int          $post_id     Post ID.
+ * @param WP_Post      $post        Post after the save.
+ * @param bool         $update      Whether this is an existing post.
  * @param WP_Post|null $post_before Post before the save.
  */
 function pgds_save_meta( $post_id, $post, $update, $post_before ) {
@@ -845,19 +873,25 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		unset( $GLOBALS['pgds_meta_feedback'] );
 	}
 
-	$errors       = array();
-	$new_featured = isset( $_POST['_pgds_is_featured'] );
-	$rank_input   = isset( $_POST['_pgds_feature_rank'] ) ? wp_unslash( $_POST['_pgds_feature_rank'] ) : '';
-	$rank         = pgds_validate_featured_rank( $new_featured, $rank_input );
+	$submitted_groups = isset( $_POST['pgds_meta_groups'] ) ? (array) wp_unslash( $_POST['pgds_meta_groups'] ) : array();
+	$submitted_groups = array_map( 'sanitize_key', $submitted_groups );
+	$errors           = array();
 
-	if ( is_wp_error( $rank ) ) {
-		$errors[] = $rank->get_error_code();
-	} else {
-		update_post_meta( $post_id, '_pgds_is_featured', $new_featured ? '1' : '' );
-		update_post_meta( $post_id, '_pgds_feature_rank', $rank );
+	if ( in_array( 'homepage', $submitted_groups, true ) ) {
+		$new_featured = isset( $_POST['_pgds_is_featured'] );
+		$rank_input   = isset( $_POST['_pgds_feature_rank'] ) ? wp_unslash( $_POST['_pgds_feature_rank'] ) : '';
+		$rank         = pgds_validate_featured_rank( $new_featured, $rank_input );
+
+		if ( is_wp_error( $rank ) ) {
+			$errors[] = $rank->get_error_code();
+		} else {
+			update_post_meta( $post_id, '_pgds_is_featured', $new_featured ? '1' : '' );
+			update_post_meta( $post_id, '_pgds_feature_rank', $rank );
+			update_post_meta( $post_id, '_pgds_photo_story', isset( $_POST['_pgds_photo_story'] ) ? '1' : '' );
+		}
 	}
 
-	if ( isset( $_POST['_pgds_primary_cat'] ) ) {
+	if ( in_array( 'editorial', $submitted_groups, true ) && isset( $_POST['_pgds_primary_cat'] ) ) {
 		$assigned_ids = wp_get_post_categories( $post_id, array( 'fields' => 'ids' ) );
 		$category     = pgds_validate_primary_category(
 			wp_unslash( $_POST['_pgds_primary_cat'] ),
@@ -870,7 +904,7 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		}
 	}
 
-	if ( isset( $_POST['_pgds_youtube_id'] ) ) {
+	if ( in_array( 'video', $submitted_groups, true ) && isset( $_POST['_pgds_youtube_id'] ) ) {
 		$youtube_id = pgds_normalize_youtube_input( wp_unslash( $_POST['_pgds_youtube_id'] ) );
 		if ( is_wp_error( $youtube_id ) ) {
 			$errors[] = $youtube_id->get_error_code();
@@ -881,16 +915,17 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		}
 	}
 
-	$text_fields = array( '_pgds_source', '_pgds_display_author' );
-	foreach ( $text_fields as $key ) {
-		if ( isset( $_POST[ $key ] ) ) {
-			update_post_meta( $post_id, $key, sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) );
+	if ( in_array( 'editorial', $submitted_groups, true ) ) {
+		$text_fields = array( '_pgds_source', '_pgds_display_author' );
+		foreach ( $text_fields as $key ) {
+			if ( isset( $_POST[ $key ] ) ) {
+				update_post_meta( $post_id, $key, sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) );
+			}
+		}
+		if ( isset( $_POST['_pgds_sapo'] ) ) {
+			update_post_meta( $post_id, '_pgds_sapo', sanitize_textarea_field( wp_unslash( $_POST['_pgds_sapo'] ) ) );
 		}
 	}
-	if ( isset( $_POST['_pgds_sapo'] ) ) {
-		update_post_meta( $post_id, '_pgds_sapo', sanitize_textarea_field( wp_unslash( $_POST['_pgds_sapo'] ) ) );
-	}
-	update_post_meta( $post_id, '_pgds_photo_story', isset( $_POST['_pgds_photo_story'] ) ? '1' : '' );
 
 	pgds_record_meta_feedback( $post_id, $errors );
 }

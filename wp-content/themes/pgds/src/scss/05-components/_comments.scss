@@ -7,11 +7,13 @@
   margin-top: $sp-8;
 
   &__title {
-    font-size: $fs-xl;
-    color: var(--pgds-robe-deep);
-    border-bottom: 2px solid var(--pgds-robe);
-    padding-bottom: $sp-2;
     margin-bottom: $sp-4;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--pgds-robe);
+    color: var(--pgds-robe-deep);
+    font-size: 18px;
+    font-weight: $fw-bold;
+    line-height: $lh-snug;
   }
 
   &__list {
@@ -78,13 +80,52 @@
   }
 
   &__form-wrap {
-    background: #fff;
+    padding: $sp-5;
     border: 1px solid var(--pgds-line);
     border-radius: $radius-lg;
-    padding: $sp-5;
+    background: var(--pgds-white);
+  }
+
+  &__form,
+  &__form-inner {
+    min-width: 0;
+  }
+
+  // Progressive disclosure: hide logged-out author, email, and cookie-consent rows
+  // only while the textarea is empty and the form has no focus.
+  &__form-wrap,
+  &__form,
+  &__form-inner,
+  .comment-form {
+    &:not(:focus-within):has(textarea:placeholder-shown) {
+      .comment-form-author,
+      .comment-form-email,
+      .comment-form-cookies-consent {
+        display: none;
+      }
+    }
   }
 
   &__form-inner {
+    .comment-notes,
+    .comment-form-comment,
+    .comment-form-author,
+    .comment-form-email,
+    .comment-form-cookies-consent {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .comment-notes {
+      font-size: $fs-xs;
+      color: var(--pgds-text-muted);
+      margin-bottom: $sp-3;
+    }
+
+    .required {
+      color: var(--pgds-robe);
+    }
+
     .comment-form-comment {
       margin-bottom: $sp-3;
 
@@ -95,7 +136,7 @@
         border-radius: $radius-md;
         padding: $sp-3;
         font-family: $font-body;
-        font-size: $fs-sm;
+        font-size: 13.5px;
         resize: vertical;
         color: var(--pgds-ink);
         background: transparent;
@@ -104,10 +145,17 @@
           color: #9b8f79;
         }
 
-        &:focus {
+        &:focus,
+        &:focus-visible {
           border-color: var(--pgds-robe);
-          box-shadow: 0 0 0 2px rgba(92, 58, 46, 0.12);
+          box-shadow: 0 0 0 3px rgba(92, 58, 46, 0.18);
           outline: none;
+        }
+
+        &:user-invalid,
+        &[aria-invalid='true'] {
+          border-color: var(--pgds-robe);
+          background-color: var(--pgds-paper);
         }
       }
     }
@@ -138,14 +186,46 @@
         border-radius: $radius-md;
         padding: $sp-2 $sp-3;
         font-family: $font-body;
-        font-size: $fs-sm;
+        font-size: 13.5px;
         color: var(--pgds-ink);
 
-        &:focus {
+        &:focus,
+        &:focus-visible {
           border-color: var(--pgds-robe);
-          box-shadow: 0 0 0 2px rgba(92, 58, 46, 0.12);
+          box-shadow: 0 0 0 3px rgba(92, 58, 46, 0.18);
           outline: none;
         }
+
+        &:user-invalid,
+        &[aria-invalid='true'] {
+          border-color: var(--pgds-robe);
+          background-color: var(--pgds-paper);
+        }
+      }
+    }
+
+    .comment-form-cookies-consent {
+      display: flex;
+      align-items: flex-start;
+      gap: $sp-2;
+      margin-bottom: $sp-4;
+
+      input {
+        flex: 0 0 auto;
+        margin-top: 0.2em;
+        accent-color: var(--pgds-robe);
+      }
+
+      label {
+        line-height: $lh-normal;
+      }
+    }
+
+    .comment-form-comment textarea,
+    .comment-form-author input,
+    .comment-form-email input {
+      &:focus-visible {
+        @include focus-ring;
       }
     }
   }
@@ -157,7 +237,7 @@
     border-radius: $radius-md;
     padding: $sp-2 $sp-5;
     font-family: $font-body;
-    font-size: $fs-sm;
+    font-size: 13.5px;
     font-weight: $fw-bold;
     cursor: pointer;
     transition: background $dur-base $ease-out;
@@ -171,9 +251,30 @@
     }
   }
 
+  .comment-respond .comment-reply-title,
+  .comment-reply-title {
+    font-size: $fs-md;
+    color: var(--pgds-robe-deep);
+  }
+
+  .comment-awaiting-moderation,
+  .comment-respond .must-log-in,
+  .comment-respond .logged-in-as {
+    display: block;
+    padding: $sp-2 $sp-3;
+    background: var(--pgds-paper);
+    border: 1px solid var(--pgds-line);
+    border-radius: $radius-sm;
+    color: var(--pgds-robe-deep);
+    font-size: $fs-xs;
+  }
+
   &__closed {
+    padding: $sp-3 $sp-4;
+    background: var(--pgds-paper);
+    border: 1px solid var(--pgds-line);
+    border-radius: $radius-sm;
     font-size: $fs-sm;
     color: var(--pgds-text-muted);
-    font-style: italic;
   }
 }
