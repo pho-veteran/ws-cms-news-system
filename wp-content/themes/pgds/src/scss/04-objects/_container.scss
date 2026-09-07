@@ -4,7 +4,9 @@
 @use 'config' as *;
 
 .pgds-wrap {
+  width: 100%;
   max-width: $container-max;
+  min-width: 0;
   margin-inline: auto;
   padding-inline: $container-pad;
 }

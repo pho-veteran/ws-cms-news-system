@@ -1029,45 +1029,45 @@ class PGDS_CLI_Command {
 		return $q->posts ? (int) $q->posts[0] : null;
 	}
 
-	/**
-	 * Create a post with meta, categories, and a featured image.
-	 *
-	 * @param array $rec Record.
-	 * @return int|WP_Error
-	 */
 	private function create_post( $rec ) {
-		// Category.
-		$cat_ids = array();
+		// Categories are a closed, theme-owned vocabulary. Validation has already rejected
+		// unknown slugs; missing canonical terms indicate setup drift and must stop the record
+		// rather than silently creating an editor-invisible category.
+		$cat_ids    = array();
 		$primary_id = 0;
 		if ( ! empty( $rec['primary_cat'] ) ) {
-			$primary_id = pgds_ensure_category( $rec['primary_cat'], $rec['primary_cat'] );
-			if ( $primary_id ) {
-				$cat_ids[] = $primary_id;
+			$primary = pgds_category_term( (string) $rec['primary_cat'] );
+			if ( ! $primary ) {
+				return new WP_Error( 'pgds_missing_category', sprintf( 'Canonical category "%s" is missing; run pgds_seed_categories() before importing.', $rec['primary_cat'] ) );
 			}
+			$primary_id = (int) $primary->term_id;
+			$cat_ids[]  = $primary_id;
 		}
 		foreach ( (array) ( $rec['cats'] ?? array() ) as $cslug ) {
-			$cid = pgds_ensure_category( $cslug, $cslug );
-			if ( $cid ) {
-				$cat_ids[] = $cid;
+			$category = pgds_category_term( (string) $cslug );
+			if ( ! $category ) {
+				return new WP_Error( 'pgds_missing_category', sprintf( 'Canonical category "%s" is missing; run pgds_seed_categories() before importing.', $cslug ) );
 			}
+			$cat_ids[] = (int) $category->term_id;
 		}
+		$cat_ids = array_values( array_unique( array_filter( $cat_ids ) ) );
 
 		$author_id = 0;
 		if ( ! empty( $rec['author'] ) ) {
-			$user = get_user_by( 'login', $rec['author'] ) ?: get_user_by( 'email', $rec['author'] );
+			$user      = get_user_by( 'login', $rec['author'] ) ?: get_user_by( 'email', $rec['author'] );
 			$author_id = $user ? $user->ID : 0;
 		}
 
 		$postarr = array(
-			'post_title'   => wp_strip_all_tags( $rec['title'] ),
-			'post_name'    => $rec['slug'] ?? sanitize_title( $rec['title'] ),
-			'post_content' => $this->clean_body( $rec['body_html'] ?? '' ),
-			'post_excerpt' => $rec['sapo'] ?? '',
-			'post_status'  => 'publish',
-			'post_type'    => 'post',
-			'post_date'    => $rec['published_at'] ?? current_time( 'mysql' ),
-			'post_author'  => $author_id,
-			'post_category' => array_unique( $cat_ids ),
+			'post_title'    => wp_strip_all_tags( $rec['title'] ),
+			'post_name'     => $rec['slug'] ?? sanitize_title( $rec['title'] ),
+			'post_content'  => $this->clean_body( $rec['body_html'] ?? '' ),
+			'post_excerpt'  => $rec['sapo'] ?? '',
+			'post_status'   => 'publish',
+			'post_type'     => 'post',
+			'post_date'     => $rec['published_at'] ?? current_time( 'mysql' ),
+			'post_author'   => $author_id,
+			'post_category' => $cat_ids,
 		);
 
 		$post_id = wp_insert_post( $postarr, true );
@@ -1090,7 +1090,7 @@ class PGDS_CLI_Command {
 		if ( ! empty( $rec['sapo'] ) ) {
 			update_post_meta( $post_id, '_pgds_sapo', sanitize_textarea_field( (string) $rec['sapo'] ) );
 		}
-		if ( $primary_id ) {
+		if ( $primary_id && in_array( $primary_id, $cat_ids, true ) ) {
 			update_post_meta( $post_id, '_pgds_primary_cat', $primary_id );
 		}
 		if ( ! empty( $rec['source'] ) ) {

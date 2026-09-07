@@ -96,8 +96,9 @@ function pgds_register_meta() {
 	 * the rest are single-line text or numeric.
 	 */
 	$sanitizers = array(
-		'_pgds_sapo'    => 'sanitize_textarea_field',
-		'string'        => 'sanitize_text_field',
+		'_pgds_sapo'        => 'sanitize_textarea_field',
+		'_pgds_primary_cat' => 'pgds_sanitize_primary_category_meta',
+		'string'            => 'sanitize_text_field',
 		'integer'       => 'absint',
 		'boolean'       => 'rest_sanitize_boolean',
 	);
@@ -200,12 +201,20 @@ function pgds_render_meta_box( $post ) {
 				break;
 
 			case 'category':
+				$canonical_ids = array();
+				foreach ( pgds_category_slugs() as $slug ) {
+					$category = pgds_category_term( $slug );
+					if ( $category ) {
+						$canonical_ids[] = (int) $category->term_id;
+					}
+				}
 				wp_dropdown_categories(
 					array(
 						'show_option_none' => '— Chọn chuyên mục chính —',
 						'option_none_value' => 0,
 						'hierarchical'     => 1,
 						'hide_empty'       => 0,
+						'include'          => $canonical_ids,
 						'name'             => $id,
 						'id'               => $id,
 						'selected'         => (int) $value,
@@ -249,9 +258,17 @@ function pgds_save_meta( $post_id ) {
 				break;
 
 			case 'number':
-			case 'category':
 				$val = isset( $_POST[ $key ] ) ? (int) $_POST[ $key ] : 0;
 				update_post_meta( $post_id, $key, $val );
+				break;
+
+			case 'category':
+				$val = isset( $_POST[ $key ] ) ? pgds_validate_primary_category_id( wp_unslash( $_POST[ $key ] ), $post_id ) : 0;
+				if ( $val ) {
+					update_post_meta( $post_id, $key, $val );
+				} else {
+					delete_post_meta( $post_id, $key );
+				}
 				break;
 
 			case 'textarea':

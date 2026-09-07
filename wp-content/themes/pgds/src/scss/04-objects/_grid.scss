@@ -6,6 +6,11 @@
 
 .pgds-content-grid {
   display: grid;
+  min-width: 0;
+
+  > * {
+    min-width: 0;
+  }
   grid-template-columns: 1fr;
   gap: $sp-7;
 
@@ -17,6 +22,11 @@
 // Homepage feature grid: main + 320 panel
 .pgds-feature-grid {
   display: grid;
+  min-width: 0;
+
+  > * {
+    min-width: 0;
+  }
   grid-template-columns: 1fr;
   gap: 26px;
   align-items: stretch;
@@ -35,6 +45,11 @@
 // short row should fill the width instead of advertising the shortfall.
 .pgds-grid-3 {
   display: grid;
+  min-width: 0;
+
+  > * {
+    min-width: 0;
+  }
   grid-template-columns: 1fr;
   gap: $sp-5;
   align-items: stretch;
@@ -64,6 +79,11 @@
 // Grid 4 (media thumb)
 .pgds-grid-4 {
   display: grid;
+  min-width: 0;
+
+  > * {
+    min-width: 0;
+  }
   grid-template-columns: repeat(2, 1fr);
   gap: $sp-3;
 

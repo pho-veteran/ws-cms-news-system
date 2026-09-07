@@ -40,11 +40,11 @@ echo "==> Installing the required plugin (Redis object cache)..."
 $WP plugin install redis-cache --activate || echo "  (skipped if no network is available)"
 $WP redis enable 2>/dev/null || echo "  (redis enable skipped)"
 
-echo "==> Activating the pgds theme (which seeds 13 categories)..."
+echo "==> Activating the pgds theme (which reconciles 10 canonical categories)..."
 $WP theme activate pgds
 
 echo "==> Seeding categories (call directly in case the hook has not run)..."
-$WP eval 'if (function_exists("pgds_seed_categories")) { pgds_seed_categories(); echo "seeded\n"; }'
+$WP eval '$result = function_exists( "pgds_seed_categories" ) ? pgds_seed_categories() : new WP_Error( "pgds_missing_reconciler", "Category reconciler is unavailable." ); if ( is_wp_error( $result ) ) { WP_CLI::error( $result ); } WP_CLI::success( "Canonical categories reconciled." );'
 
 echo "==> Seeding the canonical custom logo..."
 PGDS_LOGO_FIXTURE="/var/www/html/.pgds-scripts/fixtures/pgds-logo.png"

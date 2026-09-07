@@ -3,6 +3,37 @@
 // ============================================================================
 @use 'config' as *;
 
+.pgds-breadcrumb {
+  margin-block: $sp-4;
+  color: var(--color-text-muted);
+  font-size: $fs-xs;
+
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $sp-2;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    min-width: 0;
+    overflow-wrap: anywhere;
+
+    &:not(:last-child)::after {
+      content: '/';
+      margin-left: $sp-2;
+      color: var(--color-border);
+    }
+  }
+
+  a:hover {
+    color: var(--color-brand);
+  }
+}
+
 // --- Article page ------------------------------------------------------------
 #pgds-main:has(> .pgds-content-grid > .pgds-article) {
   padding-top: 52px;

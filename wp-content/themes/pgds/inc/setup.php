@@ -191,8 +191,7 @@ function pgds_setup() {
 
 	register_nav_menus(
 		array(
-			'primary' => __( 'Menu chính (7 chuyên mục)', 'pgds' ),
-			'footer'  => __( 'Menu chân trang', 'pgds' ),
+			'footer' => __( 'Menu chân trang', 'pgds' ),
 		)
 	);
 }
