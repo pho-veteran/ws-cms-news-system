@@ -305,7 +305,7 @@ function pgds_month_year_vi( $timestamp = null ) {
 }
 
 /**
- * Relative published time in Vietnamese (e.g. "2 giờ trước"), falling back to a date.
+ * Relative published time in Vietnamese (e.g. "2 giờ trước").
  *
  * human_time_diff() is not used because it returns English under an en_US locale,
  * which yielded mixed-language output like "7 hours trước".
@@ -318,10 +318,10 @@ function pgds_time_ago( $post ) {
 	if ( ! $post ) {
 		return '';
 	}
-	$ts   = get_post_timestamp( $post );
-	$diff = time() - $ts;
 
-	// Future-dated (scheduled) posts: show the date rather than a negative diff.
+	$diff = current_time( 'timestamp', true ) - get_post_timestamp( $post );
+
+	// Scheduled posts need a calendar date instead of a negative relative time.
 	if ( $diff < 0 ) {
 		return get_the_date( 'd/m/Y', $post );
 	}
@@ -335,13 +335,14 @@ function pgds_time_ago( $post ) {
 	if ( $diff < DAY_IN_SECONDS ) {
 		return (int) floor( $diff / HOUR_IN_SECONDS ) . ' giờ trước';
 	}
-	if ( $diff < 2 * DAY_IN_SECONDS ) {
-		return 'Hôm qua';
-	}
-	if ( $diff < 7 * DAY_IN_SECONDS ) {
+	if ( $diff < 30 * DAY_IN_SECONDS ) {
 		return (int) floor( $diff / DAY_IN_SECONDS ) . ' ngày trước';
 	}
-	return get_the_date( 'd/m/Y', $post );
+	if ( $diff < YEAR_IN_SECONDS ) {
+		return (int) floor( $diff / ( 30 * DAY_IN_SECONDS ) ) . ' tháng trước';
+	}
+
+	return (int) floor( $diff / YEAR_IN_SECONDS ) . ' năm trước';
 }
 
 /**

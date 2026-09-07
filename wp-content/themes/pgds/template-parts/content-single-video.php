@@ -45,7 +45,7 @@ $term    = pgds_primary_cat( $post_id );
 				<?php endif; ?>
 				<div class="pgds-article__meta">
 					<span><?php echo esc_html( get_the_author() ); ?></span>
-					<span><?php echo esc_html( get_the_date( 'd/m/Y H:i' ) ); ?></span>
+					<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>"><?php echo esc_html( pgds_time_ago( $post_id ) ); ?></time>
 				</div>
 			</header>
 
