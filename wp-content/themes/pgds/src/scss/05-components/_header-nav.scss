@@ -149,6 +149,12 @@
     }
   }
 
+  // The masthead reference has no trailing chevron. Keep the control in the
+  // accessibility tree while leaving other search-form variants unchanged.
+  .pgds-header &__submit {
+    @include visually-hidden;
+  }
+
   @include mq-max(md) {
     width: 190px;
   }
@@ -417,22 +423,19 @@ body.pgds-nav-open { overflow: hidden; }
   &__link {
     display: block;
     min-block-size: $target-comfortable;
-    padding: 13px $sp-3;
+    padding: 13px $sp-5;
     color: var(--color-text-inverse);
     font-size: $fs-sm;
     font-weight: $fw-medium;
     line-height: $lh-snug;
     white-space: nowrap;
-    border-bottom: 2px solid transparent;
-    transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out,
-      border-color $dur-fast $ease-out;
+    transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out;
   }
 
   &--current > &__link,
   &__link[aria-current='page'] {
     color: var(--pgds-gilt-bright);
     font-weight: $fw-bold;
-    border-bottom-color: var(--pgds-gilt-bright);
   }
 
   &--current-ancestor > &__link { color: var(--pgds-gilt-bright); }
