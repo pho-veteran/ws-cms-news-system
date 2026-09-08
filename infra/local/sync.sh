@@ -46,9 +46,14 @@ docker exec "$wp_container" sh -c '
   chown -R www-data:www-data /var/www/html/wp-content/themes/pgds
 '
 
-docker cp "$REPO_ROOT/wp-content/mu-plugins/." \
-  "$wp_container:/var/www/html/wp-content/mu-plugins/" >/dev/null
-docker exec "$wp_container" chown -R www-data:www-data /var/www/html/wp-content/mu-plugins
+docker exec "$wp_container" sh -c 'rm -rf /tmp/pgds-mu-sync && mkdir -p /tmp/pgds-mu-sync'
+tar -C "$REPO_ROOT/wp-content/mu-plugins" -cf - . \
+  | docker cp - "$wp_container:/tmp/pgds-mu-sync"
+docker exec "$wp_container" sh -c '
+  rm -rf /var/www/html/wp-content/mu-plugins
+  mv /tmp/pgds-mu-sync /var/www/html/wp-content/mu-plugins
+  chown -R www-data:www-data /var/www/html/wp-content/mu-plugins
+'
 docker exec "$wp_container" sh -c '
   mkdir -p /var/www/html/wp-content/uploads
   chmod 0777 /var/www/html/wp-content/uploads

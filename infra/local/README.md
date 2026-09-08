@@ -21,6 +21,10 @@ docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/lint.sh'
 
 # install WP, activate the theme, seed lunar data, import sample data
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/setup.sh'
+
+# isolated CMS plus EPIC #3 category/SEO/importer/cron/cache regressions
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/tests/cms-editor-regression.sh'
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/tests/compatibility-regression.sh'
 ```
 
 Open http://localhost:8080 — the front page renders 11 blocks.
@@ -30,8 +34,8 @@ Admin: http://localhost:8080/wp-admin (admin / admin123).
 
 For a rich, reproducible editorial corpus, layer the development-only fixture bundle in
 [`tools/preview/`](../../tools/preview/) onto the canonical local setup. It contains 180
-articles across the four editorial surfaces, eight teaching entries, 21 checked-in licensed
-photographs and four local YouTube poster fixtures. The seed verifies every checksum, imports
+articles across the four editorial surfaces, eight teaching entries, 25 checked-in licensed
+image fixtures (including four local YouTube posters). The seed verifies every checksum, imports
 content media into the Media Library, and assigns imagery through normal CMS fields.
 
 The bundle does not own the site's identity, static theme logo, header, footer, category setup,

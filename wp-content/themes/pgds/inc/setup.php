@@ -196,6 +196,21 @@ add_action( 'admin_menu', 'pgds_remove_menu_management', 999 );
 add_action( 'after_setup_theme', 'pgds_setup' );
 
 /**
+ * Keep the category archive split at one lead, four supporting cards and six rows.
+ *
+ * @param WP_Query $query Main query.
+ * @return void
+ */
+function pgds_category_archive_page_size( $query ) {
+	if ( is_admin() || ! $query instanceof WP_Query || ! $query->is_main_query() || ! $query->is_category() ) {
+		return;
+	}
+
+	$query->set( 'posts_per_page', 11 );
+}
+add_action( 'pre_get_posts', 'pgds_category_archive_page_size' );
+
+/**
  * Remove unused features to reduce payload and attack surface.
  */
 function pgds_trim_head() {
