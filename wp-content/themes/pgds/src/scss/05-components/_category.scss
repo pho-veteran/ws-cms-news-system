@@ -7,8 +7,7 @@
 .pgds-category {
   &__head {
     padding-top: $sp-5;
-    margin-bottom: 22px;
-    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0;
   }
 
   &__tabs {
@@ -62,6 +61,15 @@
     color: var(--color-text-muted);
   }
 
+  // The reference keeps the category tabs and their separator rule as two
+  // independent rows. Keeping the rule explicit preserves the exact 22px
+  // hand-off into the hero, including when a term description is present.
+  &__rule {
+    height: 1px;
+    margin-bottom: 22px;
+    background: var(--color-border);
+  }
+
   &__ornament {
     display: flex;
     align-items: center;
@@ -79,6 +87,7 @@
 
     .pgds-icon {
       flex: none;
+      stroke-width: 1.4;
     }
   }
 
@@ -114,14 +123,33 @@
   }
 
   .pgds-pagination {
-    margin-top: 26px;
+    margin: 26px 0 $sp-8;
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: $sp-2;
+    }
 
     .page-numbers {
+      width: 34px;
       min-width: 34px;
       height: 34px;
-      padding: 0 $sp-2;
+      min-height: 34px;
+      padding: 0;
       border-radius: $radius-md;
+      font-size: $fs-xs;
       font-weight: $fw-semibold;
+
+      &.current {
+        box-shadow: none;
+      }
+
+      &:hover:not(.current) {
+        border-color: var(--color-border);
+        background: var(--pgds-paper-deep);
+      }
     }
   }
 
