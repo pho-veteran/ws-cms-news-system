@@ -1271,6 +1271,12 @@ try {
 	$GLOBALS['menu'] = $previous_menu;
 	$GLOBALS['submenu'] = $previous_submenu;
 
+	$lunar_post_type = get_post_type_object( 'pgds_lunar_note' );
+	pgds_cms_editor_assert(
+		$lunar_post_type instanceof WP_Post_Type && $lunar_post_type->show_ui && ! $lunar_post_type->show_in_menu,
+		'Lunar calendar keeps its management screen but stays hidden from the editorial menu'
+	);
+
 	$GLOBALS['submenu']['themes.php'] = array(
 		array( 'Themes', 'switch_themes', 'themes.php' ),
 		array( 'Menus', 'edit_theme_options', 'nav-menus.php' ),
