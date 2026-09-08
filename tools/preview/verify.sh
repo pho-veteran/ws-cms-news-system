@@ -16,4 +16,4 @@ fi
 
 $WP eval-file "$VERIFY"
 
-echo "==> Preview article verification passed."
+echo "==> Preview dataset verification passed."

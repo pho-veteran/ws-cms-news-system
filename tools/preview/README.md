@@ -1,58 +1,58 @@
-# Development preview articles
+# Development preview dataset
 
-This directory contains a **development-only set of 40 article fixtures** for the local WordPress stack. It is deliberately separate from production imports and contains synthetic Vietnamese editorial copy plus the checked-in photographs used by those articles.
+This directory contains the deterministic, development-only content corpus used to review the PGDS WordPress CMS after the editorial-surface migration. It is never production content.
 
-The package is an article layer, not a second site bootstrap. Run the canonical local setup first. Site identity, header, footer, category registration, static pages, navigation, supporting post types, lunar/sidebar content, and homepage ordering remain under the canonical setup and WordPress CMS.
+## Dataset contract
 
-## Safety boundary
+- Exactly 180 published `post` records: 20 for each canonical editorial primary category.
+- Article: `tin-phat-su`, `song-an-lanh`, `am-thuc-chay`, `loi-song-xanh`, `phat-tich`, and `tot-doi-dep-dao`.
+- Specialized surfaces: `emagazine`, `video`, and `vietnam-buddhism`.
+- `media` and `song-an-lanh` remain assigned as parent categories where appropriate; `media` is never primary.
+- Article fixtures contain 500–900 words with category-specific reporting context, at least three semantic sections, a pull quote, a list, a source and an explicit display author.
+- E-magazine fixtures contain at least 800 words, chapter-style sections, a pull quote, an inline image and a two-image gallery.
+- Video fixtures intentionally contain only 80–180 words: the valid YouTube ID, synchronized title/duration metadata and CMS-managed poster are the primary content. The poster is also the featured image.
+- Vietnam Buddhism is English-only across title, sapo, body, source, author and its dedicated English Media Library records.
+- Forty-eight non-Video articles contain a native Gutenberg inline image.
+- Four articles occupy the homepage Featured positions and six Article fixtures are Photo stories.
+- Exactly eight published `pgds_teaching` records with at least 150 words, a practical exercise and a featured image.
+- Thirty-five attributed Media Library records backed by 25 checked-in fixtures. Ten records provide English metadata for Vietnam Buddhism while reusing the same licensed source files.
 
-- Never use these fixtures for a production migration or deploy.
-- Every preview article uses an `_pgds_source_id` prefixed with `preview-2026-`.
-- The checked-in photographs are development fixtures, not newsroom media.
-- The preview seed does not call `wp pgds yt-sync`, connect to production, or require a YouTube API key.
+Stable article IDs use `preview-2026-<primary-category>-01` through `-20`. Teaching IDs use `teaching-01` through `teaching-08` in `_pgds_preview_teaching_id`.
 
-## CMS-managed article media
+## Files
 
-`preview-media.json` is the article-media manifest. It records provenance, attribution, license, alt text, checksum, and the featured, inline, gallery, and poster relationships belonging to the articles. The source JPEGs live in `media/`, so the fixture package is deterministic and requires no download step.
+- `generate-dataset.mjs`: source definitions and deterministic generator for article records and media relationships.
+- `preview-content.json`: generated article import dataset.
+- `preview-media.json`: attributed media catalog and generated featured/inline/gallery/poster relationships.
+- `preview-teachings.json`: the eight teaching fixtures.
+- `reset.sh`: removes local articles, teachings and non-logo attachments while preserving users, settings, pages, taxonomy, navigation and the lunar fallback.
+- `seed.sh`: imports the complete corpus into WordPress.
+- `verify.sh`: verifies identity, category distribution, classification, body richness, editable media relationships, Video metadata, curation, teaching content and representative frontend routes.
 
-`seed.sh` imports the JPEGs as normal WordPress attachments and assigns them through native CMS fields and editor content. After import, WordPress attachment IDs, post metadata, and Gutenberg content own every relationship. Developers can replace, edit, caption, or reassign them in **Media > Library** and the post editor.
+The checked-in JPEGs are development fixtures, not newsroom media. Preserve the attribution recorded in `preview-media.json` and `media/ATTRIBUTION.json`.
 
-The files are reusable under the licenses recorded in the manifest and `media/ATTRIBUTION.json`, but their inclusion here does not make them real PGDS editorial media. Keep the fixtures development-only and preserve attribution if they are reused under their source licenses.
+## Regenerate after editing source definitions
 
-## Article fixture contract
+From the repository root:
 
-- Exactly 40 substantive articles with stable IDs `preview-2026-0001` through `preview-2026-0040`.
-- Every article has at least 300 words, two semantic sections, a pull quote, a list, and an explicit byline. Eight reference-grade fixtures (`0001`, `0002`, `0007`, `0012`, `0018`, `0023`, `0026`, and `0033`) contain approximately 600–900 words.
-- Twenty-five CMS-managed Media Library assets: 21 licensed article photographs, four local YouTube poster fixtures, 39 featured-image assignments, seven native Gutenberg inline-image assignments, and one two-image gallery.
-- `preview-2026-0026` deliberately has no article imagery.
-- Available and unavailable video states use frozen duration, title, and CMS-managed poster metadata. Each available fixture has a checked-in local thumbnail that matches its YouTube ID rather than reusing the article's featured image. The facade creates the `youtube-nocookie.com` embed only after the visitor clicks play.
-- Article-owned source, display-author, category, tag, caption, and related-content data.
+```bash
+node tools/preview/generate-dataset.mjs
+```
 
-The package intentionally does **not** create or replace site options, header/footer/category content, static pages, menus, menu locations, topics, teachings, lunar notes, or homepage feature/photo-story metadata.
+The command rewrites `preview-content.json` and the assignment section of `preview-media.json`.
 
-## Seed from the repository root
+## Replace local editorial content
+
+Run the canonical local setup once, then replace only the disposable editorial corpus:
 
 ```bash
 cd infra/local
 docker compose up -d
 ./sync.sh
-
-# Establish the canonical local WordPress site first.
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/setup.sh'
-
-# Add only the 40 preview articles and their CMS-managed media.
+docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/reset.sh'
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/seed.sh'
-```
-
-The article seed is safe to rerun: article identity is keyed by source ID and Media Library attachments use stable local asset keys. Because the generic content importer intentionally skips existing source IDs, reset the disposable local volumes when testing changes to `preview-content.json`.
-
-For an exact article-only corpus, run the canonical setup in a fresh local stack, remove only the baseline `post` records imported from `tools/sample-data/data.sample.json`, and then run `seed.sh`. Keep baseline site identity, pages, categories, navigation, teachings, lunar/sidebar records, and all other invariant CMS content intact.
-
-## Verify
-
-```bash
-cd infra/local
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/verify.sh'
 ```
 
-The verifier checks source-ID uniqueness, article richness, attributed Media Library coverage, editable featured/inline/gallery/poster relationships, the intentional no-image state, category coverage, frozen video metadata, and the available/unavailable article routes. It also rejects preview-owned homepage promotion metadata. Baseline site records and unrelated Media Library items may coexist.
+`reset.sh` is intentionally destructive only to the disposable local article, teaching and non-logo media corpus. It does not delete static pages, users, options, categories, navigation or the lunar-calendar fallback.
