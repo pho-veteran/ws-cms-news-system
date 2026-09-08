@@ -132,13 +132,17 @@
 }
 
 .pgds-media-thumb {
-  position: relative;
   display: block;
+
+  &__visual {
+    position: relative;
+    display: block;
+    margin-bottom: $sp-2;
+  }
 
   .pgds-art {
     @include ratio(16, 11);
     border-radius: $radius-md;
-    margin-bottom: $sp-2;
   }
 
   &__title {
@@ -178,7 +182,7 @@
 // Play button (shared by media + video facade)
 .pgds-play {
   position: absolute;
-  top: 45%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 44px;

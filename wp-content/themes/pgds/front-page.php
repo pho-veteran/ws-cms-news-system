@@ -205,10 +205,12 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 						<div class="pgds-grid-4">
 						<?php foreach ( $pgds_panel_thumbs as $mt ) : ?>
 							<a class="pgds-media-thumb" href="<?php echo esc_url( get_permalink( $mt ) ); ?>">
-								<?php pgds_art( $mt, 'pgds-thumb', 'pgds-ratio-thumb' ); ?>
-								<?php if ( $pgds_panel['play'] ) : ?>
-									<span class="pgds-play pgds-play--sm" aria-hidden="true"><?php pgds_play_svg(); ?></span>
-								<?php endif; ?>
+								<span class="pgds-media-thumb__visual">
+									<?php pgds_art( $mt, 'pgds-thumb', 'pgds-ratio-thumb' ); ?>
+									<?php if ( $pgds_panel['play'] ) : ?>
+										<span class="pgds-play pgds-play--sm" aria-hidden="true"><?php pgds_play_svg(); ?></span>
+									<?php endif; ?>
+								</span>
 								<span class="pgds-media-thumb__title"><?php echo esc_html( get_the_title( $mt ) ); ?></span>
 							</a>
 						<?php endforeach; ?>
