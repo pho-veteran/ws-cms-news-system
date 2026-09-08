@@ -132,34 +132,58 @@ foreach (
 	}
 }
 
-$english_detail_id = $preview_post_id( 'preview-2026-vietnam-buddhism-01' );
-if ( $english_detail_id ) {
-	$comment_marker = 'pgds-preview-comment-vietnam-buddhism';
-	$comments       = get_comments(
+$comment_fixtures = array(
+	array( 'preview-2026-tin-phat-su-01', 'Minh An', 'Bài viết có nhiều chi tiết thực tế, đặc biệt là cách phân chia công việc sau sự kiện.', 'vi-01' ),
+	array( 'preview-2026-tin-phat-su-01', 'Tuệ Nhiên', 'Phần nói về nhu cầu của người cao tuổi rất hữu ích. Mong chuyên mục tiếp tục theo dõi ở các hoạt động sau.', 'vi-02' ),
+	array( 'preview-2026-tin-phat-su-01', 'Hải Đăng', 'Hình ảnh và chú thích giúp tôi hình dung rõ hơn không gian tổ chức.', 'vi-03' ),
+	array( 'preview-2026-tin-phat-su-01', 'Thanh Mai', 'Tôi thích cách bài viết phân biệt kết quả trước mắt với giá trị có thể duy trì lâu dài.', 'vi-04' ),
+	array( 'preview-2026-tin-phat-su-01', 'Diệu Linh', 'Nếu có thêm thông tin về hoạt động dành cho gia đình trẻ thì tuyến nội dung sẽ càng đầy đủ.', 'vi-05' ),
+	array( 'preview-2026-tin-phat-su-01', 'Quang Minh', 'Một bài tổng hợp mạch lạc, có thể dùng làm tài liệu tham khảo cho nhóm tình nguyện.', 'vi-06' ),
+	array( 'preview-2026-tin-phat-su-01', 'An Hòa', 'Chi tiết về việc ghi nhận phản hồi sau chương trình là điều nhiều hoạt động cộng đồng còn thiếu.', 'vi-07' ),
+	array( 'preview-2026-tin-phat-su-01', 'Nhật Tâm', 'Mong được đọc thêm câu chuyện từ những người trực tiếp tham gia công tác chuẩn bị.', 'vi-08' ),
+	array( 'preview-2026-tin-phat-su-01', 'Bảo Châu', 'Nội dung vừa đủ sâu nhưng vẫn dễ theo dõi trên điện thoại.', 'vi-09' ),
+	array( 'preview-2026-tin-phat-su-01', 'Thiện Đức', 'Cách tiếp cận bằng những việc nhỏ làm cho tinh thần phụng sự trở nên gần gũi hơn.', 'vi-10' ),
+	array( 'preview-2026-tin-phat-su-01', 'Lam Anh', 'Phần danh sách cuối bài giúp người đọc dễ chọn một hành động cụ thể để bắt đầu.', 'vi-11' ),
+	array( 'preview-2026-tin-phat-su-01', 'Trúc Lâm', 'Bố cục rõ ràng và phần trích dẫn tạo được nhịp nghỉ hợp lý cho bài dài.', 'vi-12' ),
+	array( 'preview-2026-vietnam-buddhism-01', 'Preview reader', 'The article connects heritage preservation with the practical work of a living community.', 'en-01' ),
+);
+
+foreach ( $comment_fixtures as $index => $fixture ) {
+	$post_id = $preview_post_id( $fixture[0] );
+	if ( ! $post_id ) {
+		WP_CLI::error( sprintf( 'Missing preview article for comment fixture: %s', $fixture[0] ) );
+	}
+
+	$comment_marker = 'pgds-preview-comment-' . $fixture[3];
+	$existing       = get_comments(
 		array(
-			'post_id'    => $english_detail_id,
-			'source'     => 'comment',
-			'source__not_in' => array( 'pingback', 'trackback' ),
-			'suppress_filters' => false,
+			'post_id'    => $post_id,
+			'status'     => 'all',
 			'meta_key'   => '_pgds_preview_comment_id',
 			'meta_value' => $comment_marker,
 			'number'     => 1,
 		)
 	);
-	if ( ! $comments ) {
-		$comment_id = wp_insert_comment(
-			array(
-				'comment_post_ID'      => $english_detail_id,
-				'comment_author'       => 'Preview reader',
-				'comment_author_email' => 'preview-reader@example.test',
-				'comment_content'      => 'This CMS-managed comment verifies the English reader presentation.',
-				'comment_approved'     => 1,
-			)
-		);
-		if ( $comment_id ) {
-			update_comment_meta( $comment_id, '_pgds_preview_comment_id', $comment_marker );
-		}
+	if ( $existing ) {
+		continue;
 	}
+
+	$comment_date = gmdate( 'Y-m-d H:i:s', strtotime( '2026-09-07 08:00:00 UTC' ) + $index * HOUR_IN_SECONDS );
+	$comment_id   = wp_insert_comment(
+		array(
+			'comment_post_ID'      => $post_id,
+			'comment_author'       => $fixture[1],
+			'comment_author_email' => sprintf( 'preview-comment-%02d@example.test', $index + 1 ),
+			'comment_content'      => $fixture[2],
+			'comment_approved'     => 1,
+			'comment_date'         => $comment_date,
+			'comment_date_gmt'     => $comment_date,
+		)
+	);
+	if ( ! $comment_id ) {
+		WP_CLI::error( sprintf( 'Could not create preview comment fixture: %s', $comment_marker ) );
+	}
+	update_comment_meta( $comment_id, '_pgds_preview_comment_id', $comment_marker );
 }
 
 foreach ( $teachings as $index => $teaching ) {

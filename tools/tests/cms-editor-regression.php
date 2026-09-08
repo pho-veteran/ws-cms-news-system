@@ -229,6 +229,10 @@ try {
 		'pgds_get_editorial_classification',
 		'pgds_apply_editorial_classification',
 		'pgds_admin_surface_where',
+		'pgds_auto_approve_reader_comment',
+		'pgds_comments_per_page',
+		'pgds_comment_page_count',
+		'pgds_comment_card',
 	);
 	foreach ( $required_functions as $function ) {
 		pgds_cms_editor_assert( function_exists( $function ), sprintf( '%s is available to the article editor', $function ) );
@@ -374,6 +378,34 @@ try {
 	}
 	$pgds_cms_editor_posts[] = (int) $post_id;
 	wp_set_post_categories( $post_id, array( (int) $valid_category['term_id'] ) );
+
+	pgds_cms_editor_assert( 8 === pgds_comments_per_page(), 'reader comments use the theme pagination size' );
+	pgds_cms_editor_assert(
+		'spam' === pgds_auto_approve_reader_comment( 'spam', array( 'comment_type' => 'comment' ) ),
+		'comment auto-approval preserves an explicit spam decision'
+	);
+	wp_set_current_user( 0 );
+	$comment_id = wp_new_comment(
+		array(
+			'comment_post_ID'      => $post_id,
+			'comment_author'       => 'Regression reader',
+			'comment_author_email' => sprintf( 'reader-%s@example.test', $token ),
+			'comment_author_url'   => '',
+			'comment_author_IP'    => '127.0.0.1',
+			'comment_content'      => 'A unique reader comment for automatic approval ' . $token,
+			'comment_type'         => 'comment',
+		),
+		true
+	);
+	wp_set_current_user( (int) $administrators[0] );
+	pgds_cms_editor_assert( ! is_wp_error( $comment_id ) && $comment_id > 0, 'reader can submit a comment' );
+	if ( ! is_wp_error( $comment_id ) && $comment_id > 0 ) {
+		$comment = get_comment( $comment_id );
+		pgds_cms_editor_assert( $comment instanceof WP_Comment && '1' === (string) $comment->comment_approved, 'new reader comment is approved automatically' );
+		pgds_cms_editor_assert( current_user_can( 'edit_comment', $comment_id ), 'administrator can manage the comment in CMS' );
+		pgds_cms_editor_assert( wp_delete_comment( $comment_id, true ), 'administrator can delete the comment through WordPress' );
+		pgds_cms_editor_assert( null === get_comment( $comment_id ), 'deleted comment no longer exists' );
+	}
 
 	$groups          = pgds_meta_groups();
 	$fields          = pgds_meta_fields();
@@ -1274,7 +1306,10 @@ try {
 
 	$previous_menu = $GLOBALS['menu'] ?? array();
 	$previous_submenu = $GLOBALS['submenu'] ?? array();
-	$GLOBALS['menu'] = array( 5 => array( 'Posts', 'edit_posts', 'edit.php' ) );
+	$GLOBALS['menu'] = array(
+		5  => array( 'Posts', 'edit_posts', 'edit.php' ),
+		25 => array( 'Comments', 'moderate_comments', 'edit-comments.php' ),
+	);
 	$GLOBALS['submenu']['edit.php'] = array( array( 'All Posts', 'edit_posts', 'edit.php' ) );
 	pgds_register_editorial_surface_menus();
 	$surface_menu_urls = array();
@@ -1284,6 +1319,8 @@ try {
 		}
 	}
 	pgds_cms_editor_assert( 4 === count( $surface_menu_urls ), 'admin sidebar exposes exactly four top-level editorial menus' );
+	$menu_slugs = wp_list_pluck( $GLOBALS['menu'], 2 );
+	pgds_cms_editor_assert( in_array( 'edit-comments.php', $menu_slugs, true ), 'native Comments screen remains available for moderation and deletion' );
 	$GLOBALS['menu'] = $previous_menu;
 	$GLOBALS['submenu'] = $previous_submenu;
 

@@ -449,6 +449,28 @@ foreach ( $teaching_ids as $teaching_id ) {
 $expect_count( 'published teaching fixtures', 8, count( $teaching_ids ) );
 $expect_count( 'invalid teaching fixtures', 0, $invalid_teachings );
 
+WP_CLI::log( '==> Checking reader-comment fixtures...' );
+$all_reader_comments = get_comments(
+	array(
+		'status' => 'all',
+		'type'   => 'comment',
+	)
+);
+$pending_comments = array_filter(
+	$all_reader_comments,
+	static function ( $comment ) {
+		return '0' === (string) $comment->comment_approved;
+	}
+);
+$article_comment_id = (int) ( $preview_by_source['preview-2026-tin-phat-su-01'] ?? 0 );
+$article_comments   = $article_comment_id
+	? get_comments( array( 'post_id' => $article_comment_id, 'status' => 'approve', 'type' => 'comment' ) )
+	: array();
+$expect_count( 'published reader-comment fixtures', 13, count( $all_reader_comments ) );
+$expect_count( 'pending reader comments', 0, count( $pending_comments ) );
+$expect_count( 'paginated Article comment fixtures', 12, count( $article_comments ) );
+$expect_count( 'Article comment pages', 2, pgds_comment_page_count( $article_comments ) );
+
 WP_CLI::log( '==> Smoke-checking representative frontend routes...' );
 $route_errors = 0;
 $homepage_response = $fetch( $origin_url . '/' );
@@ -482,6 +504,27 @@ foreach ( $sample_source_ids as $source_id ) {
 	}
 	if ( 'preview-2026-vietnam-buddhism-01' === $source_id && ( false === strpos( $markup, '<html lang="en">' ) || false === strpos( $markup, 'PGDS preview editorial team' ) ) ) {
 		++$route_errors;
+	}
+	if ( 'preview-2026-vietnam-buddhism-01' === $source_id ) {
+		if (
+			1 !== substr_count( $markup, 'PGDS preview editorial team' ) ||
+			false === strpos( $markup, '>Comments<' ) ||
+			false === strpos( $markup, 'aria-label="Reply to ' )
+		) {
+			++$route_errors;
+		}
+	}
+	if ( 'preview-2026-tin-phat-su-01' === $source_id ) {
+		if (
+			1 !== substr_count( $markup, 'Ban biên tập dữ liệu preview PGDS' ) ||
+			8 !== substr_count( $markup, 'class="pgds-comment__card"' ) ||
+			! preg_match( '/(?:cpage=2|comment-page-2)/', $markup ) ||
+			false === strpos( $markup, 'aria-label="Trả lời ' ) ||
+			false !== strpos( $markup, 'says:' ) ||
+			false !== strpos( $markup, 'awaiting moderation' )
+		) {
+			++$route_errors;
+		}
 	}
 }
 foreach ( $expected_slugs as $slug ) {

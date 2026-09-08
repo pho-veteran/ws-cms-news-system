@@ -325,7 +325,6 @@ function buildVietnameseBody( title, definition, index, includeInline ) {
 		'<p>Về mặt trình bày, bài viết kết hợp tiêu đề phụ, trích dẫn, danh sách và hình ảnh do Media Library quản lý. Ảnh có thông tin tác giả, giấy phép, mô tả và văn bản thay thế; quan hệ featured, inline hoặc gallery đều có thể chỉnh sửa trong WordPress. Điều này giúp cùng một fixture kiểm tra được trang danh sách, trang chi tiết, tìm kiếm, bài liên quan và trải nghiệm biên tập.</p>',
 		'<p>Khi khép lại, câu chuyện không đưa ra một kết luận tuyệt đối. Nó mời người đọc chọn một việc vừa sức, quan sát tác động và quay lại điều chỉnh. Cách tiếp cận ấy phù hợp với tinh thần học hỏi liên tục: tôn trọng truyền thống, lắng nghe hoàn cảnh hiện tại và đo giá trị bằng những thay đổi có thể nhìn thấy trong đời sống thường ngày.</p>',
 		...magazineExtension,
-		'<p class="article-author">Ban biên tập dữ liệu preview PGDS</p>',
 	].filter( Boolean ).join( '' );
 }
 
@@ -335,7 +334,6 @@ function buildVideoBody( title, index ) {
 		'<h2>Nội dung chính của video</h2>',
 		'<p>Phóng sự đi theo diễn biến bằng hình ảnh, âm thanh hiện trường và các khoảnh khắc quan sát ngắn. Poster được quản lý trong Media Library, còn YouTube ID, tiêu đề đồng bộ và thời lượng được lưu ở các trường chuyên biệt để kiểm tra đầy đủ luồng biên tập Video.</p>',
 		'<p>Người biên tập có thể thay sapo hoặc poster mà không phải viết lại một bài dài. Nội dung mô tả này cố ý gọn, giúp việc review tập trung vào trình phát, trạng thái video, khả năng hiển thị trên danh sách và trải nghiệm xem trên màn hình nhỏ.</p>',
-		'<p class="article-author">Ban video PGDS</p>',
 	].join( '' );
 }
 
@@ -357,7 +355,6 @@ function buildEnglishBody( title, definition, index, includeInline ) {
 		'<p>Vietnam Buddhism stories distinguish direct observation from community memory and from facts that require documentary confirmation. Architectural materials, changing patterns of use, seasonal rituals and the work of volunteers are described together. This gives readers a sense of how heritage remains active while giving editors enough specificity to review the English-only publication flow.</p>',
 		'<p>The visual selection follows the same principle. A wide view establishes place, a closer frame identifies an activity and an attributed caption preserves context. The English surface uses separate Media Library records with English alternative text and descriptions, even when a licensed source image is shared with the Vietnamese fixtures.</p>',
 		'<p>The report closes without claiming a universal answer. Readers are invited to choose a manageable action, observe its effect and revise the approach. That rhythm reflects an important quality of contemporary Buddhist community work in Vietnam: respect for inherited practice, attention to present conditions and a willingness to learn through responsible participation.</p>',
-		'<p class="article-author">PGDS preview editorial team</p>',
 	].filter( Boolean ).join( '' );
 }
 

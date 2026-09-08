@@ -29,6 +29,7 @@ $pgds_modules = array(
 	'inc/editorial-surfaces.php', // four admin workflows over the shared post model
 	'inc/meta-fields.php',   // custom field + meta box (no ACF)
 	'inc/template-tags.php', // display helpers
+	'inc/comments.php',      // reader-comment approval and presentation
 	'inc/query-blocks.php',  // query for the 11 front-page blocks + dedup
 	'inc/cron.php',          // scheduled jobs (daily YouTube metadata sync, §6.4)
 	'inc/seo-schema.php',    // VideoObject + NewsMediaOrganization + video sitemap

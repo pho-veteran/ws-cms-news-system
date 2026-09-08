@@ -15,6 +15,7 @@ This directory contains the deterministic, development-only content corpus used 
 - Forty-eight non-Video articles contain a native Gutenberg inline image.
 - Four articles occupy the homepage Featured positions and six Article fixtures are Photo stories.
 - Exactly eight published `pgds_teaching` records with at least 150 words, a practical exercise and a featured image.
+- Thirteen approved reader comments exercise the localized comment cards and two-page pagination; display authors remain metadata-only so bylines render once.
 - Thirty-five attributed Media Library records backed by 25 checked-in fixtures. Ten records provide English metadata for Vietnam Buddhism while reusing the same licensed source files.
 
 Stable article IDs use `preview-2026-<primary-category>-01` through `-20`. Teaching IDs use `teaching-01` through `teaching-08` in `_pgds_preview_teaching_id`.
