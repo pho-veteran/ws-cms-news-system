@@ -108,7 +108,9 @@
 
     .pgds-list__title {
       font-size: 15.5px;
-      margin-bottom: 6px;
+      // Category cards hide the meta row, so the sapo follows the title directly.
+      // Keep this tighter than the shared list-card rhythm used on the homepage.
+      margin-bottom: 2px;
     }
 
     .pgds-list__meta {
