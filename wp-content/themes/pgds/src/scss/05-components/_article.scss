@@ -336,6 +336,41 @@
   }
 }
 
+// Compact numbered pagination shared by category archives and search results.
+// WordPress sanitizes the pagination `class` argument as one HTML class, so the
+// route contexts select the shared variant without producing malformed markup.
+.pgds-category .pgds-pagination,
+body.search-results .pgds-pagination {
+  margin: 26px 0 $sp-8;
+
+  .nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $sp-2;
+  }
+
+  .page-numbers {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: $radius-md;
+    font-size: $fs-xs;
+    font-weight: $fw-semibold;
+
+    &.current {
+      box-shadow: none;
+    }
+
+    &:hover:not(.current) {
+      border-color: var(--color-border);
+      background: var(--pgds-paper-deep);
+    }
+  }
+}
+
 // --- Next/Prev ---------------------------------------------------------------
 // A page (not a post) with no sidebar: centre the measure instead of letting it run
 // the full container width, which would push the body far past a readable line length.

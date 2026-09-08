@@ -130,37 +130,6 @@
     }
   }
 
-  .pgds-pagination {
-    margin: 26px 0 $sp-8;
-
-    .nav-links {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: $sp-2;
-    }
-
-    .page-numbers {
-      width: 34px;
-      min-width: 34px;
-      height: 34px;
-      min-height: 34px;
-      padding: 0;
-      border-radius: $radius-md;
-      font-size: $fs-xs;
-      font-weight: $fw-semibold;
-
-      &.current {
-        box-shadow: none;
-      }
-
-      &:hover:not(.current) {
-        border-color: var(--color-border);
-        background: var(--pgds-paper-deep);
-      }
-    }
-  }
-
   @include mq-max(lg) {
     &__list {
       .pgds-list__item {

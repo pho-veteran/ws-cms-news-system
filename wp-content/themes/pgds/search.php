@@ -81,8 +81,9 @@ $pgds_is_blank = '' === $pgds_query;
 				<?php
 				the_posts_pagination(
 					array(
-						'prev_text' => pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ) . __( 'Trước', 'pgds' ),
-						'next_text' => __( 'Sau', 'pgds' ) . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
+						'mid_size'  => 1,
+						'prev_text' => '<span class="u-sr-only">' . esc_html__( 'Trang trước', 'pgds' ) . '</span>' . pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ),
+						'next_text' => '<span class="u-sr-only">' . esc_html__( 'Trang sau', 'pgds' ) . '</span>' . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
 						'class'     => 'pgds-pagination',
 					)
 				);
