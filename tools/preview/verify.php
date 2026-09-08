@@ -515,11 +515,19 @@ foreach ( $sample_source_ids as $source_id ) {
 		}
 	}
 	if ( 'preview-2026-tin-phat-su-01' === $source_id ) {
+		$form_position = strpos( $markup, 'data-pgds="comment-form"' );
+		$list_position = strpos( $markup, 'class="pgds-comments__list"' );
 		if (
 			1 !== substr_count( $markup, 'Ban biên tập dữ liệu preview PGDS' ) ||
 			8 !== substr_count( $markup, 'class="pgds-comment__card"' ) ||
+			false === $form_position ||
+			false === $list_position ||
+			$form_position > $list_position ||
 			! preg_match( '/(?:cpage=2|comment-page-2)/', $markup ) ||
 			false === strpos( $markup, 'aria-label="Trả lời ' ) ||
+			false === strpos( $markup, 'data-pgds="comment-reply"' ) ||
+			false !== strpos( $markup, '<ol class="pgds-comments__list"' ) ||
+			false !== strpos( $markup, 'pgds-comment__avatar' ) ||
 			false !== strpos( $markup, 'says:' ) ||
 			false !== strpos( $markup, 'awaiting moderation' )
 		) {

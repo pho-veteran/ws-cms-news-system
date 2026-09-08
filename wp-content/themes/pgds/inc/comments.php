@@ -77,12 +77,9 @@ function pgds_comment_card( $comment, $args, $depth ) {
 		? sprintf( '%1$s at %2$s', get_comment_date( 'F j, Y', $comment ), get_comment_time( 'g:i a', false, true, $comment ) )
 		: sprintf( '%1$s lúc %2$s', get_comment_date( 'd/m/Y', $comment ), get_comment_time( 'H:i', false, true, $comment ) );
 	?>
-	<li <?php comment_class( 'pgds-comment' ); ?> id="li-comment-<?php comment_ID(); ?>">
+	<div <?php comment_class( 'pgds-comment' ); ?> id="li-comment-<?php comment_ID(); ?>" role="listitem">
 		<article class="pgds-comment__card" id="comment-<?php comment_ID(); ?>">
 			<header class="pgds-comment__header">
-				<div class="pgds-comment__avatar" aria-hidden="true">
-					<?php echo get_avatar( $comment, 44, 'mystery', '', array( 'class' => 'pgds-comment__avatar-image' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				</div>
 				<div class="pgds-comment__identity">
 					<strong class="pgds-comment__author"><?php echo wp_kses_post( get_comment_author_link( $comment ) ); ?></strong>
 					<a class="pgds-comment__date" href="<?php echo esc_url( $permalink ); ?>">
@@ -103,19 +100,13 @@ function pgds_comment_card( $comment, $args, $depth ) {
 
 			<footer class="pgds-comment__actions">
 				<?php
-				if ( comments_open( $comment->comment_post_ID ) ) {
-					comment_reply_link(
-						array_merge(
-							$args,
-							array(
-								'add_below'     => 'comment',
-								'depth'         => $depth,
-								'max_depth'     => $args['max_depth'],
-								'reply_text'    => $english ? 'Reply' : 'Trả lời',
-								'reply_to_text' => $english ? 'Reply to %s' : 'Trả lời %s',
-							)
-						),
-						$comment
+				if ( comments_open( $comment->comment_post_ID ) && get_option( 'thread_comments' ) && $depth < $args['max_depth'] ) {
+					printf(
+						'<a class="pgds-comment__reply" href="#respond" data-pgds="comment-reply" data-comment-id="%1$d" data-comment-author="%2$s" aria-label="%3$s">%4$s</a>',
+						(int) $comment->comment_ID,
+						esc_attr( $author ),
+						esc_attr( sprintf( $english ? 'Reply to %s' : 'Trả lời %s', $author ) ),
+						esc_html( $english ? 'Reply' : 'Trả lời' )
 					);
 				}
 				if ( current_user_can( 'edit_comment', $comment->comment_ID ) ) {

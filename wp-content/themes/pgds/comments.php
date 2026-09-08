@@ -49,45 +49,17 @@ if ( ! $has_comments && ! $comments_open ) {
 		<?php endif; ?>
 	</h2>
 
-	<?php if ( $has_comments ) : ?>
-		<ol class="pgds-comments__list">
-			<?php
-			wp_list_comments( array(
-				'style'             => 'ol',
-				'callback'          => 'pgds_comment_card',
-				'page'              => $comment_page,
-				'per_page'          => $comments_per_page,
-				'reverse_top_level' => false,
-				'max_depth'         => 3,
-			), $reader_comments );
-			?>
-		</ol>
-		<?php if ( $comment_pages > 1 ) : ?>
-			<nav class="pgds-comments__pagination" aria-label="<?php echo esc_attr( $english ? 'Comment pages' : 'Các trang bình luận' ); ?>">
-				<?php
-				echo wp_kses_post(
-					paginate_comments_links(
-						array(
-							'echo'      => false,
-							'total'     => $comment_pages,
-							'current'   => $comment_page,
-							'type'      => 'list',
-							'prev_text' => $english ? 'Previous' : 'Trước',
-							'next_text' => $english ? 'Next' : 'Sau',
-						)
-					)
-				);
-				?>
-			</nav>
-		<?php endif; ?>
-	<?php endif; ?>
-
 	<?php if ( $comments_open ) : ?>
-		<div class="pgds-comments__form-wrap comment-box">
-			<h3 class="pgds-comments__form-title"><?php echo esc_html( $english ? 'Join the conversation' : 'Tham gia thảo luận' ); ?></h3>
-			<p class="pgds-comments__form-note">
-				<?php echo esc_html( $english ? 'Your comment will appear immediately after submission.' : 'Bình luận sẽ hiển thị ngay sau khi gửi.' ); ?>
-			</p>
+		<div
+			class="pgds-comments__form-wrap comment-box"
+			data-pgds="comment-form"
+			data-reply-label="<?php echo esc_attr( $english ? 'Replying to' : 'Đang trả lời' ); ?>"
+			data-reply-placeholder="<?php echo esc_attr( $english ? 'Reply to' : 'Trả lời' ); ?>"
+		>
+			<div class="pgds-comments__reply-context" data-pgds="reply-context" hidden>
+				<span data-pgds="reply-text"></span>
+				<button type="button" data-pgds="cancel-reply"><?php echo esc_html( $english ? 'Cancel' : 'Hủy' ); ?></button>
+			</div>
 			<?php
 			$req      = get_option( 'require_name_email' );
 			$asterisk = $req ? ' <span class="required" aria-hidden="true">*</span>' : '';
@@ -99,7 +71,7 @@ if ( ! $has_comments && ! $comments_open ) {
 				'comment_notes_after'  => '',
 				'label_submit'         => $english ? 'Post comment' : 'Gửi bình luận',
 				'cancel_reply_link'    => $english ? 'Cancel reply' : 'Hủy trả lời',
-				'comment_field'        => '<p class="comment-form-comment"><label class="screen-reader-text" for="comment">' . esc_html( $english ? 'Comment' : 'Bình luận' ) . '</label><textarea id="comment" name="comment" cols="45" rows="4" maxlength="65525" required aria-required="true" autocomplete="off" placeholder="' . esc_attr( $english ? 'Share your perspective…' : 'Chia sẻ góc nhìn của bạn…' ) . '"></textarea></p>',
+				'comment_field'        => '<p class="comment-form-comment"><label class="screen-reader-text" for="comment">' . esc_html( $english ? 'Comment' : 'Bình luận' ) . '</label><textarea id="comment" name="comment" cols="45" rows="4" maxlength="65525" required aria-required="true" autocomplete="off" placeholder="' . esc_attr( $english ? 'Write your comment…' : 'Viết bình luận của bạn…' ) . '"></textarea></p>',
 					'fields'               => array(
 						'author'  => '<p class="comment-form-author"><label for="author">' . esc_html( $english ? 'Name' : 'Tên' ) . $asterisk . '</label><input id="author" name="author" type="text" size="30" maxlength="245" autocomplete="name"' . ( $req ? ' required aria-required="true"' : '' ) . ' /></p>',
 						'email'   => '<p class="comment-form-email"><label for="email">' . esc_html__( 'Email', 'pgds' ) . $asterisk . '</label><input id="email" name="email" type="email" size="30" maxlength="100" autocomplete="email"' . ( $req ? ' required aria-required="true"' : '' ) . ' /></p>',
@@ -112,7 +84,42 @@ if ( ! $has_comments && ! $comments_open ) {
 			) );
 			?>
 		</div>
-	<?php elseif ( $has_comments ) : ?>
+	<?php endif; ?>
+
+	<?php if ( $has_comments ) : ?>
+		<div class="pgds-comments__list" role="list">
+			<?php
+			wp_list_comments( array(
+				'style'             => 'div',
+				'callback'          => 'pgds_comment_card',
+				'page'              => $comment_page,
+				'per_page'          => $comments_per_page,
+				'reverse_top_level' => false,
+				'max_depth'         => 3,
+			), $reader_comments );
+			?>
+		</div>
+		<?php if ( $comment_pages > 1 ) : ?>
+			<nav class="pgds-comments__pagination" aria-label="<?php echo esc_attr( $english ? 'Comment pages' : 'Các trang bình luận' ); ?>">
+				<?php
+				echo wp_kses_post(
+					paginate_comments_links(
+						array(
+							'echo'      => false,
+							'total'     => $comment_pages,
+							'current'   => $comment_page,
+							'type'      => 'list',
+							'prev_text' => '<span aria-hidden="true">‹</span><span class="screen-reader-text">' . esc_html( $english ? 'Previous' : 'Trước' ) . '</span>',
+							'next_text' => '<span aria-hidden="true">›</span><span class="screen-reader-text">' . esc_html( $english ? 'Next' : 'Sau' ) . '</span>',
+						)
+					)
+				);
+				?>
+			</nav>
+		<?php endif; ?>
+	<?php endif; ?>
+
+	<?php if ( ! $comments_open && $has_comments ) : ?>
 		<p class="pgds-comments__closed" role="status">
 			<?php echo esc_html( $english ? 'Comments are closed.' : 'Bình luận đã đóng.' ); ?>
 		</p>

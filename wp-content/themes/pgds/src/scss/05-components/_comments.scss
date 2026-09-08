@@ -4,8 +4,7 @@
 // Comment section on single articles: title, listed comments, reply form.
 
 .pgds-comments {
-  margin-top: 40px;
-  padding-top: $sp-2;
+  margin-top: $sp-8;
 
   &__title {
     display: flex;
@@ -39,20 +38,17 @@
     list-style: none;
     padding: 0;
     margin: 0 0 $sp-6;
+    border-top: 1px solid var(--pgds-line);
 
     .pgds-comment {
-      margin-bottom: $sp-3;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
+      margin: 0;
     }
 
     .children {
       list-style: none;
-      margin: $sp-3 0 0 28px;
+      margin: 0 0 0 $sp-5;
       padding-left: $sp-4;
-      border-left: 2px solid var(--pgds-line);
+      border-left: 2px solid var(--pgds-gilt-pale);
 
       @include mq-max(sm) {
         margin-left: $sp-3;
@@ -62,100 +58,73 @@
   }
 
   &__pagination {
-    margin: 0 0 $sp-6;
+    margin: 26px 0 $sp-6;
 
-    .page-numbers {
+    ul.page-numbers {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
+      justify-content: center;
       gap: $sp-2;
       list-style: none;
       margin: 0;
       padding: 0;
     }
 
-    a,
-    .current,
-    .dots {
+    li {
+      list-style: none;
+      margin: 0;
+    }
+
+    a.page-numbers,
+    span.page-numbers {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 36px;
-      min-height: 36px;
-      padding: 0 $sp-3;
+      width: 34px;
+      height: 34px;
       border: 1px solid var(--pgds-line);
-      border-radius: $radius-full;
-      background: var(--pgds-white);
-      color: var(--pgds-robe-deep);
-      font-size: $fs-xs;
+      border-radius: 6px;
+      color: var(--pgds-ink);
+      font-size: 13px;
       font-weight: $fw-semibold;
+      text-decoration: none;
     }
 
-    a:hover {
-      border-color: var(--pgds-gilt);
+    a.page-numbers:hover {
       background: var(--pgds-paper-deep);
     }
 
-    .current {
+    .page-numbers.current {
       border-color: var(--pgds-robe);
       background: var(--pgds-robe);
       color: var(--pgds-white);
     }
 
-    .dots {
+    .page-numbers.dots {
       border-color: transparent;
       background: transparent;
     }
   }
 
-  &__form-title {
-    margin-bottom: $sp-1;
-    color: var(--pgds-robe-deep);
-    font-size: $fs-md;
-  }
-
-  &__form-note {
-    margin-bottom: $sp-4;
-    color: var(--pgds-text-muted);
-    font-size: $fs-xs;
-    line-height: $lh-relax;
-  }
-
   .pgds-comment__card {
-    padding: $sp-4;
-    border: 1px solid var(--pgds-line);
-    border-radius: $radius-lg;
-    background: var(--pgds-white);
-    box-shadow: 0 2px 8px rgba(42, 33, 27, 0.04);
+    padding: $sp-4 0;
+    border-bottom: 1px solid var(--pgds-line);
+    background: transparent;
   }
 
   .pgds-comment__header {
     display: flex;
-    align-items: center;
-    gap: $sp-3;
-    margin-bottom: $sp-3;
-  }
-
-  .pgds-comment__avatar {
-    flex: 0 0 44px;
-    width: 44px;
-    height: 44px;
-    overflow: hidden;
-    border: 1px solid var(--pgds-line);
-    border-radius: $radius-full;
-    background: var(--pgds-paper-deep);
-  }
-
-  .pgds-comment__avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    align-items: baseline;
+    margin-bottom: $sp-2;
   }
 
   .pgds-comment__identity {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
     min-width: 0;
-    gap: 2px;
+    gap: $sp-2;
   }
 
   .pgds-comment__author {
@@ -173,6 +142,7 @@
   .pgds-comment__date {
     color: var(--pgds-text-muted);
     font-size: $fs-3xs;
+    text-decoration: none;
 
     &:hover {
       color: var(--pgds-robe);
@@ -206,54 +176,42 @@
     gap: $sp-4;
     margin-top: $sp-3;
 
-    a {
-      color: var(--pgds-moss);
+    .pgds-comment__reply {
+      color: var(--pgds-robe);
       font-size: $fs-xs;
       font-weight: $fw-semibold;
+      text-decoration: underline;
+      text-decoration-color: var(--pgds-gilt);
+      text-underline-offset: 3px;
 
       &:hover {
-        color: var(--pgds-robe);
+        color: var(--pgds-robe-deep);
+        text-decoration-color: currentColor;
+      }
+
+      &:focus-visible {
+        @include focus-ring;
       }
     }
 
     .pgds-comment__manage {
       color: var(--pgds-text-muted);
+      font-size: $fs-xs;
+      font-weight: $fw-semibold;
     }
   }
 
   &__form-wrap {
+    margin-bottom: $sp-6;
     padding: $sp-5;
     border: 1px solid var(--pgds-line);
     border-radius: $radius-lg;
-    background: var(--pgds-surface-2);
+    background: var(--pgds-white);
   }
 
   &__form,
   &__form-inner {
     min-width: 0;
-  }
-
-  &__form-inner {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: $sp-3;
-
-    > .comment-form-comment,
-    > .comment-notes,
-    > .logged-in-as,
-    > .comment-form-cookies-consent,
-    > .form-submit,
-    > .must-log-in {
-      grid-column: 1 / -1;
-    }
-
-    @include mq-max(sm) {
-      grid-template-columns: 1fr;
-
-      > * {
-        grid-column: 1;
-      }
-    }
   }
 
   // Progressive disclosure: hide logged-out author, email, and cookie-consent rows
@@ -296,7 +254,7 @@
 
       textarea {
         width: 100%;
-        min-height: 120px;
+        min-height: 80px;
         border: 1px solid #c4b79b;
         border-radius: $radius-md;
         padding: $sp-3;
@@ -392,6 +350,30 @@
       &:focus-visible {
         @include focus-ring;
       }
+    }
+  }
+
+  &__reply-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $sp-3;
+    margin-bottom: $sp-3;
+    color: var(--pgds-text-muted);
+    font-size: $fs-xs;
+
+    &[hidden] {
+      display: none;
+    }
+
+    button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--pgds-robe);
+      font: inherit;
+      font-weight: $fw-semibold;
+      cursor: pointer;
     }
   }
 
