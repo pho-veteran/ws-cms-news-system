@@ -1,8 +1,12 @@
 <?php
 /**
  * Seed additional demo posts to fill all 11 blocks (idempotent by _pgds_source_id = 'demo-*').
- * Run: wp eval-file /tools/seed-demo.php
+ * Run: php /var/www/html/.pgds-tools/seed-demo.php
  */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	require_once '/var/www/html/wp-load.php';
+}
 
 $plan = array(
 	// category_slug => [number of additional posts, title prefix]
@@ -64,4 +68,8 @@ foreach ( $plan as $cat_slug => $spec ) {
 	}
 }
 
-WP_CLI::success( "Demo seed complete. Created {$created} additional posts." );
+if ( class_exists( 'WP_CLI' ) ) {
+	WP_CLI::success( "Demo seed complete. Created {$created} additional posts." );
+} else {
+	echo "Demo seed complete. Created {$created} additional posts.\n";
+}
