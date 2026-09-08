@@ -109,8 +109,11 @@
     .pgds-list__title {
       font-size: 15.5px;
       // Category cards hide the meta row, so the sapo follows the title directly.
-      // Keep this tighter than the shared list-card rhythm used on the homepage.
-      margin-bottom: 2px;
+      // The shared clamp reserves two lines to align grid cards. Archive rows
+      // must collapse to the title's real height so one-line titles do not
+      // leave an artificial blank line before the sapo.
+      min-height: 0;
+      margin-bottom: 0;
     }
 
     .pgds-list__meta {
@@ -121,6 +124,9 @@
       font-size: 12.8px;
       line-height: $lh-relax;
       color: var(--color-text-muted);
+      // Category rows have enough vertical room for the editorial summary used
+      // by the reference layout; do not cut it at the shared two-line limit.
+      -webkit-line-clamp: 3;
     }
   }
 

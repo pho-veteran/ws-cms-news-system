@@ -12,6 +12,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Whether a supported SEO plugin owns article schema and metadata.
+ *
+ * @return bool
+ */
+function pgds_seo_plugin_owns_schema() {
+	return defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_PLUGIN_VERSION' );
+}
+
+/**
  * Fallback <meta name="description"> - ONLY when no SEO plugin owns it.
  *
  * Same division of labour as pgds_schema_article(): if an SEO plugin is active it
@@ -24,7 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * to plain text, trimmed to a search-snippet length, and escaped as an attribute.
  */
 function pgds_meta_description() {
-	if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_PLUGIN_VERSION' ) ) {
+	if ( pgds_seo_plugin_owns_schema() ) {
 		return;
 	}
 
@@ -80,14 +89,10 @@ function pgds_schema_video() {
 		return;
 	}
 	$post_id = get_the_ID();
-	$vid     = get_post_meta( $post_id, '_pgds_youtube_id', true );
-	if ( ! $vid ) {
+	if ( ! pgds_is_video_indexable( $post_id ) ) {
 		return;
 	}
-	// If the video is marked unavailable -> don't emit schema.
-	if ( '1' === get_post_meta( $post_id, '_pgds_video_unavailable', true ) ) {
-		return;
-	}
+	$vid = pgds_validate_youtube_id( get_post_meta( $post_id, '_pgds_youtube_id', true ) );
 
 	$dur   = (int) get_post_meta( $post_id, '_pgds_youtube_dur', true );
 	$thumb = get_post_meta( $post_id, '_pgds_youtube_poster', true );
@@ -116,7 +121,10 @@ add_action( 'wp_head', 'pgds_schema_video', 21 );
  * NewsArticle - ONLY when there's no SEO plugin (avoid duplication).
  */
 function pgds_schema_article() {
-	if ( ! ( defined( 'PGDS_EMIT_ARTICLE_SCHEMA' ) && PGDS_EMIT_ARTICLE_SCHEMA ) ) {
+	if (
+		pgds_seo_plugin_owns_schema() ||
+		! ( defined( 'PGDS_EMIT_ARTICLE_SCHEMA' ) && PGDS_EMIT_ARTICLE_SCHEMA )
+	) {
 		return;
 	}
 	if ( ! is_singular( 'post' ) ) {
@@ -140,6 +148,80 @@ function pgds_schema_article() {
 	pgds_print_jsonld( $data );
 }
 add_action( 'wp_head', 'pgds_schema_article', 22 );
+
+/**
+ * Whether one post is eligible for VideoObject and the video sitemap.
+ *
+ * Classification, assignment, YouTube ID and availability must agree. This prevents
+ * incidental YouTube metadata on an Article from leaking into video search results.
+ *
+ * @param int $post_id Post ID.
+ * @return bool
+ */
+function pgds_is_video_indexable( $post_id ) {
+	$post_id = (int) $post_id;
+	return $post_id > 0 &&
+		'publish' === get_post_status( $post_id ) &&
+		'video' === pgds_detail_layout( $post_id ) &&
+		'' !== pgds_validate_youtube_id( get_post_meta( $post_id, '_pgds_youtube_id', true ) ) &&
+		'1' !== (string) get_post_meta( $post_id, '_pgds_video_unavailable', true );
+}
+
+/**
+ * Query arguments shared by the video sitemap and its robots advertisement.
+ *
+ * @param int  $posts_per_page Maximum rows, or -1 for the complete sitemap.
+ * @param bool $ids_only       Return IDs instead of post objects.
+ * @return array<string,mixed>
+ */
+function pgds_video_index_query_args( $posts_per_page = -1, $ids_only = false ) {
+	$video = pgds_category_term( 'video' );
+	if ( ! $video ) {
+		return array( 'post__in' => array( 0 ) );
+	}
+
+	$args = array(
+		'post_type'      => 'post',
+		'post_status'    => 'publish',
+		'posts_per_page' => (int) $posts_per_page,
+		'no_found_rows'  => true,
+		'tax_query'      => array(
+			array(
+				'taxonomy' => 'category',
+				'field'    => 'term_id',
+				'terms'    => array( (int) $video->term_id ),
+			),
+		),
+		'meta_query'     => array(
+			'relation' => 'AND',
+			array(
+				'key'   => '_pgds_primary_cat',
+				'value' => (string) $video->term_id,
+			),
+			array(
+				'key'     => '_pgds_youtube_id',
+				'value'   => '^[A-Za-z0-9_-]{11}$',
+				'compare' => 'REGEXP',
+			),
+			array(
+				'relation' => 'OR',
+				array(
+					'key'     => '_pgds_video_unavailable',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => '_pgds_video_unavailable',
+					'value'   => '1',
+					'compare' => '!=',
+				),
+			),
+		),
+	);
+	if ( $ids_only ) {
+		$args['fields'] = 'ids';
+	}
+	return $args;
+}
 
 /**
  * Print JSON-LD safely.
@@ -248,36 +330,17 @@ function pgds_render_video_sitemap() {
 		return;
 	}
 
-	$q = new WP_Query(
-		array(
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'posts_per_page' => 1000,
-			'no_found_rows'  => true,
-			'meta_query'     => array(
-				array(
-					'key'     => '_pgds_youtube_id',
-					'compare' => 'EXISTS',
-				),
-			),
-		)
-	);
+	$q = new WP_Query( pgds_video_index_query_args() );
 
 	header( 'Content-Type: application/xml; charset=UTF-8' );
 	echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 	echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">' . "\n";
 
 	foreach ( $q->posts as $p ) {
-		$vid = get_post_meta( $p->ID, '_pgds_youtube_id', true );
-		if ( ! $vid ) {
+		if ( ! pgds_is_video_indexable( $p->ID ) ) {
 			continue;
 		}
-		// §6.3: a private / removed / age-restricted video is omitted, for the same
-		// reason VideoObject is suppressed for it — submitting a dead video to a
-		// sitemap invites crawl errors.
-		if ( '1' === get_post_meta( $p->ID, '_pgds_video_unavailable', true ) ) {
-			continue;
-		}
+		$vid = pgds_validate_youtube_id( get_post_meta( $p->ID, '_pgds_youtube_id', true ) );
 		$thumb = get_post_meta( $p->ID, '_pgds_youtube_poster', true );
 		if ( ! $thumb ) {
 			// Falls back to YouTube's own CDN only when the local poster has not been
@@ -325,30 +388,7 @@ function pgds_robots_video_sitemap( $output, $public ) {
 		return $output;
 	}
 
-	$q = new WP_Query(
-		array(
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'posts_per_page' => 1,
-			'no_found_rows'  => true,
-			'fields'         => 'ids',
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_pgds_youtube_id',
-					'compare' => 'EXISTS',
-				),
-				// Mirrors the sitemap body, which omits unavailable videos (§6.3). Without
-				// this, a site whose only videos are all private would advertise an empty
-				// sitemap.
-				array(
-					'key'     => '_pgds_video_unavailable',
-					'compare' => 'NOT EXISTS',
-				),
-			),
-		)
-	);
-
+	$q = new WP_Query( pgds_video_index_query_args( 1, true ) );
 	if ( ! $q->posts ) {
 		return $output;
 	}

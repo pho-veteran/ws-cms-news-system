@@ -78,11 +78,14 @@ jobs:
         run: npm run lint:js
 
   test-cms-editor:
-    name: Test CMS editor workflow
+    name: Test WordPress workflows
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Test static release contracts
+        run: bash tools/tests/release-contract-regression.sh
 
       - name: Boot WordPress and run isolated editor checks
         shell: bash
@@ -93,6 +96,7 @@ jobs:
           ./sync.sh
           docker compose run --rm wpcli /var/www/html/.pgds-scripts/setup.sh
           docker compose run --rm wpcli /var/www/html/.pgds-tools/tests/cms-editor-regression.sh
+          docker compose run --rm wpcli /var/www/html/.pgds-tools/tests/compatibility-regression.sh
 
       - name: Remove test containers and volumes
         if: always()

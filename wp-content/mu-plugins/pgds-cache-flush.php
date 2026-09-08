@@ -23,6 +23,23 @@ if ( ! defined( 'PGDS_FCGI_CACHE_DIR' ) ) {
 }
 
 /**
+ * Resolve the dedicated cache directory, with a test-only override hook.
+ *
+ * @return string
+ */
+function pgds_page_cache_directory() {
+	/**
+	 * Filter the FastCGI cache directory.
+	 *
+	 * Production does not attach this filter. It lets the isolated regression suite use
+	 * a disposable directory without granting its container access to /var/cache/nginx.
+	 *
+	 * @param string $directory Cache directory.
+	 */
+	return (string) apply_filters( 'pgds_page_cache_directory', PGDS_FCGI_CACHE_DIR );
+}
+
+/**
  * Delete every file in the cache directory (clean flush, without path mapping).
  * For the current scale, deleting everything is appropriate: one command, no leftovers, no mapping logic needed.
  */
@@ -36,7 +53,7 @@ function pgds_flush_page_cache() {
 	 * site: every filesystem error here is suppressed and the catch only logs under WP_DEBUG,
 	 * so there would be no signal at all. These checks cost one realpath() per flush.
 	 */
-	$dir = realpath( PGDS_FCGI_CACHE_DIR );
+	$dir = realpath( pgds_page_cache_directory() );
 	if ( ! $dir || ! is_dir( $dir ) || ! is_writable( $dir ) ) {
 		return;
 	}

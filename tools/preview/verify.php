@@ -651,14 +651,62 @@ foreach ( $sample_source_ids as $source_id ) {
 		}
 	}
 }
-foreach ( $expected_slugs as $slug ) {
+$category_route_slugs = array_merge( $expected_slugs, array( 'media' ) );
+foreach ( $category_route_slugs as $slug ) {
 	$term     = get_category_by_slug( $slug );
 	$term_url = $term instanceof WP_Term ? get_term_link( $term ) : new WP_Error( 'missing_term' );
 	$url      = is_wp_error( $term_url ) ? $term_url : $origin_url . wp_make_link_relative( $term_url );
 	$response = is_wp_error( $url ) ? $url : $fetch( $url );
-	if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+	$markup   = is_wp_error( $response ) ? '' : (string) wp_remote_retrieve_body( $response );
+	$has_child_navigation = in_array( $slug, array( 'song-an-lanh', 'am-thuc-chay', 'loi-song-xanh', 'media', 'video', 'emagazine' ), true );
+	if (
+		is_wp_error( $response ) ||
+		200 !== (int) wp_remote_retrieve_response_code( $response ) ||
+		1 !== substr_count( $markup, 'class="pgds-category-hero__lead"' ) ||
+		4 !== substr_count( $markup, 'class="pgds-category-hero__card"' ) ||
+		6 !== substr_count( $markup, 'class="pgds-list__item"' ) ||
+		( $has_child_navigation ? 2 : 0 ) !== substr_count( $markup, 'class="pgds-category__separator"' )
+	) {
+		WP_CLI::warning( sprintf( 'Category page-one contract failed for %s.', $slug ) );
 		++$route_errors;
 	}
+
+	$page_two_url      = is_wp_error( $term_url ) ? '' : trailingslashit( $origin_url . wp_make_link_relative( $term_url ) ) . 'page/2/';
+	$page_two_response = $page_two_url ? $fetch( $page_two_url ) : new WP_Error( 'missing_category_page_two' );
+	$page_two_markup   = is_wp_error( $page_two_response ) ? '' : (string) wp_remote_retrieve_body( $page_two_response );
+	if (
+		is_wp_error( $page_two_response ) ||
+		200 !== (int) wp_remote_retrieve_response_code( $page_two_response ) ||
+		false !== strpos( $page_two_markup, 'class="pgds-category-hero"' ) ||
+		0 === substr_count( $page_two_markup, 'class="pgds-list__item"' ) ||
+		false === strpos( $page_two_markup, 'aria-current="page"' )
+	) {
+		WP_CLI::warning( sprintf( 'Category page-two contract failed for %s.', $slug ) );
+		++$route_errors;
+	}
+}
+
+$video_sitemap_response = $fetch( $origin_url . '/video-sitemap.xml' );
+$video_sitemap_markup   = is_wp_error( $video_sitemap_response ) ? '' : (string) wp_remote_retrieve_body( $video_sitemap_response );
+if (
+	is_wp_error( $video_sitemap_response ) ||
+	200 !== (int) wp_remote_retrieve_response_code( $video_sitemap_response ) ||
+	false === strpos( $video_sitemap_markup, '<urlset ' ) ||
+	false === strpos( $video_sitemap_markup, 'youtube-nocookie.com/embed/' )
+) {
+	WP_CLI::warning( 'Video sitemap route contract failed.' );
+	++$route_errors;
+}
+
+$robots_response = $fetch( $origin_url . '/robots.txt' );
+$robots_markup   = is_wp_error( $robots_response ) ? '' : (string) wp_remote_retrieve_body( $robots_response );
+if (
+	is_wp_error( $robots_response ) ||
+	200 !== (int) wp_remote_retrieve_response_code( $robots_response ) ||
+	false === strpos( $robots_markup, 'Sitemap: ' . home_url( '/video-sitemap.xml' ) )
+) {
+	WP_CLI::warning( 'Robots video-sitemap advertisement contract failed.' );
+	++$route_errors;
 }
 
 $comment_page_two_url      = $article_comment_id

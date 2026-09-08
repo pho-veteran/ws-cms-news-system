@@ -31,6 +31,6 @@ $term = pgds_primary_cat( $p );
 			<?php endif; ?>
 			<?php echo esc_html( pgds_reader_time_ago( $p ) ); ?>
 		</div>
-		<p class="pgds-list__sapo"><?php echo esc_html( wp_trim_words( pgds_sapo( $p ), 28 ) ); ?></p>
+		<p class="pgds-list__sapo"><?php echo esc_html( wp_trim_words( pgds_sapo( $p ), 45 ) ); ?></p>
 	</div>
 </article>
