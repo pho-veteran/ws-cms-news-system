@@ -27,6 +27,14 @@ $reader_comments   = get_comments(
 		'hierarchical' => false,
 	)
 );
+$reader_comments   = array_map(
+	static function ( $comment ) {
+		$flat_comment                 = clone $comment;
+		$flat_comment->comment_parent = 0;
+		return $flat_comment;
+	},
+	$reader_comments
+);
 $has_comments      = ! empty( $reader_comments );
 $comment_pages     = $has_comments
 	? pgds_comment_page_count( $reader_comments )
@@ -50,16 +58,7 @@ if ( ! $has_comments && ! $comments_open ) {
 	</h2>
 
 	<?php if ( $comments_open ) : ?>
-		<div
-			class="pgds-comments__form-wrap comment-box"
-			data-pgds="comment-form"
-			data-reply-label="<?php echo esc_attr( $english ? 'Replying to' : 'Đang trả lời' ); ?>"
-			data-reply-placeholder="<?php echo esc_attr( $english ? 'Reply to' : 'Trả lời' ); ?>"
-		>
-			<div class="pgds-comments__reply-context" data-pgds="reply-context" hidden>
-				<span data-pgds="reply-text"></span>
-				<button type="button" data-pgds="cancel-reply"><?php echo esc_html( $english ? 'Cancel' : 'Hủy' ); ?></button>
-			</div>
+		<div class="pgds-comments__form-wrap comment-box">
 			<?php
 			$req      = get_option( 'require_name_email' );
 			$asterisk = $req ? ' <span class="required" aria-hidden="true">*</span>' : '';
@@ -70,7 +69,6 @@ if ( ! $has_comments && ! $comments_open ) {
 				'comment_notes_before' => '',
 				'comment_notes_after'  => '',
 				'label_submit'         => $english ? 'Post comment' : 'Gửi bình luận',
-				'cancel_reply_link'    => $english ? 'Cancel reply' : 'Hủy trả lời',
 				'comment_field'        => '<p class="comment-form-comment"><label class="screen-reader-text" for="comment">' . esc_html( $english ? 'Comment' : 'Bình luận' ) . '</label><textarea id="comment" name="comment" cols="45" rows="4" maxlength="65525" required aria-required="true" autocomplete="off" placeholder="' . esc_attr( $english ? 'Write your comment…' : 'Viết bình luận của bạn…' ) . '"></textarea></p>',
 					'fields'               => array(
 						'author'  => '<p class="comment-form-author"><label for="author">' . esc_html( $english ? 'Name' : 'Tên' ) . $asterisk . '</label><input id="author" name="author" type="text" size="30" maxlength="245" autocomplete="name"' . ( $req ? ' required aria-required="true"' : '' ) . ' /></p>',

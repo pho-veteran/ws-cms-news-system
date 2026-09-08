@@ -44,17 +44,6 @@
       margin: 0;
     }
 
-    .children {
-      list-style: none;
-      margin: 0 0 0 $sp-5;
-      padding-left: $sp-4;
-      border-left: 2px solid var(--pgds-gilt-pale);
-
-      @include mq-max(sm) {
-        margin-left: $sp-3;
-        padding-left: $sp-3;
-      }
-    }
   }
 
   &__pagination {
@@ -175,24 +164,6 @@
     align-items: center;
     gap: $sp-4;
     margin-top: $sp-3;
-
-    .pgds-comment__reply {
-      color: var(--pgds-robe);
-      font-size: $fs-xs;
-      font-weight: $fw-semibold;
-      text-decoration: underline;
-      text-decoration-color: var(--pgds-gilt);
-      text-underline-offset: 3px;
-
-      &:hover {
-        color: var(--pgds-robe-deep);
-        text-decoration-color: currentColor;
-      }
-
-      &:focus-visible {
-        @include focus-ring;
-      }
-    }
 
     .pgds-comment__manage {
       color: var(--pgds-text-muted);
@@ -353,30 +324,6 @@
     }
   }
 
-  &__reply-context {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $sp-3;
-    margin-bottom: $sp-3;
-    color: var(--pgds-text-muted);
-    font-size: $fs-xs;
-
-    &[hidden] {
-      display: none;
-    }
-
-    button {
-      padding: 0;
-      border: 0;
-      background: transparent;
-      color: var(--pgds-robe);
-      font: inherit;
-      font-weight: $fw-semibold;
-      cursor: pointer;
-    }
-  }
-
   &__submit {
     background: var(--pgds-robe);
     color: #fff;
@@ -396,12 +343,6 @@
     &:focus-visible {
       @include focus-ring;
     }
-  }
-
-  .comment-respond .comment-reply-title,
-  .comment-reply-title {
-    font-size: $fs-md;
-    color: var(--pgds-robe-deep);
   }
 
   .comment-awaiting-moderation,

@@ -44,20 +44,13 @@ function pgds_comments_per_page() {
 
 /**
  * Count reader-comment pages without depending on the global page_comments option.
- * Replies stay with their top-level thread and do not consume a separate page slot.
+ * Reader comments are intentionally presented as one flat discussion stream.
  *
  * @param WP_Comment[] $comments Comment collection.
  * @return int
  */
 function pgds_comment_page_count( $comments ) {
-	$top_level = array_filter(
-		(array) $comments,
-		static function ( $comment ) {
-			return $comment instanceof WP_Comment && 0 === (int) $comment->comment_parent;
-		}
-	);
-
-	return max( 1, (int) ceil( count( $top_level ) / pgds_comments_per_page() ) );
+	return max( 1, (int) ceil( count( (array) $comments ) / pgds_comments_per_page() ) );
 }
 
 /**
@@ -98,26 +91,17 @@ function pgds_comment_card( $comment, $args, $depth ) {
 				<?php comment_text( $comment ); ?>
 			</div>
 
-			<footer class="pgds-comment__actions">
-				<?php
-				if ( comments_open( $comment->comment_post_ID ) && get_option( 'thread_comments' ) && $depth < $args['max_depth'] ) {
-					printf(
-						'<a class="pgds-comment__reply" href="#respond" data-pgds="comment-reply" data-comment-id="%1$d" data-comment-author="%2$s" aria-label="%3$s">%4$s</a>',
-						(int) $comment->comment_ID,
-						esc_attr( $author ),
-						esc_attr( sprintf( $english ? 'Reply to %s' : 'Trả lời %s', $author ) ),
-						esc_html( $english ? 'Reply' : 'Trả lời' )
-					);
-				}
-				if ( current_user_can( 'edit_comment', $comment->comment_ID ) ) {
+			<?php if ( current_user_can( 'edit_comment', $comment->comment_ID ) ) : ?>
+				<footer class="pgds-comment__actions">
+					<?php
 					printf(
 						'<a class="pgds-comment__manage" href="%1$s">%2$s</a>',
 						esc_url( get_edit_comment_link( $comment ) ),
 						esc_html( $english ? 'Manage' : 'Quản lý' )
 					);
-				}
-				?>
-			</footer>
+					?>
+				</footer>
+			<?php endif; ?>
 		</article>
 	<?php
 }
