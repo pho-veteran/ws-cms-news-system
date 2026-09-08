@@ -66,12 +66,9 @@ if ( ! $poster_id && '' === $poster ) {
 	<img class="pgds-video__watermark watermark" src="<?php echo esc_url( PGDS_LOGO_URI ); ?>"
 		width="2048" height="357" alt="" aria-hidden="true" decoding="async">
 
-	<button class="pgds-video__play play-btn" type="button"
+	<button class="pgds-video__play play-btn pgds-play pgds-play--lg" type="button"
 		aria-label="<?php echo esc_attr( sprintf( __( 'Phát video: %s', 'pgds' ), $title ) ); ?>">
-		<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-			<circle cx="32" cy="32" r="30"></circle>
-			<path d="M26 21L45 32L26 43V21Z"></path>
-		</svg>
+		<?php pgds_play_svg(); ?>
 	</button>
 
 	<?php if ( $duration ) : ?>

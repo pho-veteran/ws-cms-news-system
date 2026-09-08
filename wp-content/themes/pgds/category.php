@@ -74,6 +74,7 @@ if ( have_posts() ) {
 			<div class="pgds-category__description"><?php echo wp_kses_post( term_description() ); ?></div>
 		<?php endif; ?>
 	</header>
+	<div class="pgds-category__rule" aria-hidden="true"></div>
 
 	<?php if ( $hero_posts ) : ?>
 		<section class="pgds-category-hero" aria-label="<?php esc_attr_e( 'Bài viết nổi bật', 'pgds' ); ?>">
@@ -109,7 +110,7 @@ if ( have_posts() ) {
 		</section>
 
 		<div class="pgds-category__ornament" aria-hidden="true">
-			<?php pgds_icon( 'sprout', array( 'size' => 22 ) ); ?>
+			<?php pgds_icon( 'category-ornament', array( 'size' => 22 ) ); ?>
 		</div>
 	<?php endif; ?>
 
@@ -141,8 +142,8 @@ if ( have_posts() ) {
 			the_posts_pagination(
 				array(
 					'mid_size'  => 1,
-					'prev_text' => pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ) . __( 'Trước', 'pgds' ),
-					'next_text' => __( 'Sau', 'pgds' ) . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
+					'prev_text' => '<span class="u-sr-only">' . esc_html__( 'Trang trước', 'pgds' ) . '</span>' . pgds_get_icon( 'chevron', array( 'class' => 'pgds-icon--flip', 'size' => 14 ) ),
+					'next_text' => '<span class="u-sr-only">' . esc_html__( 'Trang sau', 'pgds' ) . '</span>' . pgds_get_icon( 'chevron', array( 'size' => 14 ) ),
 					'class'     => 'pgds-pagination',
 				)
 			);

@@ -61,6 +61,9 @@ function pgds_icon_paths( $name ) {
 
 		// Sprout - the "Sống an lành" mindful-living section.
 		'sprout'     => '<path d="M12 20v-7"/><path d="M12 13c0-3.5-2.5-6-6-6 0 3.5 2.5 6 6 6z"/><path d="M12 13c0-3 2-5.5 5.5-5.5 0 3-2.5 5.5-5.5 5.5z"/>',
+
+		// Four-leaf ornament - the category-page divider in the approved mockup.
+		'category-ornament' => '<path d="M12 3c2 3 2 6 0 9-2-3-2-6 0-9Z"/><path d="M12 21c-2-3-2-6 0-9 2 3 2 6 0 9Z"/><path d="M3 12c3-2 6-2 9 0-3 2-6 2-9 0Z"/><path d="M21 12c-3-2-6-2-9 0 3 2 6 2 9 0Z"/>',
 	);
 
 	return $icons[ $name ] ?? '';

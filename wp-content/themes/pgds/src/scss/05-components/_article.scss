@@ -64,18 +64,12 @@
 // --- Category label (category color) ----------------------------------------
 .pgds-cat-label {
   display: inline-block;
-  font-size: $fs-3xs;
+  font-size: 11px;
   font-weight: $fw-bold;
-  letter-spacing: $ls-wide;
+  letter-spacing: $ls-widest;
   text-transform: uppercase;
-  color: var(--color-brand);
-  margin-bottom: $sp-2;
-
-  &[data-cat='song-an-lanh']    { color: var(--pgds-cat-song-an-lanh); }
-  &[data-cat='phat-tich']       { color: var(--pgds-cat-phat-tich); }
-  &[data-cat='media']           { color: var(--pgds-cat-media); }
-  &[data-cat='tot-doi-dep-dao'] { color: var(--pgds-cat-tot-doi-dep-dao); }
-  &[data-cat='vietnam-buddhism'] { color: var(--pgds-cat-vietnam-buddhism); }
+  color: var(--pgds-moss);
+  margin-bottom: $sp-1;
 }
 
 // --- Article -----------------------------------------------------------------

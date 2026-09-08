@@ -66,10 +66,12 @@
 .pgds-search {
   display: flex;
   align-items: center;
+  box-sizing: border-box;
+  block-size: 30px;
   background: var(--pgds-white);
   border: 1px solid var(--pgds-line-soft);
   border-radius: $radius-sm;
-  padding: 4px 6px 4px $sp-3;
+  padding: 0 $sp-3;
   width: 210px;
   transition: border-color $dur-base $ease-out, box-shadow $dur-base $ease-out;
 
@@ -79,6 +81,8 @@
   }
 
   &__icon {
+    width: 15px;
+    height: 15px;
     color: var(--pgds-line-mid);
     margin-right: $sp-2;
     flex: none;
