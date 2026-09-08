@@ -30,6 +30,7 @@
     &__item {
       align-items: center;
       flex: none;
+      gap: $sp-2;
       overflow: visible;
 
       &:last-child {
