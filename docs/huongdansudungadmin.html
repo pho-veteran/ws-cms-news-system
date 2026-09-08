@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hướng Dẫn Sử Dụng Admin PGDS — Hệ Thống CMS Phật Giáo và Đời Sống</title>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* CSS Variables: Light Mode Default & Dark Mode Option */
+    :root[data-theme="light"] {
+      --bg-dark: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --border-color: #e2e8f0;
+      --border-accent: rgba(217, 119, 6, 0.3);
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #94a3b8;
+      
+      --primary: #d97706;
+      --primary-glow: rgba(217, 119, 6, 0.15);
+      --cyan: #0284c7;
+      --emerald: #059669;
+      --indigo: #4f46e5;
+      --purple: #7c3aed;
+      
+      --hero-bg: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      --hero-border: rgba(217, 119, 6, 0.3);
+      --table-header-bg: #f1f5f9;
+      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.08);
+      --sidebar-width: 290px;
+    }
+
+    :root[data-theme="dark"] {
+      --bg-dark: #0b0f19;
+      --bg-surface: #111827;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --bg-card-hover: rgba(51, 65, 85, 0.8);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --border-accent: rgba(245, 158, 11, 0.3);
+      
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      
+      --primary: #f59e0b;
+      --primary-glow: rgba(245, 158, 11, 0.25);
+      --cyan: #06b6d4;
+      --emerald: #10b981;
+      --indigo: #6366f1;
+      --purple: #8b5cf6;
+      
+      --hero-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+      --hero-border: var(--border-accent);
+      --table-header-bg: rgba(17, 24, 39, 0.9);
+      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 16px 32px rgba(0, 0, 0, 0.5);
+      --sidebar-width: 290px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary);
+    }
+
+    /* Layout */
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-color);
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.03);
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
+    }
+
+    .sidebar-brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-main);
+    }
+    .sidebar-brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--primary);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Theme Toggle Button */
+    .theme-toggle-btn {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .theme-toggle-btn:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 12px;
+    }
+
+    .nav-section-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      font-weight: 700;
+      margin: 16px 12px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      margin-bottom: 2px;
+    }
+
+    .nav-item i {
+      width: 20px;
+      font-size: 1rem;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+
+    .nav-item:hover {
+      color: var(--text-main);
+      background: var(--bg-card-hover);
+    }
+
+    .nav-item:hover i {
+      transform: translateX(2px);
+      color: var(--primary);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      background: rgba(217, 119, 6, 0.08);
+      border-left: 3px solid var(--primary);
+      font-weight: 600;
+    }
+
+    .nav-item.active i {
+      color: var(--primary);
+    }
+
+    /* Main Content */
+    .main-wrapper {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      min-width: 0;
+      padding: 40px 48px;
+      max-width: 1320px;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      background: var(--hero-bg);
+      border: 1px solid var(--hero-border);
+      border-radius: 18px;
+      padding: 32px 36px;
+      margin-bottom: 40px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 30px;
+      background: rgba(217, 119, 6, 0.15);
+      border: 1px solid rgba(217, 119, 6, 0.3);
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+
+    .hero-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 780px;
+    }
+
+    /* Doc Sections */
+    .doc-section {
+      margin-bottom: 52px;
+      scroll-margin-top: 30px;
+    }
+
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-title i {
+      color: var(--primary);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(217, 119, 6, 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(217, 119, 6, 0.12);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-main);
+    }
+
+    /* Cred Box */
+    .cred-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-accent);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+
+    .cred-info {
+      display: flex;
+      gap: 24px;
+    }
+
+    .cred-item {
+      font-size: 0.9rem;
+    }
+    .cred-label {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .cred-value {
+      font-family: monospace;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .btn-copy {
+      background: rgba(217, 119, 6, 0.12);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-copy:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Table Styling */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: var(--table-header-bg);
+      color: var(--text-muted);
+      font-weight: 700;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--bg-card-hover);
+    }
+
+    .badge-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: rgba(2, 132, 199, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(2, 132, 199, 0.25);
+    }
+
+    /* Image Card & Lightbox Zoom */
+    .img-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 12px;
+      margin: 20px 0;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
+    }
+
+    .img-card:hover {
+      border-color: rgba(217, 119, 6, 0.4);
+      box-shadow: var(--shadow-md);
+    }
+
+    .img-wrapper {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: zoom-in;
+      background: #f1f5f9;
+    }
+
+    .img-wrapper img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+
+    .img-wrapper:hover img {
+      transform: scale(1.02);
+    }
+
+    .img-caption {
+      padding: 10px 8px 4px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .img-caption i {
+      color: var(--primary);
+    }
+
+    /* Steps List */
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px 22px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      color: #fff;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.95rem;
+    }
+
+    .step-content h4 {
+      color: var(--text-main);
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .step-content p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* Callout Note */
+    .callout-box {
+      background: rgba(2, 132, 199, 0.08);
+      border: 1px solid rgba(2, 132, 199, 0.3);
+      border-left: 4px solid var(--cyan);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .callout-box i {
+      color: var(--cyan);
+      font-size: 1.2rem;
+      margin-top: 2px;
+    }
+
+    .callout-box p {
+      color: var(--text-main);
+      font-size: 0.9rem;
+    }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      backdrop-filter: blur(8px);
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+    }
+
+    .lightbox-img {
+      max-width: 92%;
+      max-height: 90vh;
+      border-radius: 12px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+      border: 2px solid #fff;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 24px;
+      right: 32px;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .lightbox-close:hover {
+      color: var(--primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .main-wrapper {
+        margin-left: 0;
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-group">
+          <div class="sidebar-brand-icon">
+            <i class="fa-solid fa-dharmachakra"></i>
+          </div>
+          <div>
+            <div class="sidebar-brand-title">PGDS Admin</div>
+            <div class="sidebar-brand-subtitle">User Guide Manual</div>
+          </div>
+        </div>
+        <!-- Light / Dark Mode Switch -->
+        <button class="theme-toggle-btn" onclick="toggleTheme()" title="Chuyển chế độ Giao diện (Light / Dark)">
+          <i class="fa-solid fa-moon" id="themeIcon"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Khởi Đầu</div>
+        <a href="#sec-login" class="nav-item active"><i class="fa-solid fa-right-to-bracket"></i> 1. Đăng nhập Admin</a>
+        <a href="#sec-overview" class="nav-item"><i class="fa-solid fa-list-check"></i> 2. Thanh Menu Admin</a>
+
+        <div class="nav-section-title">Đăng Bài Viết</div>
+        <a href="#sec-video" class="nav-item"><i class="fa-solid fa-circle-play"></i> 3.1 Đăng bài Video</a>
+        <a href="#sec-emagazine" class="nav-item"><i class="fa-solid fa-book-open"></i> 3.2 Đăng bài E-magazine</a>
+        <a href="#sec-news" class="nav-item"><i class="fa-solid fa-newspaper"></i> 3.3 Bài Tin tức chuẩn</a>
+        <a href="#sec-buddhism" class="nav-item"><i class="fa-solid fa-globe"></i> 3.4 Bài Tiếng Anh</a>
+
+        <div class="nav-section-title">Quản Lý Nội Dung</div>
+        <a href="#sec-teachings" class="nav-item"><i class="fa-solid fa-quote-left"></i> 4.1 Lời Phật dạy</a>
+        <a href="#sec-comments" class="nav-item"><i class="fa-solid fa-comments"></i> 4.2 Bình luận độc giả</a>
+        <a href="#sec-media" class="nav-item"><i class="fa-solid fa-images"></i> 4.3 Thư viện Media</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+      <!-- Hero Banner -->
+      <header class="hero-banner">
+        <div class="hero-badge"><i class="fa-solid fa-sun"></i> Light Mode Edition • PGDS CMS v2.0</div>
+        <h1 class="hero-title">Hướng Dẫn Sử Dụng Trang Quản Trị PGDS</h1>
+        <p class="hero-subtitle">Tài liệu hướng dẫn trực quan chi tiết quy trình xuất bản tin tức, bài E-magazine đa phương tiện, video YouTube tự động và quản trị toàn bộ hệ thống Phật giáo và Đời sống.</p>
+      </header>
+
+      <!-- Section 1: Login -->
+      <section id="sec-login" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-key"></i> 1. Đăng Nhập Trang Quản Trị (Admin Dashboard)</h2>
+        
+        <div class="card">
+          <p style="color: var(--text-muted); margin-bottom: 12px;">Đường dẫn đăng nhập chính thức trang quản trị hệ thống CMS PGDS:</p>
+          
+          <div class="cred-box">
+            <div class="cred-info">
+              <div class="cred-item">
+                <div class="cred-label">URL Trang Admin</div>
+                <div class="cred-value">http://localhost:8080/wp-admin</div>
+              </div>
+              <div class="cred-item">
+                <div class="cred-label">Tài khoản (User)</div>
+                <div class="cred-value">admin</div>
+              </div>
+              <div class="cred-item">
+                <div class="cred-label">Mật khẩu (Pass)</div>
+                <div class="cred-value">admin123</div>
+              </div>
+            </div>
+            <button class="btn-copy" onclick="copyCreds()"><i class="fa-regular fa-copy"></i> Sao Chép</button>
+          </div>
+        </div>
+
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/01_dashboard.png')">
+            <img src="image/01_dashboard.png" alt="Dashboard Admin PGDS">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 1: Giao diện Bảng điều khiển Admin Dashboard sau khi đăng nhập thành công.</div>
+        </div>
+      </section>
+
+      <!-- Section 2: Menu Overview -->
+      <section id="sec-overview" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-bars-staggered"></i> 2. Tổng Quan Thanh Menu Quản Trị PGDS</h2>
+        
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Tên Menu Admin</th>
+                <th>Chức Năng & Nhiệm Vụ Quản Trị</th>
+                <th>Tệp Ảnh Chụp</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-gauge-high" style="color:var(--primary);"></i> Dashboard</strong></td>
+                <td>Bảng điều khiển tổng quan thông số bài viết, bình luận và trạng thái hệ thống.</td>
+                <td><span class="badge-tag">01_dashboard.png</span></td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-newspaper" style="color:var(--cyan);"></i> Bài viết</strong></td>
+                <td>Quản lý các bài viết tin tức thông thường (*Tin Phật sự, Sống an lành, Phật tích, Tốt đời đẹp đạo...*).</td>
+                <td><span class="badge-tag">02_baiviet_list.png</span></td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-book-open" style="color:var(--purple);"></i> E-magazine</strong></td>
+                <td>Đăng bài và trình bày bài viết dạng Tạp chí điện tử đồ họa cao cấp đa phương tiện.</td>
+                <td><span class="badge-tag">04_emagazine_list.png</span></td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-video" style="color:#ef4444;"></i> Video</strong></td>
+                <td>Quản lý các bài viết dạng Video (tự động lấy tiêu đề, thumbnail poster & thời lượng từ YouTube).</td>
+                <td><span class="badge-tag">06_video_list.png</span></td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-globe" style="color:var(--emerald);"></i> Vietnam Buddhism</strong></td>
+                <td>Quản lý danh mục bài viết Tiếng Anh dành cho độc giả quốc tế.</td>
+                <td><span class="badge-tag">08_vietnambuddhism_list.png</span></td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-quote-right" style="color:var(--primary);"></i> Lời Phật dạy</strong></td>
+                <td>Quản lý trích dẫn triết lý Lời Phật dạy hiển thị ở sidebar và trang chủ.</td>
+                <td><span class="badge-tag">09_loiphatday_list.png</span></td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-comments" style="color:var(--indigo);"></i> Comments</strong></td>
+                <td>Duyệt, phản hồi và xử lý các bình luận từ độc giả gửi về.</td>
+                <td><span class="badge-tag">10_comments_list.png</span></td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--text-main);"><i class="fa-solid fa-images" style="color:#ec4899;"></i> Media</strong></td>
+                <td>Thư viện tải lên và quản lý hình ảnh, tệp đính kèm.</td>
+                <td><span class="badge-tag">11_media_library.png</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 3.1: Video -->
+      <section id="sec-video" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-circle-play" style="color:#ef4444;"></i> 3.1 Hướng Dẫn Đăng Bài Video (Media > Video)</h2>
+        
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <h4>Truy cập Menu Video</h4>
+              <p>Trên menu quản trị bên trái, chọn <strong>Video</strong> ➔ chọn nút <strong>Add New Video</strong> (hoặc chọn <strong>Bài viết ➔ Viết bài mới</strong>).</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <h4>Điền Tiêu Đề & Liên Kết YouTube</h4>
+              <p>Nhập tiêu đề video. Tại ô <strong>Thẻ Video (Video YouTube)</strong>, dán link YouTube (VD: <code>https://www.youtube.com/watch?v=...</code>) hoặc Mã Video 11 ký tự.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <h4>Cấu Hình Tự Động Đồng Bộ</h4>
+              <p>Hệ thống sẽ tự động đồng bộ <strong>Thời lượng (Duration)</strong>, <strong>Ảnh Poster Thumbnail</strong> và Tiêu đề từ YouTube.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/06_video_list.png')">
+            <img src="image/06_video_list.png" alt="Danh sách Video">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 2: Danh sách quản lý các bài viết Video trong Admin.</div>
+        </div>
+
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/07_video_editor.png')">
+            <img src="image/07_video_editor.png" alt="Giao diện nhập bài Video">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 3: Giao diện nhập bài viết Video thực tế với các thông tin mẫu đã điền.</div>
+        </div>
+      </section>
+
+      <!-- Section 3.2: E-magazine -->
+      <section id="sec-emagazine" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-book-open" style="color:var(--purple);"></i> 3.2 Hướng Dẫn Đăng Bài E-magazine (Tạp chí điện tử)</h2>
+        
+        <div class="callout-box">
+          <i class="fa-solid fa-lightbulb"></i>
+          <div>
+            <strong style="color:var(--text-main);">Đặc điểm E-magazine:</strong> Bài viết E-magazine là tác phẩm báo chí đa phương tiện chiều sâu. Giao diện trang chi tiết hiển thị khổ rộng (Wide / Full Width), hỗ trợ 5 bộ Gutenberg Block Patterns thiết kế riêng sắc nét.
+          </div>
+        </div>
+
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/04_emagazine_list.png')">
+            <img src="image/04_emagazine_list.png" alt="Danh sách E-magazine">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 4: Danh sách quản lý các bài viết Tạp chí điện tử E-magazine.</div>
+        </div>
+
+        <h3 style="color:var(--text-main); font-size:1.2rem; margin: 28px 0 16px;"><i class="fa-solid fa-cubes" style="color:var(--primary);"></i> Chi tiết 5 Mẫu Gutenberg Patterns E-magazine (Kèm ảnh mẫu thực tế):</h3>
+
+        <!-- Pattern 1 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-icon"><i class="fa-solid fa-heading"></i></div>
+            <div class="card-title">📌 Mẫu 1: Chapter Heading (Tiêu đề Chương / Phân đoạn)</div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:12px;">Dùng để phân chia bài viết E-magazine dài thành từng chương mục nhỏ với chữ phân đoạn <code>Chương 01</code> phía trên và Tiêu đề H2 lớn phía dưới.</p>
+          
+          <div class="img-card" style="margin-top:10px;">
+            <div class="img-wrapper" onclick="openLightbox('image/pattern1_chapter.png')">
+              <img src="image/pattern1_chapter.png" alt="Pattern Chapter Heading">
+            </div>
+            <div class="img-caption"><i class="fa-solid fa-circle-info"></i> Ảnh chụp thực tế Mẫu 1: Chapter Heading điền mẫu "Chương 01 - Hành trình Khai sáng..."</div>
+          </div>
+        </div>
+
+        <!-- Pattern 2 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(79, 70, 229, 0.12); color:var(--indigo);"><i class="fa-solid fa-quote-left"></i></div>
+            <div class="card-title">📌 Mẫu 2: Pull Quote (Khối trích dẫn nổi bật)</div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:12px;">Đóng khung câu nói hay, triết lý hoặc điểm nhấn quan trọng trong bài với chữ khổ lớn nghệ thuật và tên tác giả/nguồn trích dẫn.</p>
+          
+          <div class="img-card" style="margin-top:10px;">
+            <div class="img-wrapper" onclick="openLightbox('image/pattern2_pullquote.png')">
+              <img src="image/pattern2_pullquote.png" alt="Pattern Pull Quote">
+            </div>
+            <div class="img-caption"><i class="fa-solid fa-circle-info"></i> Ảnh chụp thực tế Mẫu 2: Pull Quote điền mẫu câu trích dẫn của Thượng tọa Thích Thanh Từ.</div>
+          </div>
+        </div>
+
+        <!-- Pattern 3 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(5, 150, 105, 0.12); color:var(--emerald);"><i class="fa-solid fa-expand"></i></div>
+            <div class="card-title">📌 Mẫu 3: Wide Image (Ảnh tràn chiều rộng)</div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:12px;">Chèn bức ảnh khổ rộng vươn ra 2 bên lề cột nội dung kèm chú thích ảnh và tác giả ảnh (Photo credit).</p>
+          
+          <div class="img-card" style="margin-top:10px;">
+            <div class="img-wrapper" onclick="openLightbox('image/pattern3_wideimage.png')">
+              <img src="image/pattern3_wideimage.png" alt="Pattern Wide Image">
+            </div>
+            <div class="img-caption"><i class="fa-solid fa-circle-info"></i> Ảnh chụp thực tế Mẫu 3: Wide Image điền chú thích ảnh lễ hội Vesak.</div>
+          </div>
+        </div>
+
+        <!-- Pattern 4 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(2, 132, 199, 0.12); color:var(--cyan);"><i class="fa-solid fa-table-columns"></i></div>
+            <div class="card-title">📌 Mẫu 4: Image Pair (Bộ ảnh đôi 2 cột)</div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:12px;">Hiển thị 2 bức ảnh song song cạnh nhau trên 2 cột với chú thích độc lập điền mẫu cho cả 2 ảnh.</p>
+          
+          <div class="img-card" style="margin-top:10px;">
+            <div class="img-wrapper" onclick="openLightbox('image/pattern4_imagepair.png')">
+              <img src="image/pattern4_imagepair.png" alt="Pattern Image Pair">
+            </div>
+            <div class="img-caption"><i class="fa-solid fa-circle-info"></i> Ảnh chụp thực tế Mẫu 4: Image Pair bộ ảnh đôi nghi lễ dâng hoa & thắp nến.</div>
+          </div>
+        </div>
+
+        <!-- Pattern 5 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(236,72,153,0.12); color:#ec4899;"><i class="fa-solid fa-maximize"></i></div>
+            <div class="card-title">📌 Mẫu 5: Full Image (Ảnh tràn toàn màn hình)</div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:12px;">Bức ảnh điểm nhấn tràn 100% toàn bộ chiều rộng màn hình thiết bị độc giả.</p>
+          
+          <div class="img-card" style="margin-top:10px;">
+            <div class="img-wrapper" onclick="openLightbox('image/pattern5_fullimage.png')">
+              <img src="image/pattern5_fullimage.png" alt="Pattern Full Image">
+            </div>
+            <div class="img-caption"><i class="fa-solid fa-circle-info"></i> Ảnh chụp thực tế Mẫu 5: Full Image bức ảnh toàn cảnh từ trên cao.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3.3: Standard News -->
+      <section id="sec-news" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-newspaper" style="color:var(--cyan);"></i> 3.3 Đăng Bài Tin Tức Thông Thường</h2>
+        
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/02_baiviet_list.png')">
+            <img src="image/02_baiviet_list.png" alt="Danh sách bài viết tin tức">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 5: Giao diện Quản lý Danh sách Bài viết Tin tức.</div>
+        </div>
+
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/03_baiviet_editor.png')">
+            <img src="image/03_baiviet_editor.png" alt="Giao diện viết bài tin tức mới">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 6: Giao diện viết bài Tin tức chuẩn với đầy đủ thông tin mẫu.</div>
+        </div>
+      </section>
+
+      <!-- Section 3.4: Vietnam Buddhism -->
+      <section id="sec-buddhism" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-globe" style="color:var(--emerald);"></i> 3.4 Đăng Bài Tiếng Anh (Vietnam Buddhism)</h2>
+        
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/08_vietnambuddhism_list.png')">
+            <img src="image/08_vietnambuddhism_list.png" alt="Danh sách Vietnam Buddhism">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 7: Danh sách quản lý bài viết tiếng Anh (Vietnam Buddhism).</div>
+        </div>
+      </section>
+
+      <!-- Section 4.1: Teachings -->
+      <section id="sec-teachings" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-quote-right" style="color:var(--primary);"></i> 4.1 Quản Lý Lời Phật Dạy</h2>
+        
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/09_loiphatday_list.png')">
+            <img src="image/09_loiphatday_list.png" alt="Danh sách Lời Phật dạy">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 8: Danh sách trích dẫn triết lý Lời Phật dạy (Custom Post Type).</div>
+        </div>
+      </section>
+
+      <!-- Section 4.2: Comments -->
+      <section id="sec-comments" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-comments" style="color:var(--indigo);"></i> 4.2 Quản Lý Bình Luận Độc Giả</h2>
+        
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/10_comments_list.png')">
+            <img src="image/10_comments_list.png" alt="Quản lý Bình luận">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 9: Giao diện duyệt, trả lời hoặc báo spam bình luận từ độc giả.</div>
+        </div>
+      </section>
+
+      <!-- Section 4.3: Media -->
+      <section id="sec-media" class="doc-section">
+        <h2 class="section-title"><i class="fa-solid fa-images" style="color:#ec4899;"></i> 4.3 Quản Lý Thư Viện Media</h2>
+        
+        <div class="img-card">
+          <div class="img-wrapper" onclick="openLightbox('image/11_media_library.png')">
+            <img src="image/11_media_library.png" alt="Thư viện Media">
+          </div>
+          <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 10: Thư viện quản lý tệp tin & hình ảnh hệ thống (Media Library).</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox()">
+    <span class="lightbox-close">&times;</span>
+    <img class="lightbox-img" id="lightboxImage" src="" alt="Zoomed Screenshot">
+  </div>
+
+  <script>
+    // Theme Toggle Functionality
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      const currentTheme = htmlEl.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      htmlEl.setAttribute('data-theme', newTheme);
+      
+      const themeIcon = document.getElementById('themeIcon');
+      if (newTheme === 'dark') {
+        themeIcon.className = 'fa-solid fa-sun';
+      } else {
+        themeIcon.className = 'fa-solid fa-moon';
+      }
+    }
+
+    // Copy Credentials Helper
+    function copyCreds() {
+      navigator.clipboard.writeText('URL: http://localhost:8080/wp-admin\nUser: admin\nPass: admin123');
+      alert('Đã sao chép thông tin đăng nhập Admin!');
+    }
+
+    // Lightbox Zoom
+    function openLightbox(src) {
+      document.getElementById('lightboxImage').src = src;
+      document.getElementById('lightboxModal').classList.add('active');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightboxModal').classList.remove('active');
+    }
+
+    // Highlight Active Nav item on scroll
+    window.addEventListener('scroll', () => {
+      const sections = document.querySelectorAll('.doc-section');
+      const navLinks = document.querySelectorAll('.nav-item');
+      let currentSectionId = '';
+
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (window.scrollY >= top) {
+          currentSectionId = sec.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSectionId) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
