@@ -48,7 +48,7 @@ Run the canonical local setup once, then replace only the disposable editorial c
 
 ```bash
 cd infra/local
-docker compose up -d
+docker compose up -d --build
 ./sync.sh
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/setup.sh'
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/reset.sh'

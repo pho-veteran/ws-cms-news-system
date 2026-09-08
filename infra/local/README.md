@@ -13,7 +13,7 @@ production uses Nginx FastCGI cache, see `infra/nginx/`.
 
 ```bash
 cd infra/local
-docker compose up -d                              # db + redis + wordpress (apache)
+docker compose up -d --build                      # db + redis + wordpress (apache)
 ./sync.sh                                         # copy repo files into the shared Docker volume
 
 # php -l across the theme and mu-plugins (catches syntax errors)
@@ -41,7 +41,7 @@ imported into production.
 
 ```bash
 cd infra/local
-docker compose up -d
+docker compose up -d --build
 ./sync.sh
 
 # Establish the original local site, then add the article fixtures.
