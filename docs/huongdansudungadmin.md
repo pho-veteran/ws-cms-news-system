@@ -78,29 +78,71 @@ Bài viết **E-magazine** là các tác phẩm báo chí chuyên sâu đa phư�
    - Ở cột cấu hình bên phải, tìm đến mục **Ảnh đại diện (Featured Image)**.
    - Chọn ảnh chất lượng cao độ phân giải tối thiểu `1920x1080px` làm ảnh bìa chính (Banner Header) cho E-magazine.
 
-4. **Bước 4: Sử dụng các Block Patterns thiết kế riêng cho E-magazine:**
+4. **Bước 4: Sử dụng 5 Mẫu Gutenberg Block Patterns E-magazine chuẩn (Kèm ảnh chụp thực tế từng ô):**
+
    Nhấn vào nút biểu tượng **`+` (Add Block)** ở góc trên bên trái trình soạn thảo Gutenberg ➔ chuyển sang tab **Patterns (Mẫu định dạng)** ➔ chọn nhóm **PGDS E-magazine**.
 
-   ![Giao diện soạn thảo E-magazine Gutenberg](image/05_emagazine_editor.png)
+   ![Giao diện soạn thảo E-magazine Gutenberg tổng quan](image/05_emagazine_editor.png)
 
-   Bạn có thể chèn 5 mẫu thiết kế E-magazine chuẩn sau:
-   - 📌 **Chapter Heading (Tiêu đề Chương / Phân đoạn):**
-     - *Công dụng:* Chia bài viết E-magazine dài thành các chương nhỏ.
-     - *Cấu trúc mẫu:* Chữ *"Chương 01"*, *"Chương 02"* phía trên kèm thẻ Tiêu đề H2 lớn phía dưới.
-   - 📌 **Full Image (Ảnh tràn màn hình - Full Width):**
-     - *Công dụng:* Chèn bức ảnh điểm nhấn tràn toàn bộ 100% chiều rộng màn hình thiết bị.
-     - *Định dạng:* Tự động có sẵn khung nhập chú thích ảnh và nguồn ảnh (*Photo Credit*).
-   - 📌 **Wide Image (Ảnh tràn chiều rộng - Wide Width):**
-     - *Công dụng:* Chèn ảnh khổ rộng vươn ra 2 bên lề cột nội dung chính.
-   - 📌 **Pull Quote (Khối trích dẫn nổi bật - Pull Quote):**
-     - *Công dụng:* Đóng khung câu nói hay, triết lý hoặc điểm nhấn quan trọng trong bài.
-     - *Định dạng:* Chữ trích dẫn khổ lớn kèm tên nhân vật phát biểu bên dưới.
-   - 📌 **Image Pair (Bộ ảnh đôi 2 cột - Image Pair):**
-     - *Công dụng:* Hiển thị 2 bức ảnh song song cạnh nhau trên 2 cột kèm chú thích độc lập cho từng ảnh.
+   Chi tiết 5 mẫu thiết kế E-magazine chuyên dụng với thông tin điền mẫu thực tế:
+
+   ---
+
+   📌 **Mẫu 1: Chapter Heading (Tiêu đề Chương / Phân đoạn)**
+   - **Công dụng:** Chia bài viết E-magazine dài thành các chương hoặc phân đoạn chủ đề nhỏ giúp độc giả dễ theo dõi.
+   - **Cấu trúc mẫu:** Chữ *"Chương 01"*, *"Chương 02"* phía trên kèm thẻ Tiêu đề H2 lớn phía dưới.
+   - **Thông tin điền mẫu trong hệ thống:**
+     - *Chữ phân đoạn:* `Chương 01`
+     - *Tiêu đề chương:* `Hành trình Khai sáng và Nhận thức Tự tính`
+
+   ![Mẫu 1: Chapter Heading thực tế](image/pattern1_chapter.png)
+
+   ---
+
+   📌 **Mẫu 2: Pull Quote (Khối trích dẫn nổi bật)**
+   - **Công dụng:** Đóng khung câu nói hay, triết lý hoặc thông điệp quan trọng nhất trong bài viết.
+   - **Định dạng:** Chữ trích dẫn khổ lớn nghệ thuật kèm tên nhân vật/nguồn trích dẫn phía dưới.
+   - **Thông tin điền mẫu trong hệ thống:**
+     - *Nội dung trích dẫn:* `"Giữ tâm thanh tịnh giữa biến động cuộc đời chính là suối nguồn của sự an lạc vĩnh hằng."`
+     - *Nguồn trích dẫn / Tác giả:* `Thượng tọa Thích Thanh Từ — Thiền viện Trúc Lâm`
+
+   ![Mẫu 2: Pull Quote thực tế](image/pattern2_pullquote.png)
+
+   ---
+
+   📌 **Mẫu 3: Wide Image (Ảnh tràn chiều rộng - Wide Width)**
+   - **Công dụng:** Chèn bức ảnh khổ rộng vươn ra 2 bên lề cột nội dung chính bài viết.
+   - **Thông tin điền mẫu trong hệ thống:**
+     - *Ảnh tải lên:* Ảnh khung cảnh lễ hội / sự kiện chất lượng cao.
+     - *Chú thích ảnh & Nguồn:* `Ảnh 1: Quang cảnh Đại lễ Vesak rực rỡ sắc màu tâm linh — Ảnh: Ban Biên Tập PGDS`
+
+   ![Mẫu 3: Wide Image thực tế](image/pattern3_wideimage.png)
+
+   ---
+
+   📌 **Mẫu 4: Image Pair (Bộ ảnh đôi 2 cột)**
+   - **Công dụng:** Hiển thị 2 bức ảnh song song cạnh nhau trên 2 cột kèm chú thích độc lập cho từng ảnh.
+   - **Thông tin điền mẫu trong hệ thống:**
+     - *Ảnh bên trái & Chú thích:* `Ảnh trái: Nghi lễ dâng hoa cầu nguyện bình an cho vạn chúng`
+     - *Ảnh bên phải & Chú thích:* `Ảnh phải: Chư tôn đức tăng ni thực hiện nghi thức thắp nến hoa đăng`
+
+   ![Mẫu 4: Image Pair thực tế](image/pattern4_imagepair.png)
+
+   ---
+
+   📌 **Mẫu 5: Full Image (Ảnh tràn toàn màn hình - Full Width)**
+   - **Công dụng:** Chèn bức ảnh điểm nhấn vươn tràn 100% toàn bộ chiều rộng màn hình thiết bị độc giả.
+   - **Thông tin điền mẫu trong hệ thống:**
+     - *Ảnh tải lên:* Ảnh panorama toàn cảnh góc rộng nét cao.
+     - *Chú thích ảnh & Tác giả:* `Ảnh tràn toàn màn hình: Toàn cảnh không gian linh thiêng từ trên cao — Tác giả: Phóng viên Hoàng Nam`
+
+   ![Mẫu 5: Full Image thực tế](image/pattern5_fullimage.png)
+
+   ---
 
 5. **Bước 5: Xem trước & Xuất bản:**
    - Nhấn nút **Xem trước (Preview)** ở góc trên bên phải để xem thử hiển thị E-magazine.
-   - Nhấn nút **Publish (Đăng bài)** để phát hành bài viết E-magazine.
+   - Nhấn nút **Publish (Đăng bài)** để phát hành bài viết E-magazine công khai.
 
 ---
 
