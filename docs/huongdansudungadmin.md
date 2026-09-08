@@ -55,30 +55,52 @@ Trên thanh menu bên trái màn hình sau khi đăng nhập thành công, hệ 
 
 ---
 
-### 📖 3.2. Đăng bài Tạp chí Điện tử (E-magazine)
+### 📖 3.2. Đăng bài Tạp chí Điện tử (E-magazine) — Hướng dẫn chi tiết
 
-1. **Truy cập danh sách E-magazine:** Chọn menu **E-magazine** trên thanh menu trái.
+#### 🎯 Mục đích & Đặc điểm bài viết E-magazine:
+Bài viết **E-magazine** là các tác phẩm báo chí chuyên sâu đa phương tiện (*Multimedia Journalism*). Trang chi tiết E-magazine được thiết kế với không gian hiển thị mở rộng (Wide / Full width), phông chữ nghệ thuật, khối trích dẫn nổi bật và các bộ ảnh đôi/ảnh tràn màn hình mang lại trải nghiệm xem như một tạp chí in cao cấp.
 
-   ![Danh sách bài viết E-magazine](image/04_emagazine_list.png)
+![Danh sách bài viết E-magazine](image/04_emagazine_list.png)
 
-2. **Nhấn nút Add New E-magazine:**
+#### 📝 Quy trình 5 bước đăng bài E-magazine chuẩn:
+
+1. **Bước 1: Khởi tạo bài viết E-magazine mới:**
+   - Trên menu quản trị bên trái, chọn **E-magazine** ➔ nhấn nút **Add New E-magazine** (hoặc truy cập **Bài viết** ➔ **Viết bài mới**).
+
+2. **Bước 2: Nhập Tiêu đề & Cấu hình thuộc tính PGDS:**
+   - **Tiêu đề bài viết:** Nhập tiêu đề lớn tác phẩm E-magazine.
+   - **Khung cấu hình PGDS (ở cột phải hoặc bên dưới bài viết):**
+     - **Chuyên mục chính:** Đảm bảo hệ thống chọn `E-magazine` (Tuyệt đối không đổi sang chuyên mục khác để giữ đúng layout E-magazine).
+     - **Sa-pô (Tóm tắt):** Nhập đoạn mở đầu ngắn gọn, ấn tượng dẫn dắt độc giả.
+     - **Tên tác giả hiển thị:** Điền tên Biên tập viên / Nhiếp ảnh gia thực hiện (VD: `Nguyễn Văn A - Ảnh: Hoàng Nam`).
+
+3. **Bước 3: Tải Ảnh đại diện Bìa (Featured Image):**
+   - Ở cột cấu hình bên phải, tìm đến mục **Ảnh đại diện (Featured Image)**.
+   - Chọn ảnh chất lượng cao độ phân giải tối thiểu `1920x1080px` làm ảnh bìa chính (Banner Header) cho E-magazine.
+
+4. **Bước 4: Sử dụng các Block Patterns thiết kế riêng cho E-magazine:**
+   Nhấn vào nút biểu tượng **`+` (Add Block)** ở góc trên bên trái trình soạn thảo Gutenberg ➔ chuyển sang tab **Patterns (Mẫu định dạng)** ➔ chọn nhóm **PGDS E-magazine**.
 
    ![Giao diện soạn thảo E-magazine Gutenberg](image/05_emagazine_editor.png)
 
-3. **Chèn các mẫu Gutenberg Block Patterns E-magazine:**
-   - Khi viết bài E-magazine, nhấn nút `+` (Add Block) góc trên trái ➔ chọn tab **Patterns**.
-   - Chọn các mẫu trình bày E-magazine đẹp mắt có sẵn:
-     - *Wide Image:* Ảnh tràn viền chiều rộng.
-     - *Pull Quote:* Khối trích dẫn điểm nhấn.
-     - *Image Pair:* Bộ ảnh đôi 2 cột.
-     - *Chapter Heading:* Tiêu đề phân đoạn/Chương.
-     - *Full Image:* Ảnh tràn màn hình.
-4. **Cấu hình thuộc tính PGDS:**
-   - **Chuyên mục chính:** Đảm bảo chọn `E-magazine`.
-   - **Sa-pô:** Nhập mở đầu hấp dẫn.
-   - **Tên tác giả:** Nhập tên biên tập viên / tác giả.
-   - **Featured Image (Ảnh đại diện):** Tải ảnh chất lượng cao làm bìa E-magazine.
-5. **Đăng bài:** Nhấn **Publish**.
+   Bạn có thể chèn 5 mẫu thiết kế E-magazine chuẩn sau:
+   - 📌 **Chapter Heading (Tiêu đề Chương / Phân đoạn):**
+     - *Công dụng:* Chia bài viết E-magazine dài thành các chương nhỏ.
+     - *Cấu trúc mẫu:* Chữ *"Chương 01"*, *"Chương 02"* phía trên kèm thẻ Tiêu đề H2 lớn phía dưới.
+   - 📌 **Full Image (Ảnh tràn màn hình - Full Width):**
+     - *Công dụng:* Chèn bức ảnh điểm nhấn tràn toàn bộ 100% chiều rộng màn hình thiết bị.
+     - *Định dạng:* Tự động có sẵn khung nhập chú thích ảnh và nguồn ảnh (*Photo Credit*).
+   - 📌 **Wide Image (Ảnh tràn chiều rộng - Wide Width):**
+     - *Công dụng:* Chèn ảnh khổ rộng vươn ra 2 bên lề cột nội dung chính.
+   - 📌 **Pull Quote (Khối trích dẫn nổi bật - Pull Quote):**
+     - *Công dụng:* Đóng khung câu nói hay, triết lý hoặc điểm nhấn quan trọng trong bài.
+     - *Định dạng:* Chữ trích dẫn khổ lớn kèm tên nhân vật phát biểu bên dưới.
+   - 📌 **Image Pair (Bộ ảnh đôi 2 cột - Image Pair):**
+     - *Công dụng:* Hiển thị 2 bức ảnh song song cạnh nhau trên 2 cột kèm chú thích độc lập cho từng ảnh.
+
+5. **Bước 5: Xem trước & Xuất bản:**
+   - Nhấn nút **Xem trước (Preview)** ở góc trên bên phải để xem thử hiển thị E-magazine.
+   - Nhấn nút **Publish (Đăng bài)** để phát hành bài viết E-magazine.
 
 ---
 
