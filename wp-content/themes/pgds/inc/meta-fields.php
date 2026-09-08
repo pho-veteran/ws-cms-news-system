@@ -1245,6 +1245,35 @@ function pgds_rest_existing_meta( $post_id, $key, $default ) {
 }
 
 /**
+ * Check whether a REST-supplied synchronization value is only an unchanged echo.
+ *
+ * Gutenberg includes registered metadata in ordinary post saves even when an
+ * editor did not touch it. Those no-op values are safe to discard; a different
+ * value remains an attempted write and must still be rejected.
+ *
+ * @param int    $post_id  Post ID, or zero while creating a post.
+ * @param string $key      Synchronization-owned metadata key.
+ * @param mixed  $supplied REST-supplied value.
+ * @return bool
+ */
+function pgds_rest_synchronized_meta_is_unchanged( $post_id, $key, $supplied ) {
+	$integer_keys = array( '_pgds_youtube_dur', '_pgds_youtube_poster_id' );
+	$boolean_keys = array( '_pgds_video_unavailable' );
+	$default      = in_array( $key, $integer_keys, true ) ? 0 : '';
+	$existing     = pgds_rest_existing_meta( $post_id, $key, $default );
+
+	if ( in_array( $key, $integer_keys, true ) ) {
+		return absint( $supplied ) === absint( $existing );
+	}
+
+	if ( in_array( $key, $boolean_keys, true ) ) {
+		return rest_sanitize_boolean( $supplied ) === rest_sanitize_boolean( $existing );
+	}
+
+	return (string) $supplied === (string) $existing;
+}
+
+/**
  * Validate and normalize PGDS metadata before a REST post write begins.
  *
  * @param stdClass       $prepared_post Prepared post object.
@@ -1263,11 +1292,15 @@ function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 
 	foreach ( pgds_synchronized_meta_keys() as $key ) {
 		if ( array_key_exists( $key, $meta ) ) {
-			return new WP_Error(
-				'pgds_readonly_video_meta',
-				'Thời lượng và trạng thái video do PGDS tự cập nhật và không thể sửa tại đây.',
-				array( 'status' => 403 )
-			);
+			if ( ! pgds_rest_synchronized_meta_is_unchanged( $post_id, $key, $meta[ $key ] ) ) {
+				return new WP_Error(
+					'pgds_readonly_video_meta',
+					'Thời lượng và trạng thái video do PGDS tự cập nhật và không thể sửa tại đây.',
+					array( 'status' => 403 )
+				);
+			}
+
+			unset( $meta[ $key ] );
 		}
 	}
 

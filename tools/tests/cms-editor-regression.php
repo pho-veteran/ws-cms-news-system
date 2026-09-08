@@ -233,6 +233,7 @@ try {
 		'pgds_comments_per_page',
 		'pgds_comment_page_count',
 		'pgds_comment_card',
+		'pgds_rest_synchronized_meta_is_unchanged',
 	);
 	foreach ( $required_functions as $function ) {
 		pgds_cms_editor_assert( function_exists( $function ), sprintf( '%s is available to the article editor', $function ) );
@@ -860,6 +861,24 @@ try {
 		);
 
 	$readonly_keys = array( '_pgds_youtube_dur', '_pgds_youtube_title', '_pgds_youtube_poster_id' );
+	$readonly_echo = array();
+	foreach ( $readonly_keys as $readonly_key ) {
+		$readonly_echo[ $readonly_key ] = get_post_meta( $rest_post_id, $readonly_key, true );
+	}
+	$rest_readonly_echo = pgds_cms_editor_rest_request(
+		'POST',
+		'/wp/v2/posts/' . $rest_post_id,
+		array(
+			'title' => 'PGDS REST readonly echo ' . $token,
+			'meta'  => $readonly_echo,
+		)
+	);
+	pgds_cms_editor_assert( 200 === $rest_readonly_echo->get_status(), 'REST allows Gutenberg to echo unchanged synchronization-owned metadata' );
+	pgds_cms_editor_assert( 'PGDS REST readonly echo ' . $token === get_post( $rest_post_id )->post_title, 'unchanged read-only metadata does not block an ordinary post update' );
+	foreach ( $readonly_echo as $readonly_key => $readonly_value ) {
+		pgds_cms_editor_assert_meta( $rest_post_id, $readonly_key, $readonly_value, sprintf( 'REST no-op echo preserves synchronization-owned %s', $readonly_key ) );
+	}
+
 	foreach ( $readonly_keys as $readonly_key ) {
 		$readonly_before = get_post_meta( $rest_post_id, $readonly_key, true );
 		$rest_readonly = pgds_cms_editor_rest_request(
@@ -872,7 +891,7 @@ try {
 		);
 		pgds_cms_editor_assert_rest_error( $rest_readonly, 'pgds_readonly_video_meta', 403, sprintf( 'REST rejects writes to synchronization-owned %s', $readonly_key ) );
 		pgds_cms_editor_assert_meta( $rest_post_id, $readonly_key, $readonly_before, sprintf( 'REST preserves synchronization-owned %s', $readonly_key ) );
-		pgds_cms_editor_assert( 'PGDS REST valid ' . $token === get_post( $rest_post_id )->post_title, sprintf( 'REST %s rejection preserves the title', $readonly_key ) );
+		pgds_cms_editor_assert( 'PGDS REST readonly echo ' . $token === get_post( $rest_post_id )->post_title, sprintf( 'REST %s rejection preserves the title', $readonly_key ) );
 	}
 
 	wp_set_current_user( (int) $subscriber_id );
