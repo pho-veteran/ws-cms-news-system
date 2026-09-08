@@ -1,6 +1,6 @@
 # Fonts (self-hosted)
 
-The theme self-hosts its two families so production has no third-party font origin
+The theme self-hosts its families so production has no third-party font origin
 and LCP stays under our control (proposal §3.1.2). Google Fonts publishes each family
 as **one file per subset**, and there is no combined file to request, so this
 directory holds one file per family, weight, and subset:
@@ -8,6 +8,7 @@ directory holds one file per family, weight, and subset:
 ```
 be-vietnam-pro-{400,600,700}-{latin,latin-ext,vietnamese}.woff2
 newsreader-{400,700}-{latin,latin-ext,vietnamese}.woff2
+source-serif-4-{400,600,700}-{latin,latin-ext,vietnamese}.woff2
 ```
 
 Every subset is required. `vietnamese` carries the precomposed vowels
@@ -32,8 +33,8 @@ npm run fonts     # from wp-content/themes/pgds
 marker codepoints in its `unicode-range`, and verifies the `wOF2` signature so an
 HTML error page can never be saved under a `.woff2` name.
 
-Newsreader is a **variable** font: one file per subset spans the whole 400–700 axis,
-so the same source URL is saved under both the 400 and 700 filenames. The
+Newsreader and Source Serif 4 are **variable** fonts: one file per subset spans the requested weight axis,
+so the same source URL is saved under each requested weight filename. The
 `@font-face` rules declare static weights and each needs a file present, so the
 duplication is deliberate.
 

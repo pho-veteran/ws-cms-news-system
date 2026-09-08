@@ -43,6 +43,46 @@ function pgds_comments_per_page() {
 }
 
 /**
+ * Keep WordPress's canonical URLs and comment-link helpers aligned with the
+ * theme-owned flat discussion stream.
+ *
+ * The template paginates an explicitly ordered comment collection, but core
+ * still consults these options when it validates `/comment-page-N/` URLs and
+ * builds pagination links. Leaving the site-level defaults in place makes core
+ * redirect page two back to the article even though the template can render it.
+ *
+ * @param mixed $value Stored option value.
+ * @return bool
+ */
+function pgds_enable_comment_pagination( $value ) {
+	return true;
+}
+add_filter( 'option_page_comments', 'pgds_enable_comment_pagination' );
+
+/**
+ * Use the same page size in WordPress core and the theme template.
+ *
+ * @param mixed $value Stored option value.
+ * @return int
+ */
+function pgds_filter_comments_per_page( $value ) {
+	return pgds_comments_per_page();
+}
+add_filter( 'option_comments_per_page', 'pgds_filter_comments_per_page' );
+
+/**
+ * Keep core page numbering in natural order. The template has already sorted its
+ * flat collection newest first, so core's first slice is the newest eight items.
+ *
+ * @param mixed $value Stored option value.
+ * @return string
+ */
+function pgds_filter_default_comments_page( $value ) {
+	return 'oldest';
+}
+add_filter( 'option_default_comments_page', 'pgds_filter_default_comments_page' );
+
+/**
  * Count reader-comment pages without depending on the global page_comments option.
  * Reader comments are intentionally presented as one flat discussion stream.
  *

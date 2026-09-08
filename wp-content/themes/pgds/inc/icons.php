@@ -56,6 +56,9 @@ function pgds_icon_paths( $name ) {
 		// Calendar - the perpetual calendar block.
 		'calendar'   => '<rect x="3.5" y="5.5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3.5v4M16 3.5v4"/>',
 
+		// User - account/login affordances.
+		'user'       => '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>',
+
 		// Sprout - the "Sống an lành" mindful-living section.
 		'sprout'     => '<path d="M12 20v-7"/><path d="M12 13c0-3.5-2.5-6-6-6 0 3.5 2.5 6 6 6z"/><path d="M12 13c0-3 2-5.5 5.5-5.5 0 3-2.5 5.5-5.5 5.5z"/>',
 	);

@@ -94,6 +94,16 @@ function pgds_preload_fonts() {
 		'/assets/fonts/be-vietnam-pro-700-latin.woff2',
 		'/assets/fonts/be-vietnam-pro-700-vietnamese.woff2',
 	);
+
+	$queried_post = is_singular( 'post' ) ? get_queried_object() : null;
+	if ( $queried_post instanceof WP_Post && 'emagazine' === pgds_detail_layout( $queried_post ) ) {
+		$fonts[] = '/assets/fonts/source-serif-4-400-latin.woff2';
+		$fonts[] = '/assets/fonts/source-serif-4-400-vietnamese.woff2';
+		$fonts[] = '/assets/fonts/source-serif-4-600-latin.woff2';
+		$fonts[] = '/assets/fonts/source-serif-4-600-vietnamese.woff2';
+		$fonts[] = '/assets/fonts/source-serif-4-700-latin.woff2';
+		$fonts[] = '/assets/fonts/source-serif-4-700-vietnamese.woff2';
+	}
 	foreach ( $fonts as $f ) {
 		$abs = PGDS_DIR . $f;
 		if ( is_readable( $abs ) ) {

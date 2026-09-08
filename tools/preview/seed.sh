@@ -194,6 +194,9 @@ $WP eval '
     $post_id       = (int) $posts[0];
     $attachment_id = (int) $attachments[0];
     $size          = sanitize_key( (string) ( $assignment["size"] ?? "large" ) );
+    $align         = in_array( (string) ( $assignment["align"] ?? "" ), array( "wide", "full" ), true ) ? (string) $assignment["align"] : "";
+    $class_name    = implode( " ", array_filter( array_map( "sanitize_html_class", preg_split( "/\\s+/", (string) ( $assignment["class_name"] ?? "" ) ) ) ) );
+    $marker        = (string) ( $assignment["marker"] ?? "<!--pgds-preview-inline-image-->" );
     $image         = wp_get_attachment_image(
       $attachment_id,
       $size,
@@ -208,31 +211,33 @@ $WP eval '
     }
 
     $caption     = wp_get_attachment_caption( $attachment_id );
-    $block_attrs = wp_json_encode(
-      array(
-        "id"       => $attachment_id,
-        "sizeSlug" => $size,
-      )
-    );
+    $attrs = array( "id" => $attachment_id, "sizeSlug" => $size );
+    if ( $align ) {
+      $attrs["align"] = $align;
+    }
+    if ( $class_name ) {
+      $attrs["className"] = $class_name;
+    }
+    $block_attrs = wp_json_encode( $attrs );
+    $figure_classes = trim( "wp-block-image size-" . $size . ( $align ? " align" . $align : "" ) . ( $class_name ? " " . $class_name : "" ) );
     $figure      = sprintf(
-      "<!-- wp:image %s -->\n<figure class=\"wp-block-image size-%s\">%s%s</figure>\n<!-- /wp:image -->",
+      "<!-- wp:image %s -->\n<figure class=\"%s\">%s%s</figure>\n<!-- /wp:image -->",
       $block_attrs,
-      esc_attr( $size ),
+      esc_attr( $figure_classes ),
       $image,
       $caption ? "<figcaption>" . esc_html( $caption ) . "</figcaption>" : ""
     );
     $content = (string) get_post_field( "post_content", $post_id );
     $count   = 0;
-    $content = str_replace( "<!--pgds-preview-inline-image-->", $figure, $content, $count );
+    $content = str_replace( $marker, $figure, $content, $count );
     if ( 0 === $count ) {
-      $stored_id = (int) get_post_meta( $post_id, "_pgds_preview_inline_image_id", true );
       $block_ids = array();
       foreach ( parse_blocks( $content ) as $block ) {
         if ( "core/image" === (string) ( $block["blockName"] ?? "" ) && isset( $block["attrs"]["id"] ) ) {
           $block_ids[] = (int) $block["attrs"]["id"];
         }
       }
-      if ( $stored_id !== $attachment_id || ! in_array( $attachment_id, $block_ids, true ) ) {
+      if ( ! in_array( $attachment_id, $block_ids, true ) ) {
         WP_CLI::error(
           sprintf(
             "Expected one inline-image marker for %s, found none and no matching CMS image block.",
@@ -253,6 +258,9 @@ $WP eval '
     }
 
     wp_update_post( array( "ID" => $post_id, "post_content" => $content ) );
+    $stored_ids   = array_filter( array_map( "absint", explode( ",", (string) get_post_meta( $post_id, "_pgds_preview_inline_image_ids", true ) ) ) );
+    $stored_ids[] = $attachment_id;
+    update_post_meta( $post_id, "_pgds_preview_inline_image_ids", implode( ",", array_values( array_unique( $stored_ids ) ) ) );
     update_post_meta( $post_id, "_pgds_preview_inline_image_id", $attachment_id );
   }
 '
@@ -294,16 +302,44 @@ $WP eval '
       $attachment_ids[] = (int) $attachments[0];
     }
 
-    $post_id   = (int) $posts[0];
-    $content   = (string) get_post_field( "post_content", $post_id );
-    $content   = preg_replace( "/\\n*\\[gallery\\s+ids=\"[^\"]*\"[^\\]]*\\]\\s*$/", "", $content );
-    $shortcode = sprintf(
-      "[gallery ids=\"%s\" columns=\"%d\" size=\"%s\"]",
-      implode( ",", $attachment_ids ),
-      max( 1, (int) ( $gallery["columns"] ?? 2 ) ),
-      sanitize_key( (string) ( $gallery["size"] ?? "large" ) )
+    $post_id  = (int) $posts[0];
+    $content  = (string) get_post_field( "post_content", $post_id );
+    $columns  = max( 1, (int) ( $gallery["columns"] ?? 2 ) );
+    $size     = sanitize_key( (string) ( $gallery["size"] ?? "large" ) );
+    $children = array();
+    foreach ( $attachment_ids as $attachment_id ) {
+      $image = wp_get_attachment_image( $attachment_id, $size, false, array( "loading" => "lazy" ) );
+      if ( ! $image ) {
+        WP_CLI::error( "Could not render gallery preview attachment: " . $attachment_id );
+      }
+      $caption = wp_get_attachment_caption( $attachment_id );
+      $children[] = sprintf(
+        "<!-- wp:image %s -->\n<figure class=\"wp-block-image size-%s\">%s%s</figure>\n<!-- /wp:image -->",
+        wp_json_encode( array( "id" => $attachment_id, "sizeSlug" => $size ) ),
+        esc_attr( $size ),
+        $image,
+        $caption ? "<figcaption>" . esc_html( $caption ) . "</figcaption>" : ""
+      );
+    }
+    $gallery_attrs = wp_json_encode(
+      array(
+        "linkTo"   => "none",
+		"columns"  => $columns,
+        "className" => "pgds-emagazine-image-pair",
+      )
     );
-    wp_update_post( array( "ID" => $post_id, "post_content" => rtrim( $content ) . "\n\n" . $shortcode ) );
+    $gallery_block = sprintf(
+		"<!-- wp:gallery %s -->\n<figure class=\"wp-block-gallery has-nested-images columns-%d is-cropped pgds-emagazine-image-pair\">%s</figure>\n<!-- /wp:gallery -->",
+      $gallery_attrs,
+      $columns,
+      implode( "\n", $children )
+    );
+    $count   = 0;
+    $content = str_replace( "<!--pgds-preview-emag-gallery-->", $gallery_block, $content, $count );
+    if ( 1 !== $count ) {
+      WP_CLI::error( sprintf( "Expected one E-magazine gallery marker for %s, found %d.", (string) ( $gallery["source_id"] ?? "" ), $count ) );
+    }
+    wp_update_post( array( "ID" => $post_id, "post_content" => $content ) );
     update_post_meta( $post_id, "_pgds_preview_gallery_ids", implode( ",", $attachment_ids ) );
   }
 '

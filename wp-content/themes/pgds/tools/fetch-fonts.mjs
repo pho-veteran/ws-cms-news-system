@@ -39,6 +39,7 @@ const CSS_URL =
   'https://fonts.googleapis.com/css2' +
   '?family=Be+Vietnam+Pro:wght@400;600;700' +
   '&family=Newsreader:opsz,wght@6..72,400;6..72,700' +
+  '&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700' +
   '&display=swap';
 
 /*
@@ -94,6 +95,7 @@ function pick(faces, family, weight, subset) {
 const FAMILIES = [
   { slug: 'be-vietnam-pro', family: 'Be Vietnam Pro', weights: [400, 600, 700] },
   { slug: 'newsreader', family: 'Newsreader', weights: [400, 700] },
+  { slug: 'source-serif-4', family: 'Source Serif 4', weights: [400, 600, 700] },
 ];
 
 const cssRes = await fetch(CSS_URL, { headers: { 'User-Agent': UA } });

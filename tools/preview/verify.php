@@ -125,7 +125,7 @@ $expect_count( 'article records', 180, count( $records ) );
 $expect_count( 'teaching records', 8, count( $teachings ) );
 $expect_count( 'manifest media assets', 35, count( $manifest_assets ) );
 $expect_count( 'manifest featured-image assignments', 180, count( $featured_assignments ) );
-$expect_count( 'manifest inline-image assignments', 48, count( $inline_assignments ) );
+$expect_count( 'manifest inline-image assignments', 68, count( $inline_assignments ) );
 $expect_count( 'manifest gallery assignments', 20, count( $gallery_assignments ) );
 $expect_count( 'manifest video-poster assignments', 20, count( $poster_assignments ) );
 
@@ -155,6 +155,39 @@ $expect_count( 'unique article source IDs', 180, count( $record_by_source ) );
 foreach ( $dataset_counts as $slug => $count ) {
 	$expect_count( sprintf( '%s dataset records', $slug ), 20, $count );
 }
+
+$emagazine_titles   = array();
+$emagazine_sapos    = array();
+$emagazine_quotes   = array();
+$emagazine_headings = array();
+$emagazine_layouts  = array();
+foreach ( $records as $record ) {
+	if ( 'emagazine' !== (string) ( $record['primary_cat'] ?? '' ) ) {
+		continue;
+	}
+
+	$body                 = (string) ( $record['body_html'] ?? '' );
+	$emagazine_titles[]   = (string) ( $record['title'] ?? '' );
+	$emagazine_sapos[]    = (string) ( $record['sapo'] ?? '' );
+	if ( preg_match( '/pgds-emagazine-pull-quote.*?<p>(.*?)<\/p>/su', $body, $quote_match ) ) {
+		$emagazine_quotes[] = wp_strip_all_tags( $quote_match[1] );
+	}
+	if ( preg_match_all( '/<h2 class="wp-block-heading">(.*?)<\/h2>/su', $body, $heading_matches ) ) {
+		$emagazine_headings = array_merge( $emagazine_headings, $heading_matches[1] );
+	}
+
+	$layout_positions = array();
+	foreach ( array( 'wide' => 'pgds-preview-emag-wide', 'gallery' => 'pgds-preview-emag-gallery', 'full' => 'pgds-preview-emag-full', 'quote' => 'pgds-emagazine-pull-quote' ) as $label => $marker ) {
+		$layout_positions[ $label ] = strpos( $body, $marker );
+	}
+	asort( $layout_positions, SORT_NUMERIC );
+	$emagazine_layouts[] = implode( '>', array_keys( $layout_positions ) );
+}
+$expect_count( 'unique E-magazine titles', 20, count( array_unique( $emagazine_titles ) ) );
+$expect_count( 'unique E-magazine sapos', 20, count( array_unique( $emagazine_sapos ) ) );
+$expect_count( 'unique E-magazine pull quotes', 20, count( array_unique( $emagazine_quotes ) ) );
+$expect_count( 'unique E-magazine chapter headings', 60, count( array_unique( $emagazine_headings ) ) );
+$expect_count( 'E-magazine media rhythm variants', 4, count( array_unique( $emagazine_layouts ) ) );
 
 WP_CLI::log( '==> Checking imported article identity and classification...' );
 $preview_ids = array_map(
@@ -214,9 +247,20 @@ foreach ( $preview_ids as $post_id ) {
 	$is_video   = 'video' === $primary_slug;
 	$is_magazine = 'emagazine' === $primary_slug;
 	$is_long_form_valid = $words >= ( $is_magazine ? 800 : 500 ) &&
-		$heading_count >= ( $is_magazine ? 4 : 3 ) &&
+		$heading_count >= 3 &&
 		false !== stripos( $content, '<blockquote' ) &&
 		false !== stripos( $content, '<ul' );
+	if (
+		$is_magazine &&
+		(
+			3 !== substr_count( $content, 'class="wp-block-group pgds-emagazine-chapter"' ) ||
+			false === strpos( $content, 'pgds-emagazine-pull-quote' ) ||
+			false === strpos( $content, 'pgds-emagazine-figure--full' ) ||
+			false === strpos( $content, 'pgds-emagazine-image-pair' )
+		)
+	) {
+		$is_long_form_valid = false;
+	}
 	$is_video_valid = $words >= 80 && $words <= 180 && $heading_count >= 1 &&
 		false === stripos( $content, '<blockquote' ) && false === stripos( $content, '<ul' );
 	if ( ( $is_video && ! $is_video_valid ) || ( ! $is_video && ! $is_long_form_valid ) ) {
@@ -332,9 +376,10 @@ foreach ( $inline_assignments as $assignment ) {
 	$post_id       = (int) ( $preview_by_source[ $source_id ] ?? 0 );
 	$attachment_id = (int) ( $attachment_by_asset[ $asset_id ] ?? 0 );
 	$content       = $post_id ? (string) get_post_field( 'post_content', $post_id ) : '';
+	$stored_ids    = array_map( 'intval', explode( ',', (string) get_post_meta( $post_id, '_pgds_preview_inline_image_ids', true ) ) );
 	if (
 		! $post_id || ! $attachment_id ||
-		$attachment_id !== (int) get_post_meta( $post_id, '_pgds_preview_inline_image_id', true ) ||
+		! in_array( $attachment_id, $stored_ids, true ) ||
 		false === strpos( $content, 'wp-image-' . $attachment_id ) ||
 		false === strpos( $content, '<!-- wp:image ' )
 	) {
@@ -349,7 +394,7 @@ $expect_count( 'Vietnam Buddhism non-English media records', 0, $english_media_e
 
 $unresolved_markers = 0;
 foreach ( $preview_ids as $post_id ) {
-	if ( false !== strpos( (string) get_post_field( 'post_content', $post_id ), 'pgds-preview-inline-image-->' ) ) {
+	if ( preg_match( '/pgds-preview-(?:inline-image|emag-wide|emag-full|emag-gallery)-->/', (string) get_post_field( 'post_content', $post_id ) ) ) {
 		++$unresolved_markers;
 	}
 }
@@ -362,12 +407,23 @@ foreach ( $gallery_assignments as $gallery ) {
 	foreach ( (array) ( $gallery['asset_ids'] ?? array() ) as $asset_id ) {
 		$expected_ids[] = (int) ( $attachment_by_asset[ (string) $asset_id ] ?? 0 );
 	}
-	$content = $post_id ? (string) get_post_field( 'post_content', $post_id ) : '';
-	if ( ! $post_id || in_array( 0, $expected_ids, true ) || ! preg_match( '/\[gallery\s+ids="([0-9,]+)"/', $content, $match ) ) {
+	$content    = $post_id ? (string) get_post_field( 'post_content', $post_id ) : '';
+	$actual_ids = array();
+	foreach ( parse_blocks( $content ) as $block ) {
+		if ( 'core/gallery' !== (string) ( $block['blockName'] ?? '' ) ) {
+			continue;
+		}
+		foreach ( (array) ( $block['innerBlocks'] ?? array() ) as $image_block ) {
+			if ( 'core/image' === (string) ( $image_block['blockName'] ?? '' ) && isset( $image_block['attrs']['id'] ) ) {
+				$actual_ids[] = (int) $image_block['attrs']['id'];
+			}
+		}
+		break;
+	}
+	if ( ! $post_id || in_array( 0, $expected_ids, true ) || ! $actual_ids ) {
 		++$gallery_errors;
 		continue;
 	}
-	$actual_ids = array_map( 'intval', explode( ',', $match[1] ) );
 	$stored_ids = array_map( 'intval', explode( ',', (string) get_post_meta( $post_id, '_pgds_preview_gallery_ids', true ) ) );
 	if ( $expected_ids !== $actual_ids || $expected_ids !== $stored_ids ) {
 		++$gallery_errors;
@@ -485,6 +541,8 @@ $expect_count( 'published reader-comment fixtures', 13, count( $fixture_reader_c
 $expect_count( 'pending reader comments', 0, count( $pending_comments ) );
 $expect_count( 'paginated Article comment fixtures', 12, count( $article_fixture_comments ) );
 $expect_count( 'Article comment pages', 2, pgds_comment_page_count( $article_comments ) );
+$expect_count( 'WordPress comment-page option enabled', 1, (int) (bool) get_option( 'page_comments' ) );
+$expect_count( 'WordPress comments per page', 8, (int) get_option( 'comments_per_page' ) );
 
 WP_CLI::log( '==> Smoke-checking representative frontend routes...' );
 $route_errors = 0;
@@ -498,6 +556,7 @@ if (
 	false === strpos( $homepage_markup, '"url":"' . $escaped_logo_url . '"' ) ||
 	1 === preg_match( '#/wp-content/uploads/[^"\']*logo#i', $homepage_markup )
 ) {
+	WP_CLI::warning( 'Homepage route contract failed during preview verification.' );
 	++$route_errors;
 }
 $sample_source_ids = array(
@@ -512,12 +571,32 @@ foreach ( $sample_source_ids as $source_id ) {
 	$response = $url ? $fetch( $url ) : new WP_Error( 'missing_fixture' );
 	$markup   = is_wp_error( $response ) ? '' : (string) wp_remote_retrieve_body( $response );
 	if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) || '' === $markup ) {
+		WP_CLI::warning( sprintf( 'Base route failed for %1$s: %2$s', $source_id, $url ) );
 		++$route_errors;
 	}
 	if ( 'preview-2026-video-01' === $source_id && false === strpos( $markup, 'data-pgds="youtube-facade"' ) ) {
+		WP_CLI::warning( 'Video route omitted the YouTube facade.' );
 		++$route_errors;
 	}
+	if ( 'preview-2026-emagazine-01' === $source_id ) {
+		if (
+			false === strpos( $markup, 'class="pgds-emagazine-header"' ) ||
+			false === strpos( $markup, 'class="pgds-emagazine"' ) ||
+			! preg_match( '/class="[^"]*pgds-emagazine-chapter__number[^"]*">01</', $markup ) ||
+			false === strpos( $markup, 'pgds-emagazine-figure--full' ) ||
+			false === strpos( $markup, 'pgds-emagazine-image-pair' ) ||
+			false === strpos( $markup, 'class="pgds-comments__form-wrap comment-box"' ) ||
+			4 !== substr_count( $markup, 'class="pgds-emagazine-card"' ) ||
+			false !== strpos( $markup, 'data-pgds="primary-nav"' ) ||
+			false !== strpos( $markup, 'pgds-breadcrumb' ) ||
+			false !== strpos( $markup, 'role="complementary"' )
+		) {
+			WP_CLI::warning( 'E-magazine route omitted or added an element outside its layout contract.' );
+			++$route_errors;
+		}
+	}
 	if ( 'preview-2026-vietnam-buddhism-01' === $source_id && ( false === strpos( $markup, '<html lang="en">' ) || false === strpos( $markup, 'PGDS preview editorial team' ) ) ) {
+		WP_CLI::warning( 'Vietnam Buddhism route omitted its English document or display-author contract.' );
 		++$route_errors;
 	}
 	if ( 'preview-2026-vietnam-buddhism-01' === $source_id ) {
@@ -526,6 +605,7 @@ foreach ( $sample_source_ids as $source_id ) {
 			false === strpos( $markup, '>Comments<' ) ||
 			false !== strpos( $markup, 'aria-label="Reply to ' )
 		) {
+			WP_CLI::warning( 'Vietnam Buddhism route failed its single-author or English comment contract.' );
 			++$route_errors;
 		}
 	}
@@ -558,6 +638,29 @@ foreach ( $expected_slugs as $slug ) {
 	if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
 		++$route_errors;
 	}
+}
+
+$comment_page_two_url      = $article_comment_id
+	? trailingslashit( $origin_url . wp_make_link_relative( get_permalink( $article_comment_id ) ) ) . 'comment-page-2/'
+	: '';
+$comment_page_two_response = $comment_page_two_url ? $fetch( $comment_page_two_url ) : new WP_Error( 'missing_comment_fixture' );
+$comment_page_two_markup   = is_wp_error( $comment_page_two_response ) ? '' : (string) wp_remote_retrieve_body( $comment_page_two_response );
+if (
+	is_wp_error( $comment_page_two_response ) ||
+	200 !== (int) wp_remote_retrieve_response_code( $comment_page_two_response ) ||
+	4 !== substr_count( $comment_page_two_markup, 'class="pgds-comment__card"' ) ||
+	! preg_match( '/<span[^>]*aria-current="page"[^>]*class="page-numbers current"[^>]*>2<\/span>/', $comment_page_two_markup )
+) {
+	WP_CLI::warning(
+		sprintf(
+			'Comment page-two route contract failed: url=%1$s status=%2$d cards=%3$d active=%4$d',
+			$comment_page_two_url,
+			is_wp_error( $comment_page_two_response ) ? 0 : (int) wp_remote_retrieve_response_code( $comment_page_two_response ),
+			substr_count( $comment_page_two_markup, 'class="pgds-comment__card"' ),
+			preg_match( '/<span[^>]*aria-current="page"[^>]*class="page-numbers current"[^>]*>2<\/span>/', $comment_page_two_markup )
+		)
+	);
+	++$route_errors;
 }
 $expect_count( 'representative frontend route errors', 0, $route_errors );
 

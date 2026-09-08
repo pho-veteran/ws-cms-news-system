@@ -1021,6 +1021,26 @@ function pgds_render_meta_box( $post ) {
 		echo '<div class="notice notice-info inline"><p>';
 		echo esc_html__( 'Mở trình chèn Gutenberg, chọn Patterns → PGDS E-magazine để thêm tiêu đề chương, ảnh rộng/toàn chiều rộng, cặp ảnh, caption và trích dẫn.', 'pgds' );
 		echo '</p></div>';
+		$thumbnail_id = get_post_thumbnail_id( $post->ID );
+		$checks       = array(
+			'sapo'    => array( 'Sa-pô', '' !== trim( (string) get_post_meta( $post->ID, '_pgds_sapo', true ) ) ),
+			'cover'   => array( 'Ảnh bìa', (bool) $thumbnail_id ),
+			'caption' => array( 'Chú thích ảnh bìa', $thumbnail_id && '' !== trim( (string) wp_get_attachment_caption( $thumbnail_id ) ) ),
+			'author'  => array( 'Tác giả hiển thị', '' !== trim( (string) get_post_meta( $post->ID, '_pgds_display_author', true ) ) ),
+			'credit'  => array( 'Nguồn / ghi công ảnh', '' !== trim( (string) get_post_meta( $post->ID, '_pgds_source', true ) ) ),
+			'chapter' => array( 'Ít nhất một tiêu đề chương', false !== strpos( (string) $post->post_content, 'pgds-emagazine-chapter' ) ),
+		);
+		echo '<div class="pgds-metabox__emagazine-checklist" data-pgds="emagazine-checklist"><strong>Checklist E-magazine</strong><p>Các mục này chỉ là cảnh báo biên tập, không chặn lưu hoặc xuất bản.</p><ul>';
+		foreach ( $checks as $key => $check ) {
+			printf(
+				'<li class="%1$s" data-pgds-check="%2$s"><span aria-hidden="true">%3$s</span> %4$s</li>',
+				$check[1] ? 'is-complete' : 'is-missing',
+				esc_attr( $key ),
+				$check[1] ? '✓' : '○',
+				esc_html( $check[0] )
+			);
+		}
+		echo '</ul></div>';
 	}
 	foreach ( pgds_meta_groups( $surface ) as $group_key => $group ) {
 		if ( ! in_array( $group_key, $render_groups, true ) ) {

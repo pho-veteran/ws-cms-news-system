@@ -9,10 +9,10 @@ This directory contains the deterministic, development-only content corpus used 
 - Specialized surfaces: `emagazine`, `video`, and `vietnam-buddhism`.
 - `media` and `song-an-lanh` remain assigned as parent categories where appropriate; `media` is never primary.
 - Article fixtures contain 500–900 words with category-specific reporting context, at least three semantic sections, a pull quote, a list, a source and an explicit display author.
-- E-magazine fixtures contain at least 800 words, chapter-style sections, a pull quote, an inline image and a two-image gallery.
+- E-magazine fixtures contain at least 800 words, three numbered chapters, wide and full-width images, a pull quote and a two-image core gallery. All 20 use distinct story premises, sapos, quotes and 60 unique chapter headings, with four alternating media rhythms so the collection can support editorial-quality demonstrations as well as regression testing.
 - Video fixtures intentionally contain only 80–180 words: the valid YouTube ID, synchronized title/duration metadata and CMS-managed poster are the primary content. The poster is also the featured image.
 - Vietnam Buddhism is English-only across title, sapo, body, source, author and its dedicated English Media Library records.
-- Forty-eight non-Video articles contain a native Gutenberg inline image.
+- Sixty-eight non-Video articles contain native Gutenberg inline images, including two purpose-built image breakouts in every E-magazine.
 - Four articles occupy the homepage Featured positions and six Article fixtures are Photo stories.
 - Exactly eight published `pgds_teaching` records with at least 150 words, a practical exercise and a featured image.
 - Thirteen approved reader comments exercise the localized comment cards and two-page pagination; display authors remain metadata-only so bylines render once.
