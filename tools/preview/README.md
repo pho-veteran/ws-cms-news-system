@@ -25,7 +25,7 @@ Stable article IDs use `preview-2026-<primary-category>-01` through `-20`. Teach
 - `preview-content.json`: generated article import dataset.
 - `preview-media.json`: attributed media catalog and generated featured/inline/gallery/poster relationships.
 - `preview-teachings.json`: the eight teaching fixtures.
-- `reset.sh`: removes local articles, teachings and non-logo attachments while preserving users, settings, pages, taxonomy, navigation and the lunar fallback.
+- `reset.sh`: removes local articles, teachings and their attachments while preserving users, settings, pages, taxonomy, navigation and the lunar fallback. The site logo is a static theme asset and is never stored in Media Library.
 - `seed.sh`: imports the complete corpus into WordPress.
 - `verify.sh`: verifies identity, category distribution, classification, body richness, editable media relationships, Video metadata, curation, teaching content and representative frontend routes.
 
@@ -55,4 +55,4 @@ docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/seed.sh'
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/verify.sh'
 ```
 
-`reset.sh` is intentionally destructive only to the disposable local article, teaching and non-logo media corpus. It does not delete static pages, users, options, categories, navigation or the lunar-calendar fallback.
+`reset.sh` is intentionally destructive only to the disposable local article, teaching and media corpus. It does not delete static pages, users, options, categories, navigation or the lunar-calendar fallback.

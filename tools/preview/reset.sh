@@ -37,9 +37,6 @@ $WP eval '
     )
   );
   foreach ( $attachments as $attachment_id ) {
-    if ( "site-logo" === get_post_meta( $attachment_id, "_pgds_local_fixture_key", true ) ) {
-      continue;
-    }
     wp_delete_attachment( (int) $attachment_id, true );
   }
 '

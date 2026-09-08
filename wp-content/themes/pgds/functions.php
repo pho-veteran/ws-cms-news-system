@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'PGDS_VERSION', '1.0.0' );
 define( 'PGDS_DIR', get_template_directory() );
 define( 'PGDS_URI', get_template_directory_uri() );
+define( 'PGDS_LOGO_URI', PGDS_URI . '/assets/images/pgds-logo.png' );
 
 /**
  * Load modules in dependency order.

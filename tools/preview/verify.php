@@ -293,6 +293,15 @@ foreach ( $manifest_assets as $asset ) {
 }
 $expect_count( 'imported attributed Media Library assets', 35, count( $attachment_by_asset ) );
 $expect_count( 'Media Library provenance or file errors', 0, $asset_errors );
+$all_attachment_ids = get_posts(
+	array(
+		'post_type'      => 'attachment',
+		'post_status'    => 'inherit',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+	)
+);
+$expect_count( 'all local Media Library attachments', 35, count( $all_attachment_ids ) );
 
 WP_CLI::log( '==> Checking featured, inline and gallery relationships...' );
 $featured_errors = 0;
@@ -442,6 +451,18 @@ $expect_count( 'invalid teaching fixtures', 0, $invalid_teachings );
 
 WP_CLI::log( '==> Smoke-checking representative frontend routes...' );
 $route_errors = 0;
+$homepage_response = $fetch( $origin_url . '/' );
+$homepage_markup   = is_wp_error( $homepage_response ) ? '' : (string) wp_remote_retrieve_body( $homepage_response );
+$escaped_logo_url  = str_replace( '/', '\\/', PGDS_LOGO_URI );
+if (
+	is_wp_error( $homepage_response ) ||
+	200 !== (int) wp_remote_retrieve_response_code( $homepage_response ) ||
+	false === strpos( $homepage_markup, 'src="' . esc_url( PGDS_LOGO_URI ) . '"' ) ||
+	false === strpos( $homepage_markup, '"url":"' . $escaped_logo_url . '"' ) ||
+	1 === preg_match( '#/wp-content/uploads/[^"\']*logo#i', $homepage_markup )
+) {
+	++$route_errors;
+}
 $sample_source_ids = array(
 	'preview-2026-tin-phat-su-01',
 	'preview-2026-emagazine-01',

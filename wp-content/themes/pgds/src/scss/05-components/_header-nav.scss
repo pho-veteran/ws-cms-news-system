@@ -25,18 +25,7 @@
   }
 }
 
-// Wordmark fallback when no custom logo is set. Uses the display face: the site
-// name IS the masthead, so it carries the brand rather than the body font.
-.pgds-logo__text {
-  font-family: $font-display;
-  font-size: $fs-xl;
-  font-weight: $fw-bold;
-  color: var(--color-brand-strong);
-  letter-spacing: -.01em;
-}
-
-.pgds-logo__img,
-.custom-logo {
+.pgds-logo__img {
   height: 64px;
   width: auto;
   display: block;

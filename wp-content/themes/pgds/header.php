@@ -23,15 +23,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <header class="pgds-header site block" role="banner">
 	<div class="pgds-wrap pgds-header__inner header-inner">
-		<?php if ( has_custom_logo() ) : ?>
-			<?php the_custom_logo(); ?>
-		<?php else : ?>
-			<a class="pgds-logo logo-img-link" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
-				<span class="pgds-logo__text">
-					<?php bloginfo( 'name' ); ?>
-				</span>
-			</a>
-		<?php endif; ?>
+		<a class="pgds-logo logo-img-link" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
+			<img
+				class="pgds-logo__img logo-img"
+				src="<?php echo esc_url( PGDS_LOGO_URI ); ?>"
+				width="2048"
+				height="357"
+				alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"
+				decoding="async"
+			>
+		</a>
 
 		<div class="pgds-header__right header-right">
 			<div class="pgds-header__date header-date"><?php echo esc_html( pgds_reader_date_full() ); ?></div>

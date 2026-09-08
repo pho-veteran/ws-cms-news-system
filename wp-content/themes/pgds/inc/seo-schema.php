@@ -57,21 +57,16 @@ function pgds_schema_organization() {
 	if ( ! is_front_page() && ! is_home() ) {
 		return;
 	}
-	$logo_id  = (int) get_theme_mod( 'custom_logo' );
-	$logo_url = $logo_id ? wp_get_attachment_image_url( $logo_id, 'full' ) : '';
-
 	$data = array(
 		'@context' => 'https://schema.org',
 		'@type'    => 'NewsMediaOrganization',
 		'name'     => get_bloginfo( 'name' ),
 		'url'      => home_url( '/' ),
-	);
-	if ( $logo_url ) {
-		$data['logo'] = array(
+		'logo'     => array(
 			'@type' => 'ImageObject',
-			'url'   => $logo_url,
-		);
-	}
+			'url'   => PGDS_LOGO_URI,
+		),
+	);
 	pgds_print_jsonld( $data );
 }
 add_action( 'wp_head', 'pgds_schema_organization', 20 );

@@ -64,7 +64,6 @@ docker exec "$wp_container" sh -c '
 '
 tar -C "$REPO_ROOT/tools" -cf - . | docker cp - "$wp_container:/tmp/pgds-tools-sync"
 tar -C "$REPO_ROOT/infra/local/scripts" -cf - . | docker cp - "$wp_container:/tmp/pgds-scripts-sync"
-tar -C "$REPO_ROOT/infra/local" -cf - fixtures | docker cp - "$wp_container:/tmp/pgds-scripts-sync"
 docker exec "$wp_container" sh -c '
   rm -rf /var/www/html/.pgds-tools /var/www/html/.pgds-scripts
   mv /tmp/pgds-tools-sync /var/www/html/.pgds-tools

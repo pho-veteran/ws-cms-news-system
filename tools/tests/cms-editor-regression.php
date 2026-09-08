@@ -239,6 +239,22 @@ try {
 		throw new RuntimeException( 'The current theme does not expose the approved article-editor API.' );
 	}
 
+	$logo_path = PGDS_DIR . '/assets/images/pgds-logo.png';
+	pgds_cms_editor_assert( defined( 'PGDS_LOGO_URI' ), 'theme exposes a static logo URL' );
+	pgds_cms_editor_assert( is_readable( $logo_path ), 'static logo asset exists in the theme' );
+	pgds_cms_editor_assert(
+		is_readable( $logo_path ) && 'cd0412ca0008111f7677eede6a5e4cce94200df1677c10ac949b8cb0283c39a1' === hash_file( 'sha256', $logo_path ),
+		'static logo matches the expected landing-page artwork'
+	);
+	pgds_cms_editor_assert( ! current_theme_supports( 'custom-logo' ), 'site logo is not backed by WordPress custom-logo data' );
+	$header_source = (string) file_get_contents( PGDS_DIR . '/header.php' );
+	pgds_cms_editor_assert(
+		false !== strpos( $header_source, 'PGDS_LOGO_URI' ) &&
+		false === strpos( $header_source, 'the_custom_logo' ) &&
+		false === strpos( $header_source, 'has_custom_logo' ),
+		'header renders the static logo without a Media Library fallback'
+	);
+
 	$administrators = get_users(
 		array(
 			'role'   => 'administrator',
