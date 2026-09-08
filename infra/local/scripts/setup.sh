@@ -46,23 +46,6 @@ $WP theme activate pgds
 echo "==> Seeding categories (call directly in case the hook has not run)..."
 $WP eval '$result = function_exists( "pgds_seed_categories" ) ? pgds_seed_categories() : new WP_Error( "pgds_missing_reconciler", "Category reconciler is unavailable." ); if ( is_wp_error( $result ) ) { WP_CLI::error( $result ); } WP_CLI::success( "Canonical categories reconciled." );'
 
-echo "==> Seeding the canonical custom logo..."
-PGDS_LOGO_FIXTURE="/var/www/html/.pgds-scripts/fixtures/pgds-logo.png"
-PGDS_LOGO_KEY="pgds-local-canonical-logo"
-if [ ! -f "$PGDS_LOGO_FIXTURE" ]; then
-  echo "ERROR: canonical logo fixture is missing: $PGDS_LOGO_FIXTURE" >&2
-  exit 1
-fi
-PGDS_LOGO_ID="$($WP post list --post_type=attachment --post_status=inherit --meta_key=_pgds_local_fixture_key --meta_value="$PGDS_LOGO_KEY" --field=ID --posts_per_page=1)"
-if [ -z "$PGDS_LOGO_ID" ]; then
-  PGDS_LOGO_ID="$($WP media import "$PGDS_LOGO_FIXTURE" \
-    --title="Phật giáo và Đời sống" \
-    --alt="Phật giáo và Đời sống" \
-    --porcelain)"
-  $WP post meta update "$PGDS_LOGO_ID" _pgds_local_fixture_key "$PGDS_LOGO_KEY" >/dev/null
-fi
-$WP eval "set_theme_mod( 'custom_logo', $PGDS_LOGO_ID );"
-
 echo "==> Flushing rewrite rules (video-sitemap.xml)..."
 $WP rewrite flush --hard
 

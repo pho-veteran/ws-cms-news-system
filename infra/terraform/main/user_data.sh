@@ -68,6 +68,14 @@ sed -i \
   -e 's/^;pm.process_idle_timeout = .*/pm.process_idle_timeout = 10s/' \
   "$PHP_POOL"
 
+cat > /etc/php/8.3/mods-available/pgds-uploads.ini <<'EOF'
+; Media Library file ceiling. post_max_size includes multipart form overhead.
+upload_max_filesize = 30M
+post_max_size = 32M
+EOF
+phpenmod -v 8.3 -s fpm pgds-uploads
+phpenmod -v 8.3 -s cli pgds-uploads
+
 systemctl enable php8.3-fpm
 systemctl restart php8.3-fpm
 

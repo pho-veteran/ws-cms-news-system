@@ -175,15 +175,6 @@ function pgds_setup() {
 	add_theme_support( 'responsive-embeds' );
 	// Lets the editor's alignwide/alignfull match the article measure below.
 	add_theme_support( 'align-wide' );
-	add_theme_support(
-		'custom-logo',
-		array(
-			'height'      => 64,
-			'width'       => 240,
-			'flex-width'  => true,
-			'flex-height' => true,
-		)
-	);
 
 	foreach ( pgds_image_sizes() as $name => $spec ) {
 		add_image_size( $name, $spec[0], $spec[1], $spec[2] );

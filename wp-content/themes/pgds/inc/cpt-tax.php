@@ -122,6 +122,7 @@ function pgds_register_cpt_tax() {
 			),
 			'public'       => false,
 			'show_ui'      => true,
+			'show_in_menu' => false,
 			'show_in_rest' => true,
 			'menu_icon'    => 'dashicons-calendar-alt',
 			'menu_position' => 22,

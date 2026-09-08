@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "notice": "Development-only preview media. Import into the local WordPress Media Library only; never deploy these fixtures as newsroom media.",
+  "schema_version": 2,
+  "notice": "Development-only preview media for the 180-article editorial-surface dataset. Never deploy these fixtures as newsroom media.",
   "assets": [
     {
       "id": "photo-01",
@@ -397,214 +397,1310 @@
       "original_width": 1280,
       "original_height": 720,
       "sha256": "c8c5c462797a59b7103c0b162bace7a92fdc5f41ca26963acf7e8aa5907b9108"
+    },
+    {
+      "id": "photo-01-en",
+      "fixture": "pgds-seed-01.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 1",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Dai_le_vesak_sa_dec.JPG",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Dai_le_vesak_sa_dec.JPG/960px-Dai_le_vesak_sa_dec.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Petertan",
+      "credit": "Own work",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "A decorated courtyard prepared for a Buddhist celebration in Sa Dec",
+      "original_width": 3264,
+      "original_height": 2448,
+      "sha256": "fcad7e5f6abe10a5352de7be6e1122896f98bd7784321bc9eb7d4d97a4a6531f"
+    },
+    {
+      "id": "photo-02-en",
+      "fixture": "pgds-seed-02.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 2",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_Thi%E1%BB%81n_L%C3%A2m_T%E1%BB%B1_(c%E1%BB%95ng_v%C3%A0o_Th%C3%ADch_Ca_Ph%E1%BA%ADt_%C4%90%C3%A0i),_V%C5%A9ng_T%C3%A0u,_ng%C3%A0y_19_th%C3%A1ng_5_n%C4%83m_2014_(1).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Ch%C3%B9a_Thi%E1%BB%81n_L%C3%A2m_T%E1%BB%B1_%28c%E1%BB%95ng_v%C3%A0o_Th%C3%ADch_Ca_Ph%E1%BA%ADt_%C4%90%C3%A0i%29%2C_V%C5%A9ng_T%C3%A0u%2C_ng%C3%A0y_19_th%C3%A1ng_5_n%C4%83m_2014_%281%29.jpg/960px-Ch%C3%B9a_Thi%E1%BB%81n_L%C3%A2m_T%E1%BB%B1_%28c%E1%BB%95ng_v%C3%A0o_Th%C3%ADch_Ca_Ph%E1%BA%ADt_%C4%90%C3%A0i%29%2C_V%C5%A9ng_T%C3%A0u%2C_ng%C3%A0y_19_th%C3%A1ng_5_n%C4%83m_2014_%281%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Phương Huy",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "The entrance to Thien Lam Pagoda in Vung Tau",
+      "original_width": 2048,
+      "original_height": 1536,
+      "sha256": "4ddc658f5f066efc7aa13845f3b3122e77316de89ade7e3dd061c096ac34ef69"
+    },
+    {
+      "id": "photo-03-en",
+      "fixture": "pgds-seed-03.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 3",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_Th%C3%A0nh.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Ch%C3%B9a_Th%C3%A0nh.jpg/960px-Ch%C3%B9a_Th%C3%A0nh.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Bùi Thụy Đào Nguyên",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "The tree-lined facade of Thanh Pagoda in Lang Son",
+      "original_width": 3543,
+      "original_height": 2362,
+      "sha256": "2f1ee966174250a752ee2f7d1148b52de5a797cd38fc8d1935d572f21e40a551"
+    },
+    {
+      "id": "photo-04-en",
+      "fixture": "pgds-seed-04.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 4",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_%C4%90%E1%BA%A1i_Gi%C3%A1c_(Bi%C3%AAn_H%C3%B2a).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Ch%C3%B9a_%C4%90%E1%BA%A1i_Gi%C3%A1c_%28Bi%C3%AAn_H%C3%B2a%29.jpg/960px-Ch%C3%B9a_%C4%90%E1%BA%A1i_Gi%C3%A1c_%28Bi%C3%AAn_H%C3%B2a%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Bùi Thụy Đào Nguyên",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "The courtyard of Dai Giac Pagoda beneath a mature tree",
+      "original_width": 3543,
+      "original_height": 2362,
+      "sha256": "993dd801d6698c8eee870808ff2d2e53e1b32d5f0451de58915b5d0ddcc8d8d8"
+    },
+    {
+      "id": "photo-05-en",
+      "fixture": "pgds-seed-05.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 5",
+      "source_url": "https://commons.wikimedia.org/wiki/File:An_ancient_bell_in_the_grounds_of_the_Thien_Mu_Pagoda_(30992219743).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/An_ancient_bell_in_the_grounds_of_the_Thien_Mu_Pagoda_%2830992219743%29.jpg/960px-An_ancient_bell_in_the_grounds_of_the_Thien_Mu_Pagoda_%2830992219743%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "shankar s. from Dubai, united arab emirates",
+      "credit": "An ancient bell in the grounds of the Thien Mu Pagoda",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "An ancient bell in the grounds of Thien Mu Pagoda",
+      "original_width": 6000,
+      "original_height": 4000,
+      "sha256": "ac82873a4a04f126bbe23213bae319adb7b72f5fbe6083e6e8be349c1ef0eeae"
+    },
+    {
+      "id": "photo-06-en",
+      "fixture": "pgds-seed-06.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 6",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Lascar_One_Pillar_Pagoda_(4550966464).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Lascar_One_Pillar_Pagoda_%284550966464%29.jpg/960px-Lascar_One_Pillar_Pagoda_%284550966464%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Jorge Láscar from Australia",
+      "credit": "One Pillar Pagoda",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "Visitors walking through a Vietnamese temple complex",
+      "original_width": 2592,
+      "original_height": 1944,
+      "sha256": "d1bb184d9c4878a072819313693bbf8173e49242406f18c2301366591ea184f0"
+    },
+    {
+      "id": "photo-08-en",
+      "fixture": "pgds-seed-08.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 7",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Cao_L%C3%A3nh_little_girl_(Unsplash).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Cao_L%C3%A3nh_little_girl_%28Unsplash%29.jpg/960px-Cao_L%C3%A3nh_little_girl_%28Unsplash%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Mi PHAM phammi",
+      "credit": "https://unsplash.com/photos/KGiK9yOfRn0 Image at the Wayback Machine Gallery at the Wayback Machine",
+      "license": "CC0",
+      "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "A quiet pagoda roof framed by trees and open sky",
+      "original_width": 5136,
+      "original_height": 3272,
+      "sha256": "cdfd1b3879f4082c09a7bb7d5b8b860b5c1809cdecf34d60d572e09d7b26afe8"
+    },
+    {
+      "id": "photo-10-en",
+      "fixture": "pgds-seed-10.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 8",
+      "source_url": "https://commons.wikimedia.org/wiki/File:BirG006-Dharamsala.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/BirG006-Dharamsala.jpg/960px-BirG006-Dharamsala.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Wojciech Kocot",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "A Buddhist statue overlooking a temple courtyard",
+      "original_width": 3337,
+      "original_height": 2219,
+      "sha256": "ac106dafd2171aaa772789df954edf201852832c7e926b95cb9ef89bb31a0c0e"
+    },
+    {
+      "id": "photo-12-en",
+      "fixture": "pgds-seed-12.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 9",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Thich_Trung_Hieu_dieu_khac_tu_tay_Chua_Pho_Lai.jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Thich_Trung_Hieu_dieu_khac_tu_tay_Chua_Pho_Lai.jpg/960px-Thich_Trung_Hieu_dieu_khac_tu_tay_Chua_Pho_Lai.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Nguyenngocthanhtoan",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "Decorative details preserved on a historic pagoda",
+      "original_width": 1836,
+      "original_height": 2448,
+      "sha256": "5894ac2d2dde429e143a6985b5700a36e1c1ee3c9b890944e06ffdf7c7a2a5e9"
+    },
+    {
+      "id": "photo-13-en",
+      "fixture": "pgds-seed-13.jpg",
+      "source_title": "Vietnam Buddhist heritage photograph 10",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Ch%C3%B9a_B%E1%BA%A3o_%C4%90%C3%A0m_n%C4%83m_2022_(%C4%90i%E1%BB%87n_Quan_%C3%82m,_hoa_c%C3%BAng)_(3).jpg",
+      "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Ch%C3%B9a_B%E1%BA%A3o_%C4%90%C3%A0m_n%C4%83m_2022_%28%C4%90i%E1%BB%87n_Quan_%C3%82m%2C_hoa_c%C3%BAng%29_%283%29.jpg/960px-Ch%C3%B9a_B%E1%BA%A3o_%C4%90%C3%A0m_n%C4%83m_2022_%28%C4%90i%E1%BB%87n_Quan_%C3%82m%2C_hoa_c%C3%BAng%29_%283%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "author": "Phương Huy",
+      "credit": "Own work",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "description": "An attributed development fixture used by the English-language Vietnam Buddhism editorial surface.",
+      "alt": "A rural temple landscape in the late afternoon",
+      "original_width": 3024,
+      "original_height": 4032,
+      "sha256": "44a2582b45de4fbf143030376033960d6eba99068d5b56a8259c224e236f9c2e"
     }
   ],
   "assignments": {
     "featured": [
       {
-        "source_id": "preview-2026-0001",
+        "source_id": "preview-2026-tin-phat-su-01",
         "asset_id": "photo-01"
       },
       {
-        "source_id": "preview-2026-0002",
-        "asset_id": "photo-15"
+        "source_id": "preview-2026-tin-phat-su-02",
+        "asset_id": "photo-02"
       },
       {
-        "source_id": "preview-2026-0003",
+        "source_id": "preview-2026-tin-phat-su-03",
         "asset_id": "photo-03"
       },
       {
-        "source_id": "preview-2026-0004",
-        "asset_id": "photo-17"
+        "source_id": "preview-2026-tin-phat-su-04",
+        "asset_id": "photo-04"
       },
       {
-        "source_id": "preview-2026-0005",
-        "asset_id": "photo-22"
-      },
-      {
-        "source_id": "preview-2026-0006",
-        "asset_id": "photo-24"
-      },
-      {
-        "source_id": "preview-2026-0007",
-        "asset_id": "photo-08"
-      },
-      {
-        "source_id": "preview-2026-0008",
-        "asset_id": "photo-18"
-      },
-      {
-        "source_id": "preview-2026-0009",
-        "asset_id": "photo-23"
-      },
-      {
-        "source_id": "preview-2026-0010",
-        "asset_id": "photo-16"
-      },
-      {
-        "source_id": "preview-2026-0011",
-        "asset_id": "photo-24"
-      },
-      {
-        "source_id": "preview-2026-0012",
-        "asset_id": "photo-10"
-      },
-      {
-        "source_id": "preview-2026-0013",
-        "asset_id": "photo-20"
-      },
-      {
-        "source_id": "preview-2026-0014",
-        "asset_id": "photo-06"
-      },
-      {
-        "source_id": "preview-2026-0015",
-        "asset_id": "photo-13"
-      },
-      {
-        "source_id": "preview-2026-0016",
+        "source_id": "preview-2026-tin-phat-su-05",
         "asset_id": "photo-05"
       },
       {
-        "source_id": "preview-2026-0017",
-        "asset_id": "photo-23"
-      },
-      {
-        "source_id": "preview-2026-0018",
-        "asset_id": "photo-19"
-      },
-      {
-        "source_id": "preview-2026-0019",
-        "asset_id": "photo-15"
-      },
-      {
-        "source_id": "preview-2026-0020",
-        "asset_id": "photo-12"
-      },
-      {
-        "source_id": "preview-2026-0021",
-        "asset_id": "photo-10"
-      },
-      {
-        "source_id": "preview-2026-0022",
-        "asset_id": "photo-08"
-      },
-      {
-        "source_id": "preview-2026-0023",
-        "asset_id": "photo-03"
-      },
-      {
-        "source_id": "preview-2026-0024",
-        "asset_id": "photo-22"
-      },
-      {
-        "source_id": "preview-2026-0025",
-        "asset_id": "photo-14"
-      },
-      {
-        "source_id": "preview-2026-0026",
-        "asset_id": null
-      },
-      {
-        "source_id": "preview-2026-0027",
-        "asset_id": "photo-15"
-      },
-      {
-        "source_id": "preview-2026-0028",
-        "asset_id": "photo-20"
-      },
-      {
-        "source_id": "preview-2026-0029",
-        "asset_id": "photo-24"
-      },
-      {
-        "source_id": "preview-2026-0030",
-        "asset_id": "photo-15"
-      },
-      {
-        "source_id": "preview-2026-0031",
-        "asset_id": "photo-21"
-      },
-      {
-        "source_id": "preview-2026-0032",
-        "asset_id": "photo-22"
-      },
-      {
-        "source_id": "preview-2026-0033",
-        "asset_id": "photo-16"
-      },
-      {
-        "source_id": "preview-2026-0034",
-        "asset_id": "photo-19"
-      },
-      {
-        "source_id": "preview-2026-0035",
-        "asset_id": "photo-18"
-      },
-      {
-        "source_id": "preview-2026-0036",
-        "asset_id": "photo-20"
-      },
-      {
-        "source_id": "preview-2026-0037",
-        "asset_id": "photo-08"
-      },
-      {
-        "source_id": "preview-2026-0038",
-        "asset_id": "photo-19"
-      },
-      {
-        "source_id": "preview-2026-0039",
+        "source_id": "preview-2026-tin-phat-su-06",
         "asset_id": "photo-06"
       },
       {
-        "source_id": "preview-2026-0040",
+        "source_id": "preview-2026-tin-phat-su-07",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-08",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-09",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-10",
+        "asset_id": "photo-13"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-11",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-12",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-13",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-14",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-15",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-16",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-17",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-18",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-19",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-tin-phat-su-20",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-01",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-02",
+        "asset_id": "photo-04"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-03",
+        "asset_id": "photo-05"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-04",
+        "asset_id": "photo-06"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-05",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-06",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-07",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-08",
+        "asset_id": "photo-13"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-09",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-10",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-11",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-12",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-13",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-14",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-15",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-16",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-17",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-18",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-19",
         "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-20",
+        "asset_id": "photo-01"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-01",
+        "asset_id": "photo-05"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-02",
+        "asset_id": "photo-06"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-03",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-04",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-05",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-06",
+        "asset_id": "photo-13"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-07",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-08",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-09",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-10",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-11",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-12",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-13",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-14",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-15",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-16",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-17",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-18",
+        "asset_id": "photo-01"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-19",
+        "asset_id": "photo-02"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-20",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-01",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-02",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-03",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-04",
+        "asset_id": "photo-13"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-05",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-06",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-07",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-08",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-09",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-10",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-11",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-12",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-13",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-14",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-15",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-16",
+        "asset_id": "photo-01"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-17",
+        "asset_id": "photo-02"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-18",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-19",
+        "asset_id": "photo-04"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-20",
+        "asset_id": "photo-05"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-01",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-02",
+        "asset_id": "photo-13"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-03",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-04",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-05",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-06",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-07",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-08",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-09",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-10",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-11",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-12",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-13",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-14",
+        "asset_id": "photo-01"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-15",
+        "asset_id": "photo-02"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-16",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-17",
+        "asset_id": "photo-04"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-18",
+        "asset_id": "photo-05"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-19",
+        "asset_id": "photo-06"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-20",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-01",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-02",
+        "asset_id": "photo-15"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-03",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-04",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-05",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-06",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-07",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-08",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-09",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-10",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-11",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-12",
+        "asset_id": "photo-01"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-13",
+        "asset_id": "photo-02"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-14",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-15",
+        "asset_id": "photo-04"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-16",
+        "asset_id": "photo-05"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-17",
+        "asset_id": "photo-06"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-18",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-19",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-20",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-emagazine-01",
+        "asset_id": "photo-16"
+      },
+      {
+        "source_id": "preview-2026-emagazine-02",
+        "asset_id": "photo-17"
+      },
+      {
+        "source_id": "preview-2026-emagazine-03",
+        "asset_id": "photo-18"
+      },
+      {
+        "source_id": "preview-2026-emagazine-04",
+        "asset_id": "photo-19"
+      },
+      {
+        "source_id": "preview-2026-emagazine-05",
+        "asset_id": "photo-20"
+      },
+      {
+        "source_id": "preview-2026-emagazine-06",
+        "asset_id": "photo-21"
+      },
+      {
+        "source_id": "preview-2026-emagazine-07",
+        "asset_id": "photo-22"
+      },
+      {
+        "source_id": "preview-2026-emagazine-08",
+        "asset_id": "photo-23"
+      },
+      {
+        "source_id": "preview-2026-emagazine-09",
+        "asset_id": "photo-24"
+      },
+      {
+        "source_id": "preview-2026-emagazine-10",
+        "asset_id": "photo-01"
+      },
+      {
+        "source_id": "preview-2026-emagazine-11",
+        "asset_id": "photo-02"
+      },
+      {
+        "source_id": "preview-2026-emagazine-12",
+        "asset_id": "photo-03"
+      },
+      {
+        "source_id": "preview-2026-emagazine-13",
+        "asset_id": "photo-04"
+      },
+      {
+        "source_id": "preview-2026-emagazine-14",
+        "asset_id": "photo-05"
+      },
+      {
+        "source_id": "preview-2026-emagazine-15",
+        "asset_id": "photo-06"
+      },
+      {
+        "source_id": "preview-2026-emagazine-16",
+        "asset_id": "photo-08"
+      },
+      {
+        "source_id": "preview-2026-emagazine-17",
+        "asset_id": "photo-10"
+      },
+      {
+        "source_id": "preview-2026-emagazine-18",
+        "asset_id": "photo-12"
+      },
+      {
+        "source_id": "preview-2026-emagazine-19",
+        "asset_id": "photo-13"
+      },
+      {
+        "source_id": "preview-2026-emagazine-20",
+        "asset_id": "photo-14"
+      },
+      {
+        "source_id": "preview-2026-video-01",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-02",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-03",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-04",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-05",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-06",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-07",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-08",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-09",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-10",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-11",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-12",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-13",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-14",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-15",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-16",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-17",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-18",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-19",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-20",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-01",
+        "asset_id": "photo-05-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-02",
+        "asset_id": "photo-06-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-03",
+        "asset_id": "photo-08-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-04",
+        "asset_id": "photo-10-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-05",
+        "asset_id": "photo-12-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-06",
+        "asset_id": "photo-13-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-07",
+        "asset_id": "photo-01-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-08",
+        "asset_id": "photo-02-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-09",
+        "asset_id": "photo-03-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-10",
+        "asset_id": "photo-04-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-11",
+        "asset_id": "photo-05-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-12",
+        "asset_id": "photo-06-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-13",
+        "asset_id": "photo-08-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-14",
+        "asset_id": "photo-10-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-15",
+        "asset_id": "photo-12-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-16",
+        "asset_id": "photo-13-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-17",
+        "asset_id": "photo-01-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-18",
+        "asset_id": "photo-02-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-19",
+        "asset_id": "photo-03-en"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-20",
+        "asset_id": "photo-04-en"
       }
     ],
     "inline_images": [
       {
-        "source_id": "preview-2026-0001",
-        "asset_id": "photo-02",
+        "source_id": "preview-2026-tin-phat-su-01",
+        "asset_id": "photo-10",
         "size": "large"
       },
       {
-        "source_id": "preview-2026-0002",
-        "asset_id": "photo-18",
+        "source_id": "preview-2026-tin-phat-su-06",
+        "asset_id": "photo-16",
         "size": "large"
       },
       {
-        "source_id": "preview-2026-0007",
-        "asset_id": "photo-24",
-        "size": "large"
-      },
-      {
-        "source_id": "preview-2026-0012",
+        "source_id": "preview-2026-tin-phat-su-11",
         "asset_id": "photo-21",
         "size": "large"
       },
       {
-        "source_id": "preview-2026-0018",
-        "asset_id": "photo-17",
+        "source_id": "preview-2026-tin-phat-su-16",
+        "asset_id": "photo-02",
         "size": "large"
       },
       {
-        "source_id": "preview-2026-0023",
+        "source_id": "preview-2026-song-an-lanh-01",
+        "asset_id": "photo-08",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-06",
+        "asset_id": "photo-15",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-11",
+        "asset_id": "photo-20",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-song-an-lanh-16",
+        "asset_id": "photo-01",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-01",
+        "asset_id": "photo-06",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-06",
+        "asset_id": "photo-14",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-11",
+        "asset_id": "photo-19",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-am-thuc-chay-16",
+        "asset_id": "photo-24",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-01",
         "asset_id": "photo-05",
         "size": "large"
       },
       {
-        "source_id": "preview-2026-0033",
+        "source_id": "preview-2026-loi-song-xanh-06",
+        "asset_id": "photo-13",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-11",
+        "asset_id": "photo-18",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-loi-song-xanh-16",
+        "asset_id": "photo-23",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-01",
         "asset_id": "photo-04",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-06",
+        "asset_id": "photo-12",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-11",
+        "asset_id": "photo-17",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-phat-tich-16",
+        "asset_id": "photo-22",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-01",
+        "asset_id": "photo-03",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-06",
+        "asset_id": "photo-10",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-11",
+        "asset_id": "photo-16",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-tot-doi-dep-dao-16",
+        "asset_id": "photo-21",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-01",
+        "asset_id": "photo-02",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-02",
+        "asset_id": "photo-03",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-03",
+        "asset_id": "photo-04",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-04",
+        "asset_id": "photo-05",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-05",
+        "asset_id": "photo-06",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-06",
+        "asset_id": "photo-08",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-07",
+        "asset_id": "photo-10",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-08",
+        "asset_id": "photo-12",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-09",
+        "asset_id": "photo-13",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-10",
+        "asset_id": "photo-14",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-11",
+        "asset_id": "photo-15",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-12",
+        "asset_id": "photo-16",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-13",
+        "asset_id": "photo-17",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-14",
+        "asset_id": "photo-18",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-15",
+        "asset_id": "photo-19",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-16",
+        "asset_id": "photo-20",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-17",
+        "asset_id": "photo-21",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-18",
+        "asset_id": "photo-22",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-19",
+        "asset_id": "photo-23",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-20",
+        "asset_id": "photo-24",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-01",
+        "asset_id": "photo-10-en",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-06",
+        "asset_id": "photo-03-en",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-11",
+        "asset_id": "photo-10-en",
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-vietnam-buddhism-16",
+        "asset_id": "photo-03-en",
         "size": "large"
       }
     ],
     "galleries": [
       {
-        "source_id": "preview-2026-0023",
+        "source_id": "preview-2026-emagazine-01",
+        "asset_ids": [
+          "photo-06",
+          "photo-13"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-02",
+        "asset_ids": [
+          "photo-08",
+          "photo-14"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-03",
+        "asset_ids": [
+          "photo-10",
+          "photo-15"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-04",
+        "asset_ids": [
+          "photo-12",
+          "photo-16"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-05",
+        "asset_ids": [
+          "photo-13",
+          "photo-17"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-06",
+        "asset_ids": [
+          "photo-14",
+          "photo-18"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-07",
+        "asset_ids": [
+          "photo-15",
+          "photo-19"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-08",
+        "asset_ids": [
+          "photo-16",
+          "photo-20"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-09",
+        "asset_ids": [
+          "photo-17",
+          "photo-21"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-10",
+        "asset_ids": [
+          "photo-18",
+          "photo-22"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-11",
+        "asset_ids": [
+          "photo-19",
+          "photo-23"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-12",
+        "asset_ids": [
+          "photo-20",
+          "photo-24"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-13",
+        "asset_ids": [
+          "photo-21",
+          "photo-01"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-14",
+        "asset_ids": [
+          "photo-22",
+          "photo-02"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-15",
+        "asset_ids": [
+          "photo-23",
+          "photo-03"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-16",
+        "asset_ids": [
+          "photo-24",
+          "photo-04"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-17",
+        "asset_ids": [
+          "photo-01",
+          "photo-05"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-18",
+        "asset_ids": [
+          "photo-02",
+          "photo-06"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-19",
+        "asset_ids": [
+          "photo-03",
+          "photo-08"
+        ],
+        "columns": 2,
+        "size": "large"
+      },
+      {
+        "source_id": "preview-2026-emagazine-20",
         "asset_ids": [
           "photo-04",
-          "photo-06"
+          "photo-10"
         ],
         "columns": 2,
         "size": "large"
@@ -612,19 +1708,83 @@
     ],
     "video_posters": [
       {
-        "source_id": "preview-2026-0008",
+        "source_id": "preview-2026-video-01",
         "asset_id": "video-poster-0008"
       },
       {
-        "source_id": "preview-2026-0012",
+        "source_id": "preview-2026-video-02",
         "asset_id": "video-poster-0012"
       },
       {
-        "source_id": "preview-2026-0019",
+        "source_id": "preview-2026-video-03",
         "asset_id": "video-poster-0019"
       },
       {
-        "source_id": "preview-2026-0039",
+        "source_id": "preview-2026-video-04",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-05",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-06",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-07",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-08",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-09",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-10",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-11",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-12",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-13",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-14",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-15",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-16",
+        "asset_id": "video-poster-0039"
+      },
+      {
+        "source_id": "preview-2026-video-17",
+        "asset_id": "video-poster-0008"
+      },
+      {
+        "source_id": "preview-2026-video-18",
+        "asset_id": "video-poster-0012"
+      },
+      {
+        "source_id": "preview-2026-video-19",
+        "asset_id": "video-poster-0019"
+      },
+      {
+        "source_id": "preview-2026-video-20",
         "asset_id": "video-poster-0039"
       }
     ]

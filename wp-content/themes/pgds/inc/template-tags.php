@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function pgds_art( $post, $size = 'pgds-card', $ratio_class = 'pgds-ratio-card', $eager = false ) {
 	$post = get_post( $post );
-	echo '<div class="art pgds-art ' . esc_attr( $ratio_class ) . '">';
+	echo '<div class="pgds-art ' . esc_attr( $ratio_class ) . '">';
 	if ( $post && has_post_thumbnail( $post ) ) {
 		$attr = array(
 			'loading'  => $eager ? 'eager' : 'lazy',
@@ -30,8 +30,6 @@ function pgds_art( $post, $size = 'pgds-card', $ratio_class = 'pgds-ratio-card',
 			$attr['fetchpriority'] = 'high';
 		}
 		echo get_the_post_thumbnail( $post, $size, $attr );
-	} else {
-		echo '<svg viewBox="0 0 100 100" width="40"><path d="M50 85C25 72 20 50 20 50c14 9 22 4 22 4s4 18 8 22c8-4 12-22 12-22s8 5 22-4c0 0-4 26-34 35Z" fill="#C9BB98"></path></svg>';
 	}
 	echo '</div>';
 }
@@ -249,7 +247,7 @@ function pgds_cat_label( $post ) {
 		'<a class="pgds-cat-label" data-cat="%s" href="%s">%s</a>',
 		esc_attr( pgds_top_cat_slug( $term ) ),
 		esc_url( get_term_link( $term ) ),
-		esc_html( $term->name )
+		esc_html( pgds_category_display_label( $term->slug, $term->name ) )
 	);
 }
 
@@ -437,6 +435,317 @@ function pgds_detail_layout( $post ) {
 
 	return 'article';
 }
+
+
+/**
+ * Resolve the post that controls the reader language for this request.
+ *
+ * Native comment submissions run outside the singular template, so they carry their
+ * article context in comment_post_ID. Other requests use the queried post only.
+ *
+ * @return int
+ */
+function pgds_english_detail_post_id() {
+	if (
+		wp_doing_ajax() ||
+		( defined( 'REST_REQUEST' ) && REST_REQUEST ) ||
+		( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST )
+	) {
+		return 0;
+	}
+
+	if ( isset( $_POST['comment_post_ID'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Native comments do not use a nonce.
+		$post_id = absint( wp_unslash( $_POST['comment_post_ID'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$post    = get_post( $post_id );
+		return $post instanceof WP_Post && 'post' === $post->post_type ? $post_id : 0;
+	}
+
+	if ( is_admin() ) {
+		return 0;
+	}
+
+	global $wp_query;
+	if ( ! $wp_query instanceof WP_Query || ! $wp_query->is_singular( 'post' ) ) {
+		return 0;
+	}
+
+	return absint( $wp_query->get_queried_object_id() );
+}
+
+/**
+ * Whether the current reader request uses the dedicated English presentation.
+ *
+ * @return bool
+ */
+function pgds_is_english_reader_request() {
+	if (
+		wp_doing_ajax() ||
+		( defined( 'REST_REQUEST' ) && REST_REQUEST ) ||
+		( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST )
+	) {
+		return false;
+	}
+
+	if ( isset( $_POST['comment_post_ID'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Native comments do not use a nonce.
+		$post_id = pgds_english_detail_post_id();
+		return $post_id && 'vietnam-buddhism' === pgds_detail_layout( $post_id );
+	}
+
+	if ( is_admin() ) {
+		return false;
+	}
+
+	$post_id = pgds_english_detail_post_id();
+	if ( $post_id ) {
+		return 'vietnam-buddhism' === pgds_detail_layout( $post_id );
+	}
+
+	global $wp_query;
+	if ( ! $wp_query instanceof WP_Query || ! $wp_query->is_category( 'vietnam-buddhism' ) ) {
+		return false;
+	}
+
+	$term = $wp_query->get_queried_object();
+	return $term instanceof WP_Term && 'category' === $term->taxonomy && 'vietnam-buddhism' === $term->slug;
+}
+
+/**
+ * Theme-owned interface strings used by the English reader presentation.
+ *
+ * Editorial and option values never pass through this map.
+ *
+ * @return array<string,string>
+ */
+function pgds_english_reader_strings() {
+	return array(
+		'Bỏ qua tới nội dung'                                                    => 'Skip to content',
+		'Chuyên mục'                                                             => 'Sections',
+		'Đóng menu chuyên mục'                                                   => 'Close section menu',
+		'Tìm kiếm tin tức'                                                       => 'Search news',
+		'Tìm kiếm tin tức…'                                                      => 'Search news…',
+		'Tìm'                                                                    => 'Search',
+		'Trang chủ'                                                              => 'Home',
+		'Mở menu con'                                                            => 'Open submenu',
+		'Đường dẫn trang'                                                        => 'Breadcrumb',
+		'Chuyên mục con'                                                         => 'Subsections',
+		'Bài viết nổi bật'                                                       => 'Featured articles',
+		'Chuyên mục đang được cập nhật'                                          => 'This section is being updated',
+		'Chưa có bài viết trong chuyên mục này. Mời bạn quay lại trang chủ để đọc những nội dung mới nhất.'
+			=> 'No articles are available in this section yet. Please return to the home page for the latest content.',
+		'Về trang chủ'                                                           => 'Back to home',
+		'Trước'                                                                  => 'Previous',
+		'Sau'                                                                    => 'Next',
+		'Nguồn: %s'                                                              => 'Source: %s',
+		'Cùng chuyên mục'                                                        => 'Related articles',
+		'Chưa có bài viết liên quan.'                                            => 'No related articles are available.',
+		'Bình luận'                                                              => 'Comments',
+		'Gửi bình luận'                                                          => 'Post comment',
+		'Viết bình luận của bạn…'                                                => 'Write your comment…',
+		'Tên'                                                                    => 'Name',
+		'Lưu tên, email và website trong trình duyệt cho lần bình luận tiếp theo.' => 'Save my name, email, and website in this browser for the next time I comment.',
+		'Bình luận đã đóng.'                                                     => 'Comments are closed.',
+		'Thông tin bên lề'                                                       => 'Sidebar',
+		'Đọc nhiều'                                                              => 'Most read',
+		'Chưa có bài viết nổi bật.'                                              => 'No popular articles are available.',
+		'Lịch Vạn Niên'                                                          => 'Perpetual Calendar',
+		'Dương Lịch'                                                             => 'Gregorian Calendar',
+		'Âm Lịch'                                                                => 'Lunar Calendar',
+		'Cập nhật thủ công'                                                      => 'Manual update',
+		'Mệnh ngày:'                                                             => 'Day element:',
+		'Giờ hoàng đạo:'                                                         => 'Auspicious hours:',
+		'Chuyên trang tin điện tử - tin tức, đời sống và văn hóa Phật giáo'       => 'A Buddhist news, culture, and lifestyle publication',
+		'Liên hệ'                                                                => 'Contact',
+		'Tổng biên tập: [Họ tên]'                                                => 'Editor-in-Chief: [Name]',
+		'© %1$s %2$s — Bản quyền thuộc về toà soạn.'                             => '© %1$s %2$s — All rights reserved.',
+	);
+}
+
+/**
+ * Translate an allowlisted theme string for the English reader presentation.
+ *
+ * @param string $translation Existing translation.
+ * @param string $text        Source string.
+ * @param string $domain      Text domain.
+ * @return string
+ */
+function pgds_filter_english_reader_gettext( $translation, $text, $domain ) {
+	if ( ! pgds_is_english_reader_request() ) {
+		return $translation;
+	}
+
+	if ( 'pgds' === $domain ) {
+		$strings = pgds_english_reader_strings();
+		return $strings[ $text ] ?? $translation;
+	}
+
+	// Core owns comment rendering, navigation, and submission errors. Its source strings
+	// are English, so use them directly without changing the global WordPress locale.
+	return 'default' === $domain ? $text : $translation;
+}
+
+/**
+ * Translate a contextual string for the English reader presentation.
+ *
+ * @param string $translation Existing translation.
+ * @param string $text        Source string.
+ * @param string $context     Translation context.
+ * @param string $domain      Text domain.
+ * @return string
+ */
+function pgds_filter_english_reader_gettext_with_context( $translation, $text, $context, $domain ) {
+	unset( $context );
+	return pgds_filter_english_reader_gettext( $translation, $text, $domain );
+}
+
+/**
+ * Select an English plural for core-owned detail UI.
+ *
+ * @param string $translation Existing translation.
+ * @param string $single      Singular source string.
+ * @param string $plural      Plural source string.
+ * @param int    $number      Quantity.
+ * @param string $domain      Text domain.
+ * @return string
+ */
+function pgds_filter_english_reader_ngettext( $translation, $single, $plural, $number, $domain ) {
+	if ( ! pgds_is_english_reader_request() || 'default' !== $domain ) {
+		return $translation;
+	}
+
+	return 1 === (int) $number ? $single : $plural;
+}
+
+/**
+ * Select a contextual English plural for core-owned detail UI.
+ *
+ * @param string $translation Existing translation.
+ * @param string $single      Singular source string.
+ * @param string $plural      Plural source string.
+ * @param int    $number      Quantity.
+ * @param string $context     Translation context.
+ * @param string $domain      Text domain.
+ * @return string
+ */
+function pgds_filter_english_reader_ngettext_with_context( $translation, $single, $plural, $number, $context, $domain ) {
+	unset( $context );
+	return pgds_filter_english_reader_ngettext( $translation, $single, $plural, $number, $domain );
+}
+
+/**
+ * Set English document semantics for the dedicated detail route.
+ *
+ * @param string $output Language attributes.
+ * @return string
+ */
+function pgds_filter_english_reader_language_attributes( $output ) {
+	if ( ! pgds_is_english_reader_request() ) {
+		return $output;
+	}
+
+	if ( preg_match( '/\\blang=(["\'])[^"\']*\\1/i', $output ) ) {
+		return (string) preg_replace( '/\\blang=(["\'])[^"\']*\\1/i', 'lang="en"', $output );
+	}
+
+	return trim( 'lang="en" ' . $output );
+}
+
+/**
+ * Reader-facing current date for the active detail language.
+ *
+ * @param int|null $timestamp Unix timestamp; defaults to now (site timezone).
+ * @return string
+ */
+function pgds_reader_date_full( $timestamp = null ) {
+	if ( ! pgds_is_english_reader_request() ) {
+		return pgds_date_full_vi( $timestamp );
+	}
+
+	$timestamp = $timestamp ?? current_datetime()->getTimestamp();
+	$weekdays  = array( 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' );
+	$months    = array( 1 => 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December' );
+	$weekday   = $weekdays[ (int) date_i18n( 'w', $timestamp ) ] ?? '';
+	$month     = $months[ (int) date_i18n( 'n', $timestamp ) ] ?? '';
+
+	return sprintf(
+		'%1$s, %2$s %3$d, %4$d',
+		$weekday,
+		$month,
+		(int) date_i18n( 'j', $timestamp ),
+		(int) date_i18n( 'Y', $timestamp )
+	);
+}
+
+/**
+ * Reader-facing month and year for the active detail language.
+ *
+ * @param int|null $timestamp Unix timestamp; defaults to now (site timezone).
+ * @return string
+ */
+function pgds_reader_month_year( $timestamp = null ) {
+	if ( ! pgds_is_english_reader_request() ) {
+		return pgds_month_year_vi( $timestamp );
+	}
+
+	$timestamp = $timestamp ?? current_datetime()->getTimestamp();
+	$months    = array( 1 => 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December' );
+	$month     = $months[ (int) date_i18n( 'n', $timestamp ) ] ?? '';
+
+	return sprintf( '%1$s %2$d', $month, (int) date_i18n( 'Y', $timestamp ) );
+}
+
+/**
+ * Reader-facing relative publication time for the active detail language.
+ *
+ * @param int|WP_Post $post Post.
+ * @return string
+ */
+function pgds_reader_time_ago( $post ) {
+	if ( ! pgds_is_english_reader_request() ) {
+		return pgds_time_ago( $post );
+	}
+
+	$post = get_post( $post );
+	if ( ! $post ) {
+		return '';
+	}
+
+	$timestamp = get_post_timestamp( $post );
+	$diff      = current_time( 'timestamp', true ) - $timestamp;
+	if ( $diff < 0 ) {
+		$months = array( 1 => 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December' );
+		$month  = $months[ (int) date_i18n( 'n', $timestamp ) ] ?? '';
+		return sprintf( '%1$s %2$d, %3$d', $month, (int) date_i18n( 'j', $timestamp ), (int) date_i18n( 'Y', $timestamp ) );
+	}
+
+	if ( $diff < MINUTE_IN_SECONDS ) {
+		return 'Just now';
+	}
+
+	if ( $diff < HOUR_IN_SECONDS ) {
+		$value = (int) floor( $diff / MINUTE_IN_SECONDS );
+		$unit  = 1 === $value ? 'minute' : 'minutes';
+	} elseif ( $diff < DAY_IN_SECONDS ) {
+		$value = (int) floor( $diff / HOUR_IN_SECONDS );
+		$unit  = 1 === $value ? 'hour' : 'hours';
+	} elseif ( $diff < 30 * DAY_IN_SECONDS ) {
+		$value = (int) floor( $diff / DAY_IN_SECONDS );
+		$unit  = 1 === $value ? 'day' : 'days';
+	} elseif ( $diff < YEAR_IN_SECONDS ) {
+		$value = (int) floor( $diff / ( 30 * DAY_IN_SECONDS ) );
+		$unit  = 1 === $value ? 'month' : 'months';
+	} else {
+		$value = (int) floor( $diff / YEAR_IN_SECONDS );
+		$unit  = 1 === $value ? 'year' : 'years';
+	}
+
+	return sprintf( '%1$d %2$s ago', $value, $unit );
+}
+
+add_filter( 'gettext', 'pgds_filter_english_reader_gettext', 20, 3 );
+add_filter( 'gettext_with_context', 'pgds_filter_english_reader_gettext_with_context', 20, 4 );
+add_filter( 'ngettext', 'pgds_filter_english_reader_ngettext', 20, 5 );
+add_filter( 'ngettext_with_context', 'pgds_filter_english_reader_ngettext_with_context', 20, 6 );
+add_filter( 'language_attributes', 'pgds_filter_english_reader_language_attributes' );
 
 /**
  * Editorial author name: custom meta first, then WP user fallback.

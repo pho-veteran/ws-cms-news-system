@@ -6,7 +6,7 @@
 
 const HOST = (window.PGDS && window.PGDS.ytHost) || 'https://www.youtube-nocookie.com';
 
-function buildIframe(videoId) {
+function buildIframe(videoId, title) {
   const iframe = document.createElement('iframe');
   const params = new URLSearchParams({
     autoplay: '1',
@@ -14,7 +14,7 @@ function buildIframe(videoId) {
     modestbranding: '1',
   });
   iframe.src = `${HOST}/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
-  iframe.title = 'YouTube video';
+  iframe.title = title || 'YouTube video';
   iframe.allow =
     'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
   iframe.setAttribute('allowfullscreen', '');
@@ -29,10 +29,14 @@ function activate(figure) {
   if (!videoId || figure.dataset.pgdsActivated === '1') return;
   figure.dataset.pgdsActivated = '1';
 
-  const iframe = buildIframe(videoId);
-  // Remove the poster + button + duration + watermark, insert the iframe.
-  figure.querySelectorAll('.pgds-video__poster, .pgds-video__play, .pgds-video__dur, .pgds-video__watermark').forEach((el) => el.remove());
-  figure.appendChild(iframe);
+  const iframe = buildIframe(videoId, figure.getAttribute('data-video-title'));
+  const caption = figure.querySelector('.pgds-video__caption');
+  figure
+    .querySelectorAll(
+      '.pgds-video__poster, .pgds-video__play, .pgds-video__dur, .pgds-video__watermark',
+    )
+    .forEach((el) => el.remove());
+  figure.insertBefore(iframe, caption);
   iframe.focus();
 }
 
@@ -40,15 +44,7 @@ export function initYouTubeFacade(root = document) {
   const figures = root.querySelectorAll('[data-pgds="youtube-facade"]');
   figures.forEach((figure) => {
     const btn = figure.querySelector('.pgds-video__play');
-    const poster = figure.querySelector('.pgds-video__poster');
-    if (btn) {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        activate(figure);
-      });
-    }
-    if (poster) {
-      poster.addEventListener('click', () => activate(figure));
-    }
+    if (!btn) return;
+    btn.addEventListener('click', () => activate(figure));
   });
 }

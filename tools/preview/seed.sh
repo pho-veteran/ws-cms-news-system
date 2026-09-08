@@ -1,15 +1,15 @@
 #!/bin/sh
 # =============================================================================
-# Add the deterministic, development-only PGDS article fixtures.
+# Add the deterministic, development-only PGDS editorial fixtures.
 #
 # Run from the repository root:
 #   cd infra/local && docker compose up -d && ./sync.sh
 #   docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/setup.sh'
 #   docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/preview/seed.sh'
 #
-# Run the canonical local setup first. This script imports only preview articles and
-# their CMS-managed media; it does not install or configure WordPress, curate homepage
-# slots, or create site scaffolding. It never connects to production or runs yt-sync.
+# Run the canonical local setup first. This script imports 180 preview articles,
+# CMS-managed media, homepage curation and eight teaching entries. It does not install
+# or configure WordPress and never connects to production or runs yt-sync.
 # =============================================================================
 set -eu
 
@@ -25,7 +25,7 @@ if [ ! -r "$MEDIA_MANIFEST" ]; then
   exit 1
 fi
 
-if [ ! -f "$PREVIEW_DIR/preview-content.json" ] || [ ! -f "$PREVIEW_DIR/seed-preview.php" ] || [ ! -f "$MEDIA_MANIFEST" ]; then
+if [ ! -f "$PREVIEW_DIR/preview-content.json" ] || [ ! -f "$PREVIEW_DIR/preview-teachings.json" ] || [ ! -f "$PREVIEW_DIR/seed-preview.php" ] || [ ! -f "$MEDIA_MANIFEST" ]; then
   echo "ERROR: preview fixture files are missing from $PREVIEW_DIR. Re-run ./sync.sh." >&2
   exit 1
 fi
@@ -255,23 +255,6 @@ $WP eval '
     wp_update_post( array( "ID" => $post_id, "post_content" => $content ) );
     update_post_meta( $post_id, "_pgds_preview_inline_image_id", $attachment_id );
   }
-
-  $no_image_posts = get_posts(
-    array(
-      "post_type"      => "post",
-      "post_status"    => "any",
-      "posts_per_page" => 1,
-      "fields"         => "ids",
-      "meta_key"       => "_pgds_source_id",
-      "meta_value"     => "preview-2026-0026",
-    )
-  );
-  if ( $no_image_posts ) {
-    $post_id = (int) $no_image_posts[0];
-    $content = str_replace( "<!--pgds-preview-inline-image-->", "", (string) get_post_field( "post_content", $post_id ) );
-    wp_update_post( array( "ID" => $post_id, "post_content" => $content ) );
-    delete_post_meta( $post_id, "_pgds_preview_inline_image_id" );
-  }
 '
 
 echo "==> Assigning gallery media through the WordPress editor content..."
@@ -372,6 +355,7 @@ $WP pgds media-variants --regenerate
 $WP cache flush >/dev/null 2>&1 || true
 
 echo ""
-echo "==> PREVIEW ARTICLES READY. Open http://localhost:8080"
+echo "==> PREVIEW DATASET READY. Open http://localhost:8080"
 echo "    Media is editable in WordPress under Media > Library and in each post's featured, inline, and gallery content."
+echo "    The dataset contains 20 posts for each editorial primary category and eight teaching entries."
 echo "    Run $PREVIEW_DIR/verify.sh to assert the fixture contract."

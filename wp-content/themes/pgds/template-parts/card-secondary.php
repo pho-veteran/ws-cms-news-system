@@ -53,8 +53,8 @@ if ( 'related' === $variant ) {
 	</<?php echo esc_html( $tag ); ?>>
 	<?php if ( 'full' === $variant ) : ?>
 		<p class="pgds-card__sapo"><?php echo esc_html( wp_trim_words( pgds_sapo( $p ), 26 ) ); ?></p>
-		<div class="pgds-card__meta meta"><?php echo esc_html( pgds_time_ago( $p ) ); ?></div>
+		<div class="pgds-card__meta meta"><?php echo esc_html( pgds_reader_time_ago( $p ) ); ?></div>
 	<?php elseif ( 'related' === $variant ) : ?>
-		<div class="pgds-card__meta meta"><?php echo esc_html( pgds_time_ago( $p ) ); ?></div>
+		<div class="pgds-card__meta meta"><?php echo esc_html( pgds_reader_time_ago( $p ) ); ?></div>
 	<?php endif; ?>
 </article>

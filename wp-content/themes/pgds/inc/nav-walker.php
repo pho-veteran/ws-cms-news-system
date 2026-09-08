@@ -57,6 +57,37 @@ function pgds_category_nav_state( $slug, $current = null ) {
 }
 
 /**
+ * Return a presentation label for a canonical category.
+ *
+ * Stored term names stay unchanged; only the dedicated English reader request uses
+ * these labels in shared navigation, breadcrumbs, and footer links.
+ *
+ * @param string $slug     Canonical category slug.
+ * @param string $fallback Existing category label.
+ * @return string
+ */
+function pgds_category_display_label( $slug, $fallback = '' ) {
+	if ( ! pgds_is_english_reader_request() ) {
+		return $fallback;
+	}
+
+	$labels = array(
+		'tin-phat-su'      => 'Buddhist Affairs',
+		'song-an-lanh'     => 'Mindful Living',
+		'am-thuc-chay'     => 'Vegetarian Cuisine',
+		'loi-song-xanh'    => 'Green Living',
+		'phat-tich'        => 'Buddhist Heritage',
+		'media'            => 'Media',
+		'video'            => 'Video',
+		'emagazine'        => 'E-magazine',
+		'tot-doi-dep-dao'  => 'Buddhism in Life',
+		'vietnam-buddhism' => 'Vietnam Buddhism',
+	);
+
+	return $labels[ $slug ] ?? $fallback;
+}
+
+/**
  * Render a semantic breadcrumb trail.
  *
  * @param array<int,array{label:string,url?:string}> $items Breadcrumb items.
@@ -77,26 +108,22 @@ function pgds_breadcrumbs( $items, $label = '' ) {
 
 	$label = $label ?: __( 'Đường dẫn trang', 'pgds' );
 	?>
-	<div class="crumb-bar">
-		<div class="wrap">
-			<nav class="pgds-breadcrumb breadcrumb" aria-label="<?php echo esc_attr( $label ); ?>">
-				<ol class="pgds-breadcrumb__list">
-					<?php foreach ( $items as $index => $item ) : ?>
-						<li class="pgds-breadcrumb__item">
-							<?php if ( ! empty( $item['url'] ) && $index < count( $items ) - 1 ) : ?>
-								<a class="parent" href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['label'] ); ?></a>
-							<?php else : ?>
-								<span class="current" aria-current="page"><?php echo esc_html( $item['label'] ); ?></span>
-							<?php endif; ?>
-							<?php if ( $index < count( $items ) - 1 ) : ?>
-								<span class="pgds-breadcrumb__separator sep" aria-hidden="true">›</span>
-							<?php endif; ?>
-						</li>
-					<?php endforeach; ?>
-				</ol>
-			</nav>
-		</div>
-	</div>
+	<nav class="pgds-breadcrumb breadcrumb" aria-label="<?php echo esc_attr( $label ); ?>">
+		<ol class="pgds-breadcrumb__list">
+			<?php foreach ( $items as $index => $item ) : ?>
+				<li class="pgds-breadcrumb__item">
+					<?php if ( ! empty( $item['url'] ) && $index < count( $items ) - 1 ) : ?>
+						<a href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['label'] ); ?></a>
+					<?php else : ?>
+						<span class="current" aria-current="page"><?php echo esc_html( $item['label'] ); ?></span>
+					<?php endif; ?>
+						<?php if ( $index < count( $items ) - 1 ) : ?>
+							<span class="pgds-breadcrumb__separator sep" aria-hidden="true">›</span>
+						<?php endif; ?>
+				</li>
+			<?php endforeach; ?>
+		</ol>
+	</nav>
 	<?php
 }
 
@@ -148,7 +175,7 @@ function pgds_primary_navigation() {
 			esc_url( $url ),
 			$has ? ' aria-haspopup="true"' : '',
 			$state['current'] ? ' aria-current="page"' : '',
-			esc_html( $node['label'] )
+			esc_html( pgds_category_display_label( $slug, $node['label'] ) )
 		);
 
 		if ( $has ) {
@@ -178,7 +205,7 @@ function pgds_primary_navigation() {
 					$child_state['current'] ? ' pgds-navitem--current' : '',
 					esc_url( $child_url ),
 					$child_state['current'] ? ' aria-current="page"' : '',
-					esc_html( $child_label )
+					esc_html( pgds_category_display_label( $child_slug, $child_label ) )
 				);
 			}
 			echo '</ul>';

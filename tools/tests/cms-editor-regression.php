@@ -136,6 +136,29 @@ function pgds_cms_editor_filter_post_ids( $filter ) {
 }
 
 /**
+ * Find post IDs returned by one editorial-surface SQL predicate.
+ *
+ * @param string $surface        Surface key.
+ * @param string $classification Optional classification filter.
+ * @return int[]
+ */
+function pgds_cms_editor_surface_post_ids( $surface, $classification = '' ) {
+	$query = new WP_Query();
+	$query->init();
+	$query->set( 'post_type', 'post' );
+	$query->set( 'post_status', 'any' );
+	$query->set( 'posts_per_page', -1 );
+	$query->set( 'fields', 'ids' );
+	$query->set( 'pgds_surface', $surface );
+	if ( $classification ) {
+		$query->set( 'pgds_classification', $classification );
+	}
+	$query->get_posts();
+
+	return array_map( 'intval', $query->posts );
+}
+
+/**
  * Assert a REST error code and HTTP status.
  *
  * @param WP_REST_Response $response      REST response.
@@ -201,7 +224,16 @@ try {
 		'pgds_normalize_youtube_input',
 		'pgds_get_article_warnings',
 		'pgds_save_meta',
-			'pgds_remove_menu_management',
+		'pgds_remove_menu_management',
+		'pgds_editorial_surfaces',
+		'pgds_get_editorial_classification',
+		'pgds_apply_editorial_classification',
+		'pgds_admin_surface_where',
+		'pgds_auto_approve_reader_comment',
+		'pgds_comments_per_page',
+		'pgds_comment_page_count',
+		'pgds_comment_card',
+		'pgds_rest_synchronized_meta_is_unchanged',
 	);
 	foreach ( $required_functions as $function ) {
 		pgds_cms_editor_assert( function_exists( $function ), sprintf( '%s is available to the article editor', $function ) );
@@ -211,6 +243,22 @@ try {
 	} ) ) {
 		throw new RuntimeException( 'The current theme does not expose the approved article-editor API.' );
 	}
+
+	$logo_path = PGDS_DIR . '/assets/images/pgds-logo.png';
+	pgds_cms_editor_assert( defined( 'PGDS_LOGO_URI' ), 'theme exposes a static logo URL' );
+	pgds_cms_editor_assert( is_readable( $logo_path ), 'static logo asset exists in the theme' );
+	pgds_cms_editor_assert(
+		is_readable( $logo_path ) && 'cd0412ca0008111f7677eede6a5e4cce94200df1677c10ac949b8cb0283c39a1' === hash_file( 'sha256', $logo_path ),
+		'static logo matches the expected landing-page artwork'
+	);
+	pgds_cms_editor_assert( ! current_theme_supports( 'custom-logo' ), 'site logo is not backed by WordPress custom-logo data' );
+	$header_source = (string) file_get_contents( PGDS_DIR . '/header.php' );
+	pgds_cms_editor_assert(
+		false !== strpos( $header_source, 'PGDS_LOGO_URI' ) &&
+		false === strpos( $header_source, 'the_custom_logo' ) &&
+		false === strpos( $header_source, 'has_custom_logo' ),
+		'header renders the static logo without a Media Library fallback'
+	);
 
 	$administrators = get_users(
 		array(
@@ -331,6 +379,34 @@ try {
 	}
 	$pgds_cms_editor_posts[] = (int) $post_id;
 	wp_set_post_categories( $post_id, array( (int) $valid_category['term_id'] ) );
+
+	pgds_cms_editor_assert( 8 === pgds_comments_per_page(), 'reader comments use the theme pagination size' );
+	pgds_cms_editor_assert(
+		'spam' === pgds_auto_approve_reader_comment( 'spam', array( 'comment_type' => 'comment' ) ),
+		'comment auto-approval preserves an explicit spam decision'
+	);
+	wp_set_current_user( 0 );
+	$comment_id = wp_new_comment(
+		array(
+			'comment_post_ID'      => $post_id,
+			'comment_author'       => 'Regression reader',
+			'comment_author_email' => sprintf( 'reader-%s@example.test', $token ),
+			'comment_author_url'   => '',
+			'comment_author_IP'    => '127.0.0.1',
+			'comment_content'      => 'A unique reader comment for automatic approval ' . $token,
+			'comment_type'         => 'comment',
+		),
+		true
+	);
+	wp_set_current_user( (int) $administrators[0] );
+	pgds_cms_editor_assert( ! is_wp_error( $comment_id ) && $comment_id > 0, 'reader can submit a comment' );
+	if ( ! is_wp_error( $comment_id ) && $comment_id > 0 ) {
+		$comment = get_comment( $comment_id );
+		pgds_cms_editor_assert( $comment instanceof WP_Comment && '1' === (string) $comment->comment_approved, 'new reader comment is approved automatically' );
+		pgds_cms_editor_assert( current_user_can( 'edit_comment', $comment_id ), 'administrator can manage the comment in CMS' );
+		pgds_cms_editor_assert( wp_delete_comment( $comment_id, true ), 'administrator can delete the comment through WordPress' );
+		pgds_cms_editor_assert( null === get_comment( $comment_id ), 'deleted comment no longer exists' );
+	}
 
 	$groups          = pgds_meta_groups();
 	$fields          = pgds_meta_fields();
@@ -648,7 +724,7 @@ try {
 			'compatibility meta-box feedback is request-local and rendered once'
 		);
 		pgds_cms_editor_assert(
-			false !== strpos( $redirect_metabox_markup, 'aria-describedby="_pgds_primary_cat-help"' ),
+			false !== strpos( $redirect_metabox_markup, 'aria-describedby="pgds_article_primary_slug-help"' ),
 			'primary-category control is associated with its guidance'
 		);
 		pgds_cms_editor_assert(
@@ -785,6 +861,24 @@ try {
 		);
 
 	$readonly_keys = array( '_pgds_youtube_dur', '_pgds_youtube_title', '_pgds_youtube_poster_id' );
+	$readonly_echo = array();
+	foreach ( $readonly_keys as $readonly_key ) {
+		$readonly_echo[ $readonly_key ] = get_post_meta( $rest_post_id, $readonly_key, true );
+	}
+	$rest_readonly_echo = pgds_cms_editor_rest_request(
+		'POST',
+		'/wp/v2/posts/' . $rest_post_id,
+		array(
+			'title' => 'PGDS REST readonly echo ' . $token,
+			'meta'  => $readonly_echo,
+		)
+	);
+	pgds_cms_editor_assert( 200 === $rest_readonly_echo->get_status(), 'REST allows Gutenberg to echo unchanged synchronization-owned metadata' );
+	pgds_cms_editor_assert( 'PGDS REST readonly echo ' . $token === get_post( $rest_post_id )->post_title, 'unchanged read-only metadata does not block an ordinary post update' );
+	foreach ( $readonly_echo as $readonly_key => $readonly_value ) {
+		pgds_cms_editor_assert_meta( $rest_post_id, $readonly_key, $readonly_value, sprintf( 'REST no-op echo preserves synchronization-owned %s', $readonly_key ) );
+	}
+
 	foreach ( $readonly_keys as $readonly_key ) {
 		$readonly_before = get_post_meta( $rest_post_id, $readonly_key, true );
 		$rest_readonly = pgds_cms_editor_rest_request(
@@ -797,7 +891,7 @@ try {
 		);
 		pgds_cms_editor_assert_rest_error( $rest_readonly, 'pgds_readonly_video_meta', 403, sprintf( 'REST rejects writes to synchronization-owned %s', $readonly_key ) );
 		pgds_cms_editor_assert_meta( $rest_post_id, $readonly_key, $readonly_before, sprintf( 'REST preserves synchronization-owned %s', $readonly_key ) );
-		pgds_cms_editor_assert( 'PGDS REST valid ' . $token === get_post( $rest_post_id )->post_title, sprintf( 'REST %s rejection preserves the title', $readonly_key ) );
+		pgds_cms_editor_assert( 'PGDS REST readonly echo ' . $token === get_post( $rest_post_id )->post_title, sprintf( 'REST %s rejection preserves the title', $readonly_key ) );
 	}
 
 	wp_set_current_user( (int) $subscriber_id );
@@ -955,12 +1049,305 @@ try {
 	}
 	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'min="1"' ) && false !== strpos( $metabox_markup, 'max="4"' ) && false !== strpos( $metabox_markup, 'step="1"' ), 'featured-rank input provides 1–4 progressive guidance' );
 	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'aria-controls="pgds-meta-group-homepage"' ) && false !== strpos( $metabox_markup, 'id="pgds-meta-group-homepage" class="pgds-metabox__group-content" hidden' ), 'Homepage curation renders collapsed behind an accessible toggle' );
-	foreach ( array( 'editorial', 'homepage', 'video' ) as $group_key ) {
+	foreach ( array( 'editorial', 'homepage' ) as $group_key ) {
 		pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'name="pgds_meta_groups[]" value="' . $group_key . '"' ), sprintf( '%s group emits an explicit save marker', $group_key ) );
 	}
+	pgds_cms_editor_assert( false === strpos( $metabox_markup, 'name="pgds_meta_groups[]" value="video"' ), 'hidden Video group does not emit a save marker in Article' );
 	pgds_cms_editor_assert( 3 === substr_count( $metabox_markup, '<output' ), 'video title, duration, and synchronization status render as read-only outputs' );
 	pgds_cms_editor_assert( 0 === preg_match( '/<output[^>]+name=/', $metabox_markup ), 'synchronization-owned outputs have no writable form name' );
 	pgds_cms_editor_assert( false === strpos( $metabox_markup, 'name="_pgds_youtube_title"' ) && false === strpos( $metabox_markup, 'name="_pgds_youtube_dur"' ), 'displayed synchronization-owned fields do not render writable controls' );
+
+	$surface_definitions = pgds_editorial_surfaces();
+	pgds_cms_editor_assert(
+		array( 'article', 'emagazine', 'video', 'vietnam-buddhism' ) === array_keys( $surface_definitions ),
+		'editorial registry exposes exactly four workflows'
+	);
+	pgds_cms_editor_assert(
+		array( 'tin-phat-su', 'song-an-lanh', 'am-thuc-chay', 'loi-song-xanh', 'phat-tich', 'tot-doi-dep-dao' ) === $surface_definitions['article']['primary_slugs'],
+		'Article registry contains only the approved Vietnamese branches'
+	);
+	pgds_cms_editor_assert( '' === pgds_editorial_surface_from_slug( 'media' ), 'Media parent category never defines an editorial surface' );
+
+	$surface_terms = array();
+	foreach ( array( 'tin-phat-su', 'phat-tich', 'emagazine', 'video', 'vietnam-buddhism', 'media' ) as $surface_slug ) {
+		$surface_term = pgds_category_term( $surface_slug );
+		if ( ! $surface_term instanceof WP_Term ) {
+			throw new RuntimeException( 'The regression suite requires every editorial surface category.' );
+		}
+		$surface_terms[ $surface_slug ] = (int) $surface_term->term_id;
+	}
+
+	$surface_fixture_ids = array();
+	foreach (
+		array(
+			'article'            => 'tin-phat-su',
+			'emagazine'          => 'emagazine',
+			'video'              => 'video',
+			'vietnam-buddhism'   => 'vietnam-buddhism',
+		) as $fixture_surface => $fixture_slug
+	) {
+		$fixture_id = wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'draft',
+				'post_title'  => sprintf( 'PGDS %s surface %s', $fixture_surface, $token ),
+			),
+			true
+		);
+		if ( is_wp_error( $fixture_id ) ) {
+			throw new RuntimeException( 'The regression suite could not create a surface fixture.' );
+		}
+		$fixture_id                 = (int) $fixture_id;
+		$pgds_cms_editor_posts[]    = $fixture_id;
+		$surface_fixture_ids[ $fixture_surface ] = $fixture_id;
+		wp_set_post_categories( $fixture_id, array( $surface_terms[ $fixture_slug ], $surface_terms['phat-tich'] ) );
+		update_post_meta( $fixture_id, '_pgds_primary_cat', $surface_terms[ $fixture_slug ] );
+	}
+	update_post_meta( $surface_fixture_ids['video'], '_pgds_video_unavailable', '1' );
+
+	$missing_primary_id = wp_insert_post(
+		array(
+			'post_type'   => 'post',
+			'post_status' => 'draft',
+			'post_title'  => 'PGDS missing primary ' . $token,
+		),
+		true
+	);
+	$media_primary_id = wp_insert_post(
+		array(
+			'post_type'   => 'post',
+			'post_status' => 'draft',
+			'post_title'  => 'PGDS media primary ' . $token,
+		),
+		true
+	);
+	$stale_video_id = wp_insert_post(
+		array(
+			'post_type'   => 'post',
+			'post_status' => 'draft',
+			'post_title'  => 'PGDS stale video primary ' . $token,
+		),
+		true
+	);
+	if ( is_wp_error( $missing_primary_id ) || is_wp_error( $media_primary_id ) || is_wp_error( $stale_video_id ) ) {
+		throw new RuntimeException( 'The regression suite could not create legacy classification fixtures.' );
+	}
+	foreach ( array( $missing_primary_id, $media_primary_id, $stale_video_id ) as $legacy_id ) {
+		$pgds_cms_editor_posts[] = (int) $legacy_id;
+	}
+	wp_set_post_categories( $missing_primary_id, array( $surface_terms['tin-phat-su'] ) );
+	wp_set_post_categories( $media_primary_id, array( $surface_terms['media'] ) );
+	update_post_meta( $media_primary_id, '_pgds_primary_cat', $surface_terms['media'] );
+	wp_set_post_categories( $stale_video_id, array( $surface_terms['tin-phat-su'] ) );
+	pgds_category_migration_context( true );
+	update_post_meta( $stale_video_id, '_pgds_primary_cat', $surface_terms['video'] );
+	pgds_category_migration_context( false );
+
+	foreach ( $surface_fixture_ids as $fixture_surface => $fixture_id ) {
+		$classification = pgds_get_editorial_classification( $fixture_id );
+		pgds_cms_editor_assert( $classification['valid'] && $fixture_surface === $classification['surface'], sprintf( '%s fixture has one valid editorial surface', $fixture_surface ) );
+		pgds_cms_editor_assert( in_array( $fixture_id, pgds_cms_editor_surface_post_ids( $fixture_surface ), true ), sprintf( '%s list includes its valid fixture', $fixture_surface ) );
+		foreach ( array_diff( array_keys( $surface_definitions ), array( $fixture_surface ) ) as $other_surface ) {
+			pgds_cms_editor_assert( ! in_array( $fixture_id, pgds_cms_editor_surface_post_ids( $other_surface ), true ), sprintf( '%s fixture stays out of %s list', $fixture_surface, $other_surface ) );
+		}
+	}
+	pgds_cms_editor_assert( in_array( $surface_fixture_ids['video'], pgds_cms_editor_surface_post_ids( 'video' ), true ), 'unavailable Video remains in the Video workflow' );
+
+	$vietnam_buddhism_id = $surface_fixture_ids['vietnam-buddhism'];
+	update_post_meta( $vietnam_buddhism_id, '_pgds_is_featured', '1' );
+	$vietnam_buddhism_warnings = pgds_get_article_warnings( $vietnam_buddhism_id );
+	pgds_cms_editor_assert(
+		! empty( $vietnam_buddhism_warnings ) && false !== strpos( $vietnam_buddhism_warnings[0]['message'], 'featured image' ),
+		'Vietnam Buddhism validation guidance is rendered in English'
+	);
+	ob_start();
+	pgds_render_meta_box( get_post( $vietnam_buddhism_id ) );
+	$vietnam_buddhism_markup = ob_get_clean();
+	foreach ( array( 'Content type', '>Article</option>', 'Editorial details', 'Home-page curation', 'Back to Vietnam Buddhism' ) as $english_copy ) {
+		pgds_cms_editor_assert( false !== strpos( $vietnam_buddhism_markup, $english_copy ), sprintf( 'Vietnam Buddhism form includes English copy: %s', wp_strip_all_tags( $english_copy ) ) );
+	}
+	foreach ( array( 'Loại nội dung', 'Biên tập', 'Tin nổi bật', 'Quay lại danh sách', 'Trạng thái', 'Chưa có dữ liệu' ) as $vietnamese_copy ) {
+		pgds_cms_editor_assert( false === strpos( $vietnam_buddhism_markup, $vietnamese_copy ), sprintf( 'Vietnam Buddhism form omits theme-added Vietnamese copy: %s', $vietnamese_copy ) );
+	}
+	pgds_cms_editor_assert(
+		'Featured settings were not updated. Choose a position from 1 to 4 when Featured is enabled.' === pgds_meta_feedback_messages( 'vietnam-buddhism' )['pgds_invalid_featured_rank'],
+		'Vietnam Buddhism save feedback is rendered in English'
+	);
+	update_post_meta( $vietnam_buddhism_id, '_pgds_is_featured', '' );
+
+	foreach ( array( $missing_primary_id, $media_primary_id, $stale_video_id ) as $legacy_id ) {
+		$legacy_classification = pgds_get_editorial_classification( $legacy_id );
+		pgds_cms_editor_assert( ! $legacy_classification['valid'] && 'article' === $legacy_classification['surface'], 'legacy classification falls back to Article' );
+		pgds_cms_editor_assert( in_array( (int) $legacy_id, pgds_cms_editor_surface_post_ids( 'article', 'needs-review' ), true ), 'Article review filter finds a legacy classification' );
+	}
+
+	$surface_url_previous_get     = $_GET;
+	$surface_url_previous_pagenow = $GLOBALS['pagenow'] ?? null;
+	$GLOBALS['pagenow']           = 'edit.php';
+	$_GET                         = array( 'pgds_surface' => 'video' );
+	$video_list_url               = pgds_editorial_admin_url( admin_url( 'edit.php' ), 'edit.php', null );
+	$page_list_url                = pgds_editorial_admin_url( admin_url( 'edit.php?post_type=page' ), 'edit.php?post_type=page', null );
+	$surface_views                = pgds_editorial_surface_views(
+		array(
+			'all' => '<a href="edit.php?post_type=post">All <span class="count">(999)</span></a>',
+		)
+	);
+	$surface_row_actions          = pgds_editorial_post_row_actions(
+		array(
+			'trash' => '<a href="post.php?post=' . $surface_fixture_ids['video'] . '&action=trash">Trash</a>',
+		),
+		get_post( $surface_fixture_ids['video'] )
+	);
+	pgds_cms_editor_assert( false !== strpos( $video_list_url, 'post_type=post' ) && false !== strpos( $video_list_url, 'pgds_surface=video' ), 'native Posts-list links preserve the current surface' );
+	pgds_cms_editor_assert( false === strpos( $page_list_url, 'pgds_surface=' ), 'surface URL preservation does not affect Pages links' );
+	pgds_cms_editor_assert( false !== strpos( $surface_views['all'], 'pgds_surface=video' ) && false === strpos( $surface_views['all'], '(999)' ), 'native status views preserve their surface and display its count' );
+	pgds_cms_editor_assert( false !== strpos( $surface_row_actions['trash'], 'pgds_surface=video' ), 'row trash actions preserve their return surface' );
+
+	$GLOBALS['pagenow'] = 'post.php';
+	$_GET                = array( 'post' => $surface_fixture_ids['video'] );
+	$inferred_list_url   = pgds_editorial_admin_url( admin_url( 'edit.php' ), 'edit.php', null );
+	$preview_url         = pgds_editorial_preview_post_link( home_url( '/?p=' . $surface_fixture_ids['video'] . '&preview=true' ), get_post( $surface_fixture_ids['video'] ) );
+	pgds_cms_editor_assert( false !== strpos( $inferred_list_url, 'pgds_surface=video' ), 'editor links infer their list surface when the URL has no explicit context' );
+	pgds_cms_editor_assert( false !== strpos( $preview_url, 'pgds_surface=video' ), 'preview links preserve the inferred editorial surface' );
+
+	$_GET                = $surface_url_previous_get;
+	$GLOBALS['pagenow']  = $surface_url_previous_pagenow;
+	pgds_cms_editor_assert( pgds_editorial_view_count( 'video', 'draft' ) >= 1, 'native Video view counts use the Video surface predicate' );
+	pgds_cms_editor_assert( pgds_editorial_view_count( 'article', 'pgds_needs_classification' ) >= 3, 'Article review view count uses the classification predicate' );
+
+	$composed_query = new WP_Query();
+	$composed_query->init();
+	$existing_meta_query = array(
+		'relation' => 'OR',
+		array( 'key' => '_pgds_source', 'value' => 'one' ),
+		array( 'key' => '_pgds_source', 'value' => 'two' ),
+	);
+	$composed_query->set( 'meta_query', $existing_meta_query );
+	$previous_get       = $_GET;
+	$previous_pagenow   = $GLOBALS['pagenow'] ?? null;
+	$previous_wp_query  = $GLOBALS['wp_query'] ?? null;
+	$previous_the_query = $GLOBALS['wp_the_query'] ?? null;
+	$GLOBALS['pagenow'] = 'edit.php';
+	$_GET                = array( 'pgds_filter' => 'featured' );
+	$GLOBALS['wp_the_query'] = $composed_query;
+	$GLOBALS['wp_query'] = $composed_query;
+	set_current_screen( 'edit-post' );
+	pgds_admin_filter_apply( $composed_query );
+	$_GET                = $previous_get;
+	$GLOBALS['pagenow']  = $previous_pagenow;
+	$GLOBALS['wp_the_query'] = $previous_the_query;
+	$GLOBALS['wp_query'] = $previous_wp_query;
+	$composed_meta_query = $composed_query->get( 'meta_query' );
+	pgds_cms_editor_assert(
+		'AND' === ( $composed_meta_query['relation'] ?? '' ) && $existing_meta_query === ( $composed_meta_query[0] ?? array() ),
+		'PGDS list filters compose with an existing nested meta query'
+	);
+
+	$switch_post_id = $surface_fixture_ids['article'];
+	update_post_meta( $switch_post_id, '_pgds_source_id', 'surface-switch-source' );
+	update_post_meta( $switch_post_id, '_pgds_youtube_dur', '321' );
+	$switch_result = pgds_apply_editorial_classification( $switch_post_id, 'emagazine' );
+	pgds_cms_editor_assert( ! is_wp_error( $switch_result ), 'classification helper switches Article to E-magazine' );
+	$switch_categories = array_map( 'intval', wp_get_post_categories( $switch_post_id ) );
+	pgds_cms_editor_assert( in_array( $surface_terms['emagazine'], $switch_categories, true ), 'surface switch assigns the new primary category' );
+	pgds_cms_editor_assert( ! in_array( $surface_terms['tin-phat-su'], $switch_categories, true ), 'surface switch removes the previous primary category' );
+	pgds_cms_editor_assert( in_array( $surface_terms['phat-tich'], $switch_categories, true ), 'surface switch preserves secondary categories' );
+	pgds_cms_editor_assert_meta( $switch_post_id, '_pgds_source_id', 'surface-switch-source', 'surface switch preserves importer identity' );
+	pgds_cms_editor_assert_meta( $switch_post_id, '_pgds_youtube_dur', '321', 'surface switch preserves synchronization metadata' );
+
+	$confirm_post_id = $surface_fixture_ids['emagazine'];
+	pgds_cms_editor_submit(
+		$confirm_post_id,
+		array(
+			'pgds_surface'              => 'video',
+			'pgds_article_primary_slug' => '',
+		),
+		'valid',
+		null,
+		array( 'editorial' )
+	);
+	pgds_cms_editor_assert( 'emagazine' === pgds_get_editorial_classification( $confirm_post_id )['surface'], 'surface change without confirmation preserves classification' );
+	pgds_cms_editor_submit(
+		$confirm_post_id,
+		array(
+			'pgds_surface'                => 'video',
+			'pgds_article_primary_slug'   => '',
+			'pgds_surface_change_confirm' => '1',
+		),
+		'valid',
+		null,
+		array( 'editorial' )
+	);
+	pgds_cms_editor_assert( 'video' === pgds_get_editorial_classification( $confirm_post_id )['surface'], 'confirmed draft surface change updates classification' );
+
+	$rest_missing_classification = pgds_cms_editor_rest_request(
+		'POST',
+		'/wp/v2/posts',
+		array(
+			'status' => 'publish',
+			'title'  => 'PGDS rejected unclassified publish ' . $token,
+		)
+	);
+	pgds_cms_editor_assert_rest_error( $rest_missing_classification, 'pgds_article_category_required', 400, 'REST blocks publishing an unclassified Article' );
+
+	$rest_video_without_youtube = pgds_cms_editor_rest_request(
+		'POST',
+		'/wp/v2/posts',
+		array(
+			'status'     => 'publish',
+			'title'      => 'PGDS rejected incomplete video ' . $token,
+			'categories' => array( $surface_terms['video'] ),
+			'meta'       => array( '_pgds_primary_cat' => $surface_terms['video'] ),
+		)
+	);
+	pgds_cms_editor_assert_rest_error( $rest_video_without_youtube, 'pgds_video_requires_youtube', 400, 'REST blocks publishing a Video without a YouTube ID' );
+
+	$rest_video_draft = pgds_cms_editor_rest_request(
+		'POST',
+		'/wp/v2/posts',
+		array(
+			'status'     => 'draft',
+			'title'      => 'PGDS incomplete video draft ' . $token,
+			'categories' => array( $surface_terms['video'] ),
+			'meta'       => array( '_pgds_primary_cat' => $surface_terms['video'] ),
+		)
+	);
+	$rest_video_draft_data = $rest_video_draft->get_data();
+	pgds_cms_editor_assert( 201 === $rest_video_draft->get_status(), 'REST allows an incomplete Video draft' );
+	if ( isset( $rest_video_draft_data['id'] ) ) {
+		$pgds_cms_editor_posts[] = (int) $rest_video_draft_data['id'];
+	}
+
+	$pattern_registry = WP_Block_Patterns_Registry::get_instance();
+	foreach ( array( 'emagazine-chapter-heading', 'emagazine-wide-image', 'emagazine-full-image', 'emagazine-image-pair', 'emagazine-pull-quote' ) as $pattern_slug ) {
+		pgds_cms_editor_assert( $pattern_registry->is_registered( 'pgds/' . $pattern_slug ), sprintf( '%s E-magazine pattern is registered', $pattern_slug ) );
+	}
+
+	$previous_menu = $GLOBALS['menu'] ?? array();
+	$previous_submenu = $GLOBALS['submenu'] ?? array();
+	$GLOBALS['menu'] = array(
+		5  => array( 'Posts', 'edit_posts', 'edit.php' ),
+		25 => array( 'Comments', 'moderate_comments', 'edit-comments.php' ),
+	);
+	$GLOBALS['submenu']['edit.php'] = array( array( 'All Posts', 'edit_posts', 'edit.php' ) );
+	pgds_register_editorial_surface_menus();
+	$surface_menu_urls = array();
+	foreach ( $GLOBALS['menu'] as $menu_item ) {
+		if ( isset( $menu_item[2] ) && str_contains( $menu_item[2], 'pgds_surface=' ) ) {
+			$surface_menu_urls[] = $menu_item[2];
+		}
+	}
+	pgds_cms_editor_assert( 4 === count( $surface_menu_urls ), 'admin sidebar exposes exactly four top-level editorial menus' );
+	$menu_slugs = wp_list_pluck( $GLOBALS['menu'], 2 );
+	pgds_cms_editor_assert( in_array( 'edit-comments.php', $menu_slugs, true ), 'native Comments screen remains available for moderation and deletion' );
+	$GLOBALS['menu'] = $previous_menu;
+	$GLOBALS['submenu'] = $previous_submenu;
+
+	$lunar_post_type = get_post_type_object( 'pgds_lunar_note' );
+	pgds_cms_editor_assert(
+		$lunar_post_type instanceof WP_Post_Type && $lunar_post_type->show_ui && ! $lunar_post_type->show_in_menu,
+		'Lunar calendar keeps its management screen but stays hidden from the editorial menu'
+	);
 
 	$GLOBALS['submenu']['themes.php'] = array(
 		array( 'Themes', 'switch_themes', 'themes.php' ),
