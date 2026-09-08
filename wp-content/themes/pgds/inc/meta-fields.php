@@ -18,8 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @return array
  */
-function pgds_meta_fields() {
-	return array(
+function pgds_meta_fields( $surface = '' ) {
+	$surface = pgds_sanitize_editorial_surface( $surface );
+	$surface = $surface ? $surface : 'article';
+	$fields  = array(
 		'_pgds_sapo'           => array(
 			'group'    => 'editorial',
 			'label'    => 'Sa-pô',
@@ -94,6 +96,36 @@ function pgds_meta_fields() {
 			'editable' => false,
 		),
 	);
+
+	if ( 'emagazine' === $surface ) {
+		$fields['_pgds_source']['label'] = 'Nguồn / ghi công ảnh';
+		$fields['_pgds_source']['help']  = 'Ghi nguồn hoặc ghi công ảnh chung; ghi công từng ảnh trong caption của ảnh tương ứng.';
+	}
+
+	if ( 'vietnam-buddhism' === $surface ) {
+		$fields['_pgds_sapo']['label']                 = 'Summary';
+		$fields['_pgds_sapo']['help']                  = 'Write the short summary shown in article cards and at the beginning of the article.';
+		$fields['_pgds_primary_cat']['label']          = 'Primary category';
+		$fields['_pgds_primary_cat']['help']           = 'Vietnam Buddhism is maintained automatically for this workflow.';
+		$fields['_pgds_source']['label']               = 'Source';
+		$fields['_pgds_source']['help']                = 'Name the source when the article uses material from another organization; otherwise leave it blank.';
+		$fields['_pgds_display_author']['label']       = 'Display author';
+		$fields['_pgds_display_author']['help']        = 'Use this only when the public byline differs from the WordPress account name.';
+		$fields['_pgds_is_featured']['label']          = 'Featured';
+		$fields['_pgds_is_featured']['help']           = 'Allow this article to appear in the Featured section on the home page.';
+		$fields['_pgds_feature_rank']['label']         = 'Featured position';
+		$fields['_pgds_feature_rank']['help']          = 'Choose a position from 1 to 4 when Featured is enabled.';
+		$fields['_pgds_photo_story']['label']          = 'Photo story';
+		$fields['_pgds_photo_story']['help']           = 'Allow this article to appear in the Photo Story section.';
+		$fields['_pgds_youtube_id']['label']            = 'YouTube video';
+		$fields['_pgds_youtube_id']['help']             = 'Paste a YouTube URL or its 11-character video ID.';
+		$fields['_pgds_youtube_title']['label']         = 'YouTube title';
+		$fields['_pgds_youtube_title']['help']          = 'PGDS synchronizes the video title automatically.';
+		$fields['_pgds_youtube_dur']['label']           = 'Duration';
+		$fields['_pgds_youtube_dur']['help']            = 'PGDS synchronizes the video duration automatically.';
+	}
+
+	return $fields;
 }
 
 /**
@@ -101,8 +133,10 @@ function pgds_meta_fields() {
  *
  * @return array
  */
-function pgds_meta_groups() {
-	return array(
+function pgds_meta_groups( $surface = '' ) {
+	$surface = pgds_sanitize_editorial_surface( $surface );
+	$surface = $surface ? $surface : 'article';
+	$groups  = array(
 		'editorial' => array(
 			'label'       => 'Biên tập',
 			'description' => 'Bạn nhập các thông tin giúp bài viết hiển thị đúng tên, nguồn và chuyên mục.',
@@ -117,6 +151,36 @@ function pgds_meta_groups() {
 			'description' => 'Bạn nhập video YouTube; PGDS tự cập nhật thời lượng và trạng thái.',
 		),
 	);
+
+	if ( 'vietnam-buddhism' === $surface ) {
+		$groups['editorial']['label']        = 'Editorial details';
+		$groups['editorial']['description']  = 'Add the summary, byline and source used by the public article.';
+		$groups['homepage']['label']         = 'Home-page curation';
+		$groups['homepage']['description']   = 'Choose where this article may appear on the home page.';
+		$groups['video']['label']            = 'Video';
+		$groups['video']['description']      = 'YouTube metadata is not used by the Vietnam Buddhism workflow.';
+	}
+
+	return $groups;
+}
+
+/**
+ * Return meta-box groups rendered by one editorial surface.
+ *
+ * @param string $surface Surface key.
+ * @return string[]
+ */
+function pgds_editorial_surface_groups( $surface ) {
+	switch ( $surface ) {
+		case 'emagazine':
+			return array( 'editorial' );
+		case 'video':
+			return array( 'editorial', 'video' );
+		case 'vietnam-buddhism':
+		case 'article':
+		default:
+			return array( 'editorial', 'homepage' );
+	}
 }
 
 /**
@@ -186,18 +250,26 @@ add_action( 'init', 'pgds_register_meta' );
  * Register the article meta box.
  */
 function pgds_add_meta_box() {
+	$post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
+	$surface = pgds_current_editorial_surface( $post_id );
+	$title   = 'vietnam-buddhism' === $surface ? 'Editorial details' : 'Nội dung và hiển thị PGDS';
+
 	/*
 	 * The block editor renders normal-context legacy boxes in the drawer below the
 	 * content. Side-context boxes are hidden there, so this context is intentional.
 	 */
 	add_meta_box(
 		'pgds_article_meta',
-		__( 'Nội dung và hiển thị PGDS', 'pgds' ),
+		$title,
 		'pgds_render_meta_box',
 		'post',
 		'normal',
 		'high'
 	);
+
+	if ( ! empty( pgds_editorial_surfaces()[ $surface ]['fixed_primary'] ) ) {
+		remove_meta_box( 'categorydiv', 'post', 'side' );
+	}
 }
 add_action( 'add_meta_boxes', 'pgds_add_meta_box' );
 
@@ -383,9 +455,18 @@ function pgds_find_featured_rank_conflict( $post_id, $rank ) {
  *
  * @param bool $featured   Whether Featured is enabled.
  * @param bool $photo_story Whether Tin ảnh is enabled.
+ * @param bool $english     Whether to use English labels.
  * @return string
  */
-function pgds_article_placement_label( $featured, $photo_story ) {
+function pgds_article_placement_label( $featured, $photo_story, $english = false ) {
+	if ( $english ) {
+		if ( $featured && $photo_story ) {
+			return 'Featured and Photo Story';
+		}
+
+		return $featured ? 'Featured' : 'Photo Story';
+	}
+
 	if ( $featured && $photo_story ) {
 		return 'Tin nổi bật và Tin ảnh';
 	}
@@ -403,21 +484,26 @@ function pgds_get_article_warnings( $post_id ) {
 	$warnings    = array();
 	$featured    = '1' === get_post_meta( $post_id, '_pgds_is_featured', true );
 	$photo_story = '1' === get_post_meta( $post_id, '_pgds_photo_story', true );
+	$english     = 'vietnam-buddhism' === pgds_current_editorial_surface( $post_id );
 
 	if ( $featured || $photo_story ) {
-		$placement = pgds_article_placement_label( $featured, $photo_story );
+		$placement = pgds_article_placement_label( $featured, $photo_story, $english );
 
 		if ( ! has_post_thumbnail( $post_id ) ) {
 			$warnings[] = array(
 				'code'    => 'pgds_missing_featured_image',
-				'message' => sprintf( '%s chưa có ảnh đại diện. Bài vẫn được lưu, nhưng thẻ bài có thể thiếu ảnh.', $placement ),
+				'message' => $english
+					? sprintf( '%s has no featured image. The post can still be saved, but its card may have no image.', $placement )
+					: sprintf( '%s chưa có ảnh đại diện. Bài vẫn được lưu, nhưng thẻ bài có thể thiếu ảnh.', $placement ),
 			);
 		}
 
 		if ( '' === trim( (string) get_post_meta( $post_id, '_pgds_sapo', true ) ) ) {
 			$warnings[] = array(
 				'code'    => 'pgds_missing_sapo',
-				'message' => sprintf( '%s chưa có sa-pô. Bài vẫn được lưu, nhưng phần giới thiệu có thể bị trống.', $placement ),
+				'message' => $english
+					? sprintf( '%s has no summary. The post can still be saved, but its introduction may be empty.', $placement )
+					: sprintf( '%s chưa có sa-pô. Bài vẫn được lưu, nhưng phần giới thiệu có thể bị trống.', $placement ),
 			);
 		}
 	}
@@ -429,8 +515,11 @@ function pgds_get_article_warnings( $post_id ) {
 		if ( $conflict_id ) {
 			$warning = array(
 				'code'        => 'pgds_duplicate_featured_rank',
-				'message'     => sprintf( 'Một bài đã xuất bản khác đang dùng vị trí Tin nổi bật %d. Cả hai bài vẫn được giữ nguyên.', $rank ),
+				'message'     => $english
+					? sprintf( 'Another published post already uses Featured position %d. Both posts were left unchanged.', $rank )
+					: sprintf( 'Một bài đã xuất bản khác đang dùng vị trí Tin nổi bật %d. Cả hai bài vẫn được giữ nguyên.', $rank ),
 				'conflict_id' => $conflict_id,
+				'edit_label'  => $english ? 'Open the post using this position' : 'Mở bài đang trùng vị trí',
 			);
 			if ( current_user_can( 'edit_post', $conflict_id ) ) {
 				$warning['edit_url'] = get_edit_post_link( $conflict_id, 'raw' );
@@ -447,12 +536,34 @@ function pgds_get_article_warnings( $post_id ) {
  *
  * @return array
  */
-function pgds_meta_feedback_messages() {
-	return array(
-		'pgds_invalid_featured_rank'   => 'Thiết lập Tin nổi bật chưa được cập nhật. Khi bật Tin nổi bật, hãy chọn vị trí từ 1 đến 4. Giá trị hợp lệ trước đó được giữ nguyên.',
-		'pgds_invalid_primary_category' => 'Chuyên mục chính chưa được cập nhật. Hãy chọn một chuyên mục đã được đánh dấu cho bài viết. Giá trị hợp lệ trước đó được giữ nguyên.',
-		'pgds_invalid_youtube'           => 'Video YouTube chưa được cập nhật. Hãy dán đúng đường dẫn YouTube hoặc mã video gồm 11 ký tự. Video hợp lệ trước đó được giữ nguyên.',
+function pgds_meta_feedback_messages( $surface = '' ) {
+	$messages = array(
+		'pgds_invalid_featured_rank'                 => 'Thiết lập Tin nổi bật chưa được cập nhật. Khi bật Tin nổi bật, hãy chọn vị trí từ 1 đến 4. Giá trị hợp lệ trước đó được giữ nguyên.',
+		'pgds_invalid_primary_category'              => 'Chuyên mục chính chưa được cập nhật. Hãy chọn một chuyên mục đã được đánh dấu cho bài viết. Giá trị hợp lệ trước đó được giữ nguyên.',
+		'pgds_invalid_youtube'                       => 'Video YouTube chưa được cập nhật. Hãy dán đúng đường dẫn YouTube hoặc mã video gồm 11 ký tự. Video hợp lệ trước đó được giữ nguyên.',
+		'pgds_invalid_editorial_surface'             => 'Loại nội dung không hợp lệ. Giá trị phân loại trước đó được giữ nguyên.',
+		'pgds_article_category_required'             => 'Bài viết phải chọn một chuyên mục tiếng Việt hợp lệ trước khi xuất bản.',
+		'pgds_video_requires_youtube'                => 'Video phải có đường dẫn YouTube hoặc mã video hợp lệ trước khi xuất bản.',
+		'pgds_surface_change_confirmation_required' => 'Hãy xác nhận trước khi chuyển bài sang một loại nội dung khác.',
+		'pgds_missing_editorial_category'            => 'Không tìm thấy chuyên mục bắt buộc. Hãy chạy lại bước khôi phục taxonomy trước khi lưu.',
+		'pgds_classification_write_failed'           => 'Không thể cập nhật đồng thời loại nội dung và chuyên mục. Phân loại trước đó đã được giữ nguyên.',
 	);
+
+	$surface = pgds_sanitize_editorial_surface( $surface );
+	$surface = $surface ? $surface : pgds_requested_editorial_surface();
+	if ( 'vietnam-buddhism' === $surface ) {
+		$messages['pgds_invalid_featured_rank']                 = 'Featured settings were not updated. Choose a position from 1 to 4 when Featured is enabled.';
+		$messages['pgds_invalid_primary_category']              = 'The primary category was not updated. The previous valid value was preserved.';
+		$messages['pgds_invalid_youtube']                       = 'The YouTube video was not updated. Paste a valid YouTube URL or 11-character video ID.';
+		$messages['pgds_invalid_editorial_surface']             = 'The selected content type is invalid. The previous classification was preserved.';
+		$messages['pgds_article_category_required']             = 'Choose a valid primary category before publishing.';
+		$messages['pgds_video_requires_youtube']                = 'A valid YouTube URL or video ID is required before publishing a Video.';
+		$messages['pgds_surface_change_confirmation_required'] = 'Confirm the change before moving this post to another content type.';
+		$messages['pgds_missing_editorial_category']            = 'The required category is unavailable. Restore the canonical taxonomy before saving.';
+		$messages['pgds_classification_write_failed']           = 'The content type and category could not be updated together. The previous classification was preserved.';
+	}
+
+	return $messages;
 }
 
 /**
@@ -641,10 +752,10 @@ add_action( 'admin_notices', 'pgds_admin_meta_notices' );
  * @param mixed $seconds Stored duration in seconds.
  * @return string
  */
-function pgds_format_video_duration( $seconds ) {
+function pgds_format_video_duration( $seconds, $english = false ) {
 	$seconds = absint( $seconds );
 	if ( ! $seconds ) {
-		return 'Chưa có dữ liệu';
+		return $english ? 'No data yet' : 'Chưa có dữ liệu';
 	}
 
 	$hours   = (int) floor( $seconds / HOUR_IN_SECONDS );
@@ -657,25 +768,26 @@ function pgds_format_video_duration( $seconds ) {
 /**
  * Get the synchronized-video status label.
  *
- * @param int $post_id Post ID.
+ * @param int  $post_id Post ID.
+ * @param bool $english Whether to use English labels.
  * @return string
  */
-function pgds_video_status_label( $post_id ) {
+function pgds_video_status_label( $post_id, $english = false ) {
 	if ( ! get_post_meta( $post_id, '_pgds_youtube_id', true ) ) {
-		return 'Chưa gắn video';
+		return $english ? 'No video attached' : 'Chưa gắn video';
 	}
 	if ( '1' === get_post_meta( $post_id, '_pgds_video_unavailable', true ) ) {
-		return 'Video không còn khả dụng';
+		return $english ? 'Video is unavailable' : 'Video không còn khả dụng';
 	}
 	if (
 		get_post_meta( $post_id, '_pgds_youtube_dur', true ) ||
 		get_post_meta( $post_id, '_pgds_youtube_title', true ) ||
 		get_post_meta( $post_id, '_pgds_youtube_poster_id', true )
 	) {
-		return 'Đã đồng bộ';
+		return $english ? 'Synchronized' : 'Đã đồng bộ';
 	}
 
-	return 'Đang chờ đồng bộ';
+	return $english ? 'Waiting for synchronization' : 'Đang chờ đồng bộ';
 }
 
 /**
@@ -688,13 +800,13 @@ function pgds_render_article_warnings( array $warnings ) {
 		echo '<div class="notice notice-warning inline"><p>';
 		echo esc_html( $warning['message'] ?? '' );
 		if ( ! empty( $warning['edit_url'] ) ) {
-			printf( ' <a href="%s">%s</a>', esc_url( $warning['edit_url'] ), esc_html__( 'Mở bài đang trùng vị trí', 'pgds' ) );
+			printf( ' <a href="%s">%s</a>', esc_url( $warning['edit_url'] ), esc_html( $warning['edit_label'] ?? 'Mở bài đang trùng vị trí' ) );
 		}
 		echo '</p></div>';
 	}
 }
 
-function pgds_render_meta_field( $post_id, $key, array $field ) {
+function pgds_render_meta_field( $post_id, $key, array $field, $surface = 'article' ) {
 	$value    = get_post_meta( $post_id, $key, true );
 	$id       = esc_attr( $key );
 	$editable = ! empty( $field['editable'] );
@@ -707,9 +819,9 @@ function pgds_render_meta_field( $post_id, $key, array $field ) {
 	}
 
 	if ( ! $editable ) {
-		$readonly_value = 'duration' === $field['type'] ? pgds_format_video_duration( $value ) : (string) $value;
+		$readonly_value = 'duration' === $field['type'] ? pgds_format_video_duration( $value, 'vietnam-buddhism' === $surface ) : (string) $value;
 		if ( '' === $readonly_value ) {
-			$readonly_value = 'Chưa có dữ liệu';
+			$readonly_value = 'vietnam-buddhism' === $surface ? 'No data yet' : 'Chưa có dữ liệu';
 		}
 		printf( '<output id="%s-value" class="pgds-metabox__readonly" aria-labelledby="%s-label">%s</output>', $id, $id, esc_html( $readonly_value ) );
 	} else {
@@ -729,7 +841,7 @@ function pgds_render_meta_field( $post_id, $key, array $field ) {
 					$id,
 					$id,
 					checked( $value, '1', false ),
-					esc_html__( 'Bật', 'pgds' )
+					esc_html( 'vietnam-buddhism' === $surface ? 'Enable' : 'Bật' )
 				);
 				break;
 
@@ -791,15 +903,104 @@ function pgds_render_meta_field( $post_id, $key, array $field ) {
 }
 
 /**
+ * Render the shared content-type and primary-category workflow control.
+ *
+ * @param WP_Post $post    Post being edited.
+ * @param string  $surface Active surface.
+ */
+function pgds_render_classification_control( $post, $surface ) {
+	$definitions   = pgds_editorial_surfaces();
+	$classification = pgds_get_editorial_classification( $post->ID );
+	$english        = 'vietnam-buddhism' === $surface;
+	$article_slug   = $classification['valid'] && 'article' === $classification['surface'] ? $classification['primary_slug'] : '';
+	$confirm_id     = 'pgds_surface_change_confirm';
+
+	echo '<div class="pgds-metabox__classification" data-pgds="classification">';
+	printf(
+		'<label class="pgds-metabox__label" for="pgds_surface">%s</label>',
+		esc_html( $english ? 'Content type' : 'Loại nội dung' )
+	);
+	echo '<select class="widefat" id="pgds_surface" name="pgds_surface" data-pgds="surface-select">';
+	foreach ( $definitions as $key => $definition ) {
+		$fixed_term = ! empty( $definition['fixed_primary'] ) ? pgds_category_term( $definition['fixed_primary'] ) : null;
+		$label      = $english && 'article' === $key ? 'Article' : $definition['label'];
+		printf(
+			'<option value="%s" data-term-id="%d"%s>%s</option>',
+			esc_attr( $key ),
+			$fixed_term instanceof WP_Term ? (int) $fixed_term->term_id : 0,
+			selected( $surface, $key, false ),
+			esc_html( $label )
+		);
+	}
+	echo '</select>';
+	printf(
+		'<p class="description">%s</p>',
+		esc_html( $english ? 'Changing the content type also updates the primary category.' : 'Khi chuyển loại nội dung, chuyên mục chính cũng được cập nhật đồng thời.' )
+	);
+
+	echo '<div class="pgds-metabox__article-category" data-pgds="article-category">';
+	printf(
+		'<label class="pgds-metabox__label" for="pgds_article_primary_slug">%s</label>',
+		esc_html( $english ? 'Vietnamese Article category' : 'Chuyên mục bài viết' )
+	);
+	echo '<select class="widefat" id="pgds_article_primary_slug" name="pgds_article_primary_slug" aria-describedby="pgds_article_primary_slug-help">';
+	printf( '<option value="">%s</option>', esc_html( $english ? '— Choose a category —' : '— Chọn chuyên mục —' ) );
+	foreach ( $definitions['article']['primary_slugs'] as $slug ) {
+		$term = pgds_category_term( $slug );
+		if ( ! $term instanceof WP_Term ) {
+			continue;
+		}
+		printf(
+			'<option value="%s" data-term-id="%d"%s>%s</option>',
+			esc_attr( $slug ),
+			(int) $term->term_id,
+			selected( $article_slug, $slug, false ),
+			esc_html( $term->name )
+		);
+	}
+	echo '</select>';
+	printf(
+		'<p class="description" id="pgds_article_primary_slug-help">%s</p>',
+		esc_html( $english ? 'Required before publishing a Vietnamese Article.' : 'Bắt buộc trước khi xuất bản Bài viết.' )
+	);
+	echo '</div>';
+
+	printf(
+		'<div class="pgds-metabox__surface-confirm" data-pgds="surface-confirm" hidden><label class="pgds-metabox__choice" for="%1$s"><input type="checkbox" id="%1$s" name="%1$s" value="1"> <span>%2$s</span></label></div>',
+		esc_attr( $confirm_id ),
+		esc_html( $english ? 'I confirm this post should move to another content type.' : 'Tôi xác nhận chuyển bài sang loại nội dung khác.' )
+	);
+
+	printf( '<input type="hidden" data-pgds="original-surface" value="%s">', esc_attr( $classification['valid'] ? $classification['surface'] : '' ) );
+	printf( '<input type="hidden" data-pgds="original-primary" value="%d">', (int) $classification['primary_id'] );
+	if ( ! $classification['valid'] ) {
+		printf(
+			'<div class="notice notice-warning inline"><p>%s</p></div>',
+			esc_html( $english ? 'This post needs a valid primary category before it can leave the Article review queue.' : 'Bài này đang cần phân loại. Hãy chọn loại nội dung và chuyên mục chính phù hợp.' )
+		);
+	}
+	echo '</div>';
+}
+
+/**
  * Render the grouped article meta box.
  *
  * @param WP_Post $post Post.
  */
 function pgds_render_meta_box( $post ) {
+	$surface        = pgds_current_editorial_surface( $post->ID );
+	$visible_groups = pgds_editorial_surface_groups( $surface );
+	$render_groups  = array_values( array_unique( array_merge( $visible_groups, array( 'video' ) ) ) );
+	$english        = 'vietnam-buddhism' === $surface;
+
 	wp_nonce_field( 'pgds_meta_save', 'pgds_meta_nonce' );
-	printf( '<input type="hidden" name="pgds_meta_groups[]" value="editorial">' );
-	printf( '<input type="hidden" name="pgds_meta_groups[]" value="homepage">' );
-	printf( '<input type="hidden" name="pgds_meta_groups[]" value="video">' );
+	foreach ( $visible_groups as $group_key ) {
+		printf(
+			'<input type="hidden" name="pgds_meta_groups[]" value="%s"%s>',
+			esc_attr( $group_key ),
+			'video' === $group_key ? ' data-pgds="dynamic-video-marker"' : ''
+		);
+	}
 
 	$feedback = $GLOBALS['pgds_meta_feedback'] ?? array();
 	if ( (int) ( $feedback['post_id'] ?? 0 ) === (int) $post->ID ) {
@@ -808,11 +1009,32 @@ function pgds_render_meta_box( $post ) {
 	}
 	pgds_render_article_warnings( pgds_get_article_warnings( $post->ID ) );
 
-	$fields = pgds_meta_fields();
+	$fields = pgds_meta_fields( $surface );
 	echo '<div class="pgds-metabox">';
-	foreach ( pgds_meta_groups() as $group_key => $group ) {
-		$collapsed = ! empty( $group['collapsed'] );
-		printf( '<fieldset class="pgds-metabox__group pgds-metabox__group--%s%s">', esc_attr( $group_key ), $collapsed ? ' is-collapsed' : '' );
+	printf(
+		'<p class="pgds-metabox__return"><a href="%s">&larr; %s</a></p>',
+		esc_url( pgds_editorial_list_url( $surface ) ),
+		esc_html( $english ? 'Back to Vietnam Buddhism' : 'Quay lại danh sách ' . pgds_editorial_surfaces()[ $surface ]['label'] )
+	);
+	pgds_render_classification_control( $post, $surface );
+	if ( 'emagazine' === $surface ) {
+		echo '<div class="notice notice-info inline"><p>';
+		echo esc_html__( 'Mở trình chèn Gutenberg, chọn Patterns → PGDS E-magazine để thêm tiêu đề chương, ảnh rộng/toàn chiều rộng, cặp ảnh, caption và trích dẫn.', 'pgds' );
+		echo '</p></div>';
+	}
+	foreach ( pgds_meta_groups( $surface ) as $group_key => $group ) {
+		if ( ! in_array( $group_key, $render_groups, true ) ) {
+			continue;
+		}
+		$collapsed    = ! empty( $group['collapsed'] );
+		$group_hidden = ! in_array( $group_key, $visible_groups, true );
+		printf(
+			'<fieldset class="pgds-metabox__group pgds-metabox__group--%s%s" data-pgds-group="%s"%s>',
+			esc_attr( $group_key ),
+			$collapsed ? ' is-collapsed' : '',
+			esc_attr( $group_key ),
+			$group_hidden ? ' hidden' : ''
+		);
 		if ( $collapsed ) {
 			printf( '<legend><button class="pgds-metabox__group-toggle" type="button" aria-expanded="false" aria-controls="pgds-meta-group-%s">%s</button></legend>', esc_attr( $group_key ), esc_html( $group['label'] ) );
 			printf( '<div id="pgds-meta-group-%s" class="pgds-metabox__group-content" hidden>', esc_attr( $group_key ) );
@@ -823,16 +1045,19 @@ function pgds_render_meta_box( $post ) {
 		printf( '<p class="pgds-metabox__group-help">%s</p>', esc_html( $group['description'] ) );
 
 		foreach ( $fields as $key => $field ) {
-			if ( $group_key === $field['group'] ) {
-				pgds_render_meta_field( $post->ID, $key, $field );
+			if ( '_pgds_primary_cat' !== $key && $group_key === $field['group'] ) {
+				pgds_render_meta_field( $post->ID, $key, $field, $surface );
 			}
 		}
 
 		if ( 'video' === $group_key ) {
 			echo '<div class="pgds-metabox__field">';
-			echo '<span class="pgds-metabox__label">Trạng thái</span>';
-			printf( '<output class="pgds-metabox__readonly">%s</output>', esc_html( pgds_video_status_label( $post->ID ) ) );
-			echo '<p class="description">PGDS tự kiểm tra trạng thái video; người biên tập không cần nhập.</p>';
+			printf( '<span class="pgds-metabox__label">%s</span>', esc_html( $english ? 'Status' : 'Trạng thái' ) );
+			printf( '<output class="pgds-metabox__readonly">%s</output>', esc_html( pgds_video_status_label( $post->ID, $english ) ) );
+			printf(
+				'<p class="description">%s</p>',
+				esc_html( $english ? 'PGDS checks the video status automatically; editors do not need to enter it.' : 'PGDS tự kiểm tra trạng thái video; người biên tập không cần nhập.' )
+			);
 			echo '</div>';
 		}
 
@@ -840,6 +1065,28 @@ function pgds_render_meta_box( $post ) {
 		echo '</fieldset>';
 	}
 	echo '</div>';
+}
+
+/**
+ * Validate the stored classification and required publish metadata.
+ *
+ * @param int $post_id Post ID.
+ * @return true|WP_Error
+ */
+function pgds_validate_editorial_publish_post( $post_id ) {
+	$classification = pgds_get_editorial_classification( $post_id );
+	if ( ! $classification['valid'] ) {
+		return new WP_Error( 'pgds_article_category_required' );
+	}
+
+	if ( 'video' === $classification['surface'] ) {
+		$youtube_id = pgds_normalize_youtube_input( get_post_meta( $post_id, '_pgds_youtube_id', true ) );
+		if ( is_wp_error( $youtube_id ) || ! $youtube_id ) {
+			return new WP_Error( 'pgds_video_requires_youtube' );
+		}
+	}
+
+	return true;
 }
 
 /**
@@ -851,7 +1098,7 @@ function pgds_render_meta_box( $post ) {
  * @param WP_Post|null $post_before Post before the save.
  */
 function pgds_save_meta( $post_id, $post, $update, $post_before ) {
-	unset( $update, $post_before );
+	unset( $update );
 
 	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
 		return;
@@ -876,6 +1123,52 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 	$submitted_groups = isset( $_POST['pgds_meta_groups'] ) ? (array) wp_unslash( $_POST['pgds_meta_groups'] ) : array();
 	$submitted_groups = array_map( 'sanitize_key', $submitted_groups );
 	$errors           = array();
+	$requested_surface = isset( $_POST['pgds_surface'] ) ? pgds_sanitize_editorial_surface( wp_unslash( $_POST['pgds_surface'] ) ) : '';
+
+	if ( in_array( 'editorial', $submitted_groups, true ) && isset( $_POST['pgds_surface'] ) ) {
+		$classification = pgds_get_editorial_classification( $post_id );
+		$confirmed      = isset( $_POST['pgds_surface_change_confirm'] );
+		$article_slug   = isset( $_POST['pgds_article_primary_slug'] ) ? sanitize_title( wp_unslash( $_POST['pgds_article_primary_slug'] ) ) : '';
+		$can_change     = true;
+
+		if ( ! $requested_surface ) {
+			$errors[]  = 'pgds_invalid_editorial_surface';
+			$can_change = false;
+		} elseif ( $classification['valid'] && $classification['surface'] !== $requested_surface && ! $confirmed ) {
+			$errors[]  = 'pgds_surface_change_confirmation_required';
+			$can_change = false;
+		}
+
+		if ( $can_change && 'publish' === $post->post_status && 'video' === $requested_surface ) {
+			$youtube_raw = isset( $_POST['_pgds_youtube_id'] )
+				? wp_unslash( $_POST['_pgds_youtube_id'] )
+				: get_post_meta( $post_id, '_pgds_youtube_id', true );
+			$youtube_id = pgds_normalize_youtube_input( $youtube_raw );
+			if ( is_wp_error( $youtube_id ) || ! $youtube_id ) {
+				$errors[]  = 'pgds_video_requires_youtube';
+				$can_change = false;
+			}
+		}
+
+		if ( $can_change ) {
+			$result = pgds_apply_editorial_classification( $post_id, $requested_surface, $article_slug );
+			if ( is_wp_error( $result ) ) {
+				$errors[] = $result->get_error_code();
+			}
+		}
+	} elseif ( in_array( 'editorial', $submitted_groups, true ) && isset( $_POST['_pgds_primary_cat'] ) ) {
+		// Preserve the pre-surface classic form contract for compatible integrations.
+		$assigned_ids = wp_get_post_categories( $post_id, array( 'fields' => 'ids' ) );
+		$category     = pgds_validate_primary_category(
+			wp_unslash( $_POST['_pgds_primary_cat'] ),
+			is_array( $assigned_ids ) ? $assigned_ids : array()
+		);
+		if ( is_wp_error( $category ) ) {
+			$errors[] = $category->get_error_code();
+		} else {
+			update_post_meta( $post_id, '_pgds_primary_cat', $category );
+		}
+	}
 
 	if ( in_array( 'homepage', $submitted_groups, true ) ) {
 		$new_featured = isset( $_POST['_pgds_is_featured'] );
@@ -891,25 +1184,17 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		}
 	}
 
-	if ( in_array( 'editorial', $submitted_groups, true ) && isset( $_POST['_pgds_primary_cat'] ) ) {
-		$assigned_ids = wp_get_post_categories( $post_id, array( 'fields' => 'ids' ) );
-		$category     = pgds_validate_primary_category(
-			wp_unslash( $_POST['_pgds_primary_cat'] ),
-			is_array( $assigned_ids ) ? $assigned_ids : array()
-		);
-		if ( is_wp_error( $category ) ) {
-			$errors[] = $category->get_error_code();
-		} else {
-			update_post_meta( $post_id, '_pgds_primary_cat', $category );
-		}
-	}
-
 	if ( in_array( 'video', $submitted_groups, true ) && isset( $_POST['_pgds_youtube_id'] ) ) {
 		$youtube_id = pgds_normalize_youtube_input( wp_unslash( $_POST['_pgds_youtube_id'] ) );
 		if ( is_wp_error( $youtube_id ) ) {
 			$errors[] = $youtube_id->get_error_code();
 		} elseif ( '' === $youtube_id ) {
-			delete_post_meta( $post_id, '_pgds_youtube_id' );
+			$classification = pgds_get_editorial_classification( $post_id );
+			if ( 'publish' === $post->post_status && $classification['valid'] && 'video' === $classification['surface'] ) {
+				$errors[] = 'pgds_video_requires_youtube';
+			} else {
+				delete_post_meta( $post_id, '_pgds_youtube_id' );
+			}
 		} else {
 			update_post_meta( $post_id, '_pgds_youtube_id', $youtube_id );
 		}
@@ -924,6 +1209,22 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		}
 		if ( isset( $_POST['_pgds_sapo'] ) ) {
 			update_post_meta( $post_id, '_pgds_sapo', sanitize_textarea_field( wp_unslash( $_POST['_pgds_sapo'] ) ) );
+		}
+	}
+
+	$was_published = $post_before instanceof WP_Post && 'publish' === $post_before->post_status;
+	if ( 'publish' === $post->post_status && ! $was_published ) {
+		$publish_validation = pgds_validate_editorial_publish_post( $post_id );
+		if ( is_wp_error( $publish_validation ) ) {
+			$errors[] = $publish_validation->get_error_code();
+			remove_action( 'wp_after_insert_post', 'pgds_save_meta', 10 );
+			wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => 'draft',
+				)
+			);
+			add_action( 'wp_after_insert_post', 'pgds_save_meta', 10, 4 );
 		}
 	}
 
@@ -953,15 +1254,12 @@ function pgds_rest_existing_meta( $post_id, $key, $default ) {
 function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 	$meta_supplied       = $request->has_param( 'meta' );
 	$categories_supplied = $request->has_param( 'categories' );
-
-	if ( ! $meta_supplied && ! $categories_supplied ) {
-		return $prepared_post;
-	}
-
 	$meta = $meta_supplied ? $request->get_param( 'meta' ) : array();
 	if ( ! is_array( $meta ) ) {
 		return $prepared_post;
 	}
+	$post_id      = absint( $request['id'] );
+	$rest_surface = $post_id ? pgds_get_editorial_classification( $post_id )['surface'] : 'article';
 
 	foreach ( pgds_synchronized_meta_keys() as $key ) {
 		if ( array_key_exists( $key, $meta ) ) {
@@ -973,7 +1271,6 @@ function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 		}
 	}
 
-	$post_id = absint( $request['id'] );
 	if ( array_key_exists( '_pgds_is_featured', $meta ) || array_key_exists( '_pgds_feature_rank', $meta ) ) {
 		$featured = array_key_exists( '_pgds_is_featured', $meta )
 			? rest_sanitize_boolean( $meta['_pgds_is_featured'] )
@@ -986,7 +1283,7 @@ function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 		if ( is_wp_error( $rank ) ) {
 			return new WP_Error(
 				$rank->get_error_code(),
-				pgds_meta_feedback_messages()[ $rank->get_error_code() ],
+				pgds_meta_feedback_messages( $rest_surface )[ $rank->get_error_code() ],
 				array( 'status' => 400 )
 			);
 		}
@@ -1008,7 +1305,7 @@ function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 		if ( is_wp_error( $category ) ) {
 			return new WP_Error(
 				$category->get_error_code(),
-				pgds_meta_feedback_messages()[ $category->get_error_code() ],
+				pgds_meta_feedback_messages( $rest_surface )[ $category->get_error_code() ],
 				array( 'status' => 400 )
 			);
 		}
@@ -1022,11 +1319,47 @@ function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 		if ( is_wp_error( $youtube_id ) ) {
 			return new WP_Error(
 				$youtube_id->get_error_code(),
-				pgds_meta_feedback_messages()[ $youtube_id->get_error_code() ],
+				pgds_meta_feedback_messages( $rest_surface )[ $youtube_id->get_error_code() ],
 				array( 'status' => 400 )
 			);
 		}
 		$meta['_pgds_youtube_id'] = $youtube_id;
+	}
+
+	$existing_post   = $post_id ? get_post( $post_id ) : null;
+	$current_status  = $existing_post instanceof WP_Post ? $existing_post->post_status : '';
+	$requested_status = $request->has_param( 'status' ) ? sanitize_key( (string) $request->get_param( 'status' ) ) : '';
+	$final_status    = $requested_status ? $requested_status : $current_status;
+	$workflow_change = $categories_supplied || array_key_exists( '_pgds_primary_cat', $meta ) || array_key_exists( '_pgds_youtube_id', $meta );
+	$validate_publish = 'publish' === $final_status && ( ! $post_id || 'publish' !== $current_status || $workflow_change );
+
+	if ( $validate_publish ) {
+		$primary_id = array_key_exists( '_pgds_primary_cat', $meta )
+			? absint( $meta['_pgds_primary_cat'] )
+			: absint( pgds_rest_existing_meta( $post_id, '_pgds_primary_cat', 0 ) );
+		$classification = pgds_classify_editorial_values( $primary_id, is_array( $assigned_ids ) ? $assigned_ids : array() );
+
+		if ( ! $classification['valid'] ) {
+			return new WP_Error(
+				'pgds_article_category_required',
+				pgds_meta_feedback_messages( $rest_surface )['pgds_article_category_required'],
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( 'video' === $classification['surface'] ) {
+			$youtube_raw = array_key_exists( '_pgds_youtube_id', $meta )
+				? $meta['_pgds_youtube_id']
+				: pgds_rest_existing_meta( $post_id, '_pgds_youtube_id', '' );
+			$youtube_id = pgds_normalize_youtube_input( $youtube_raw );
+			if ( is_wp_error( $youtube_id ) || ! $youtube_id ) {
+				return new WP_Error(
+					'pgds_video_requires_youtube',
+					pgds_meta_feedback_messages( 'video' )['pgds_video_requires_youtube'],
+					array( 'status' => 400 )
+				);
+			}
+		}
 	}
 
 	if ( $meta_supplied ) {

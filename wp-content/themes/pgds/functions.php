@@ -25,6 +25,7 @@ $pgds_modules = array(
 	'inc/nav-walker.php',    // nav walker + fallback (7 items, dropdown a11y)
 	'inc/enqueue.php',       // asset + hash versioning (reads manifest.json)
 	'inc/cpt-tax.php',       // CPT + taxonomy
+	'inc/editorial-surfaces.php', // four admin workflows over the shared post model
 	'inc/meta-fields.php',   // custom field + meta box (no ACF)
 	'inc/template-tags.php', // display helpers
 	'inc/query-blocks.php',  // query for the 11 front-page blocks + dedup
