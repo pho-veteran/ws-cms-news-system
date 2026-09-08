@@ -199,6 +199,29 @@ function pgds_cms_editor_render_article( $post_id ) {
 	}
 }
 
+/**
+ * Render the E-magazine template for one fixture post.
+ *
+ * @param int $post_id Post ID.
+ * @return string
+ */
+function pgds_cms_editor_render_emagazine( $post_id ) {
+	global $post;
+
+	$previous_post = $post;
+	$post          = get_post( $post_id );
+	setup_postdata( $post );
+
+	try {
+		ob_start();
+		get_template_part( 'template-parts/content-single-emagazine' );
+		return ob_get_clean();
+	} finally {
+		wp_reset_postdata();
+		$post = $previous_post;
+	}
+}
+
 function pgds_cms_editor_cleanup() {
 	global $pgds_cms_editor_posts, $pgds_cms_editor_users, $pgds_cms_editor_user_id;
 
@@ -231,6 +254,9 @@ try {
 		'pgds_admin_surface_where',
 		'pgds_auto_approve_reader_comment',
 		'pgds_comments_per_page',
+		'pgds_enable_comment_pagination',
+		'pgds_filter_comments_per_page',
+		'pgds_filter_default_comments_page',
 		'pgds_comment_page_count',
 		'pgds_comment_card',
 		'pgds_rest_synchronized_meta_is_unchanged',
@@ -381,6 +407,9 @@ try {
 	wp_set_post_categories( $post_id, array( (int) $valid_category['term_id'] ) );
 
 	pgds_cms_editor_assert( 8 === pgds_comments_per_page(), 'reader comments use the theme pagination size' );
+	pgds_cms_editor_assert( true === (bool) get_option( 'page_comments' ), 'WordPress canonical comment pagination is enabled' );
+	pgds_cms_editor_assert( 8 === (int) get_option( 'comments_per_page' ), 'WordPress comment links use the theme pagination size' );
+	pgds_cms_editor_assert( 'oldest' === get_option( 'default_comments_page' ), 'core page numbering starts with the first newest-sorted comment slice' );
 	pgds_cms_editor_assert(
 		'spam' === pgds_auto_approve_reader_comment( 'spam', array( 'comment_type' => 'comment' ) ),
 		'comment auto-approval preserves an explicit spam decision'
@@ -1153,6 +1182,25 @@ try {
 	}
 	pgds_cms_editor_assert( in_array( $surface_fixture_ids['video'], pgds_cms_editor_surface_post_ids( 'video' ), true ), 'unavailable Video remains in the Video workflow' );
 
+	$minimal_emagazine_id = $surface_fixture_ids['emagazine'];
+	wp_update_post( array( 'ID' => $minimal_emagazine_id, 'comment_status' => 'closed' ) );
+	delete_post_thumbnail( $minimal_emagazine_id );
+	delete_post_meta( $minimal_emagazine_id, '_pgds_sapo' );
+	delete_post_meta( $minimal_emagazine_id, '_pgds_display_author' );
+	delete_post_meta( $minimal_emagazine_id, '_pgds_source' );
+	$empty_emagazine_queries = static function ( $query ) {
+		if ( 'post' === $query->get( 'post_type' ) && 4 === (int) $query->get( 'posts_per_page' ) ) {
+			$query->set( 'post__in', array( 0 ) );
+		}
+	};
+	add_action( 'pre_get_posts', $empty_emagazine_queries, PHP_INT_MAX );
+	$minimal_emagazine_markup = pgds_cms_editor_render_emagazine( $minimal_emagazine_id );
+	remove_action( 'pre_get_posts', $empty_emagazine_queries, PHP_INT_MAX );
+	pgds_cms_editor_assert( false !== strpos( $minimal_emagazine_markup, 'class="pgds-emagazine"' ), 'minimal E-magazine renders its dedicated layout' );
+	pgds_cms_editor_assert( false === strpos( $minimal_emagazine_markup, 'pgds-emagazine__cover' ), 'E-magazine without a cover omits the cover container' );
+	pgds_cms_editor_assert( false === strpos( $minimal_emagazine_markup, 'id="comments"' ), 'E-magazine without comments omits the comments container' );
+	pgds_cms_editor_assert( false === strpos( $minimal_emagazine_markup, 'pgds-emagazine__more' ), 'E-magazine without recommendations omits the related container' );
+
 	$vietnam_buddhism_id = $surface_fixture_ids['vietnam-buddhism'];
 	update_post_meta( $vietnam_buddhism_id, '_pgds_is_featured', '1' );
 	$vietnam_buddhism_warnings = pgds_get_article_warnings( $vietnam_buddhism_id );
@@ -1321,6 +1369,51 @@ try {
 	$pattern_registry = WP_Block_Patterns_Registry::get_instance();
 	foreach ( array( 'emagazine-chapter-heading', 'emagazine-wide-image', 'emagazine-full-image', 'emagazine-image-pair', 'emagazine-pull-quote' ) as $pattern_slug ) {
 		pgds_cms_editor_assert( $pattern_registry->is_registered( 'pgds/' . $pattern_slug ), sprintf( '%s E-magazine pattern is registered', $pattern_slug ) );
+	}
+	$chapter_pattern = $pattern_registry->get_registered( 'pgds/emagazine-chapter-heading' );
+	pgds_cms_editor_assert(
+		false !== strpos( (string) ( $chapter_pattern['content'] ?? '' ), 'pgds-emagazine-chapter__number">01<' ),
+		'E-magazine chapter pattern keeps the numbered marker contract'
+	);
+	$recommendation_ids = array();
+	foreach ( array( 'emagazine', 'article' ) as $recommendation_surface ) {
+		$term_id = 'emagazine' === $recommendation_surface ? $surface_terms['emagazine'] : $surface_terms['tin-phat-su'];
+		for ( $index = 0; $index < 5; $index++ ) {
+			$recommendation_id = wp_insert_post(
+				array(
+					'post_type'     => 'post',
+					'post_status'   => 'publish',
+					'post_title'    => sprintf( 'PGDS %s recommendation %d %s', $recommendation_surface, $index, $token ),
+					'post_content'  => 'Recommendation fixture.',
+					'post_category' => array( $term_id ),
+				),
+				true
+			);
+			if ( is_wp_error( $recommendation_id ) ) {
+				throw new RuntimeException( 'Could not create E-magazine recommendation fixture.' );
+			}
+			$recommendation_id          = (int) $recommendation_id;
+			$pgds_cms_editor_posts[]     = $recommendation_id;
+			$recommendation_ids[]        = $recommendation_id;
+			update_post_meta( $recommendation_id, '_pgds_primary_cat', $term_id );
+		}
+	}
+	ob_start();
+	pgds_render_meta_box( get_post( $recommendation_ids[1] ) );
+	$emagazine_metabox = ob_get_clean();
+	foreach ( array( 'sapo', 'cover', 'caption', 'author', 'credit', 'chapter' ) as $check_key ) {
+		pgds_cms_editor_assert( false !== strpos( $emagazine_metabox, 'data-pgds-check="' . $check_key . '"' ), sprintf( 'E-magazine checklist includes %s guidance', $check_key ) );
+	}
+	pgds_cms_editor_assert( false !== strpos( $emagazine_metabox, 'không chặn lưu hoặc xuất bản' ), 'E-magazine checklist is advisory rather than a publish guard' );
+
+	$recommendations = pgds_emagazine_more_posts( $recommendation_ids[0] );
+	pgds_cms_editor_assert( 4 === count( $recommendations['emagazine'] ) && 4 === count( $recommendations['latest'] ), 'E-magazine detail returns two complete four-post recommendation groups' );
+	pgds_cms_editor_assert( ! in_array( $recommendation_ids[0], wp_list_pluck( $recommendations['emagazine'], 'ID' ), true ), 'E-magazine recommendations exclude the current post' );
+	foreach ( $recommendations['emagazine'] as $recommendation ) {
+		pgds_cms_editor_assert( 'emagazine' === pgds_get_editorial_classification( $recommendation->ID )['surface'], 'E-magazine recommendation grid contains only canonical E-magazine posts' );
+	}
+	foreach ( $recommendations['latest'] as $recommendation ) {
+		pgds_cms_editor_assert( 'emagazine' !== pgds_get_editorial_classification( $recommendation->ID )['surface'], 'latest recommendation strip excludes E-magazine posts' );
 	}
 
 	$previous_menu = $GLOBALS['menu'] ?? array();

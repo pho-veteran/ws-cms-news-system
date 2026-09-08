@@ -110,6 +110,57 @@ function pgds_query_posts( $category_slug, $count, $extra = array() ) {
 }
 
 /**
+ * Return the two deterministic E-magazine detail recommendation groups.
+ *
+ * @param int $post_id Current post ID.
+ * @return array{emagazine:WP_Post[],latest:WP_Post[]}
+ */
+function pgds_emagazine_more_posts( $post_id ) {
+	$post_id = absint( $post_id );
+	$term    = pgds_category_term( 'emagazine' );
+	if ( ! $term instanceof WP_Term ) {
+		return array( 'emagazine' => array(), 'latest' => array() );
+	}
+
+	$common = array(
+		'post_type'              => 'post',
+		'post_status'            => 'publish',
+		'posts_per_page'         => 4,
+		'post__not_in'           => array_filter( array( $post_id ) ),
+		'ignore_sticky_posts'    => true,
+		'no_found_rows'          => true,
+		'orderby'                => 'date',
+		'order'                  => 'DESC',
+		'update_post_meta_cache' => true,
+		'update_post_term_cache' => true,
+	);
+	$emagazine = get_posts(
+		array_merge(
+			$common,
+			array(
+				'category__in' => array( (int) $term->term_id ),
+				'meta_key'     => '_pgds_primary_cat',
+				'meta_value'   => (string) $term->term_id,
+			)
+		)
+	);
+	$latest = get_posts(
+		array_merge(
+			$common,
+			array(
+				'meta_query' => array(
+					'relation' => 'OR',
+					array( 'key' => '_pgds_primary_cat', 'compare' => 'NOT EXISTS' ),
+					array( 'key' => '_pgds_primary_cat', 'value' => (int) $term->term_id, 'compare' => '!=', 'type' => 'NUMERIC' ),
+				),
+			)
+		)
+	);
+
+	return array( 'emagazine' => $emagazine, 'latest' => $latest );
+}
+
+/**
  * Query the curated (featured) slot by rank, fallback to most recent post.
  *
  * @param int      $rank_from Rank from.

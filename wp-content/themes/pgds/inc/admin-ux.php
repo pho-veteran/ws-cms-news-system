@@ -768,6 +768,25 @@ function pgds_admin_editor_hints( $hook ) {
 		#pgds_article_meta .pgds-metabox__surface-confirm {
 			margin-top: 12px;
 		}
+		#pgds_article_meta .pgds-metabox__emagazine-checklist {
+			background: #fff8e5;
+			border-left: 4px solid #A9812F;
+			margin-bottom: 16px;
+			padding: 12px 16px;
+		}
+		#pgds_article_meta .pgds-metabox__emagazine-checklist p {
+			color: #50575e;
+			margin: 4px 0 8px;
+		}
+		#pgds_article_meta .pgds-metabox__emagazine-checklist ul {
+			margin: 0;
+		}
+		#pgds_article_meta .pgds-metabox__emagazine-checklist li {
+			margin: 4px 0;
+		}
+		#pgds_article_meta .pgds-metabox__emagazine-checklist .is-complete {
+			color: #1e6b3a;
+		}
 		#pgds_article_meta [hidden] {
 			display: none !important;
 		}
@@ -1112,6 +1131,67 @@ function pgds_admin_editor_hints( $hook ) {
 			update();
 		}
 
+		function bindEmagazineChecklist() {
+			var checklist = document.querySelector( '[data-pgds="emagazine-checklist"]' );
+			if ( ! checklist || checklist.dataset.pgdsBound ) {
+				return;
+			}
+
+			checklist.dataset.pgdsBound = '1';
+			var labels = {
+				sapo: 'Sa-pô',
+				cover: 'Ảnh bìa',
+				caption: 'Chú thích ảnh bìa',
+				author: 'Tác giả hiển thị',
+				credit: 'Nguồn / ghi công ảnh',
+				chapter: 'Ít nhất một tiêu đề chương'
+			};
+
+			function setState( key, complete ) {
+				var item = checklist.querySelector( '[data-pgds-check="' + key + '"]' );
+				if ( ! item ) {
+					return;
+				}
+				item.classList.toggle( 'is-complete', complete );
+				item.classList.toggle( 'is-missing', ! complete );
+				item.innerHTML = '<span aria-hidden="true">' + ( complete ? '✓' : '○' ) + '</span> ' + labels[ key ];
+			}
+
+			function value( selector ) {
+				var field = document.querySelector( selector );
+				return field ? String( field.value || '' ).trim() : '';
+			}
+
+			function update() {
+				setState( 'sapo', Boolean( value( '#_pgds_sapo' ) ) );
+				setState( 'author', Boolean( value( '#_pgds_display_author' ) ) );
+				setState( 'credit', Boolean( value( '#_pgds_source' ) ) );
+
+				if ( ! window.wp || ! window.wp.data ) {
+					return;
+				}
+				var editor = window.wp.data.select( 'core/editor' );
+				var core = window.wp.data.select( 'core' );
+				if ( ! editor ) {
+					return;
+				}
+				var featuredId = Number( editor.getEditedPostAttribute( 'featured_media' ) || 0 );
+				var content = String( editor.getEditedPostContent ? editor.getEditedPostContent() : editor.getEditedPostAttribute( 'content' ) || '' );
+				var media = featuredId && core && core.getMedia ? core.getMedia( featuredId ) : null;
+				var caption = media && media.caption ? String( media.caption.raw || media.caption.rendered || '' ).replace( /<[^>]+>/g, '' ).trim() : '';
+				setState( 'cover', featuredId > 0 );
+				setState( 'caption', Boolean( featuredId && caption ) );
+				setState( 'chapter', content.indexOf( 'pgds-emagazine-chapter' ) !== -1 );
+			}
+
+			checklist.closest( '#pgds_article_meta' ).addEventListener( 'input', update );
+			checklist.closest( '#pgds_article_meta' ).addEventListener( 'change', update );
+			if ( window.wp && window.wp.data && window.wp.data.subscribe ) {
+				window.wp.data.subscribe( update );
+			}
+			update();
+		}
+
 		function findToggle() {
 			var buttons = document.querySelectorAll( 'button' );
 			for ( var i = 0; i < buttons.length; i++ ) {
@@ -1131,6 +1211,7 @@ function pgds_admin_editor_hints( $hook ) {
 			bindFeatureRankControl();
 			bindGroupToggles();
 			bindClassificationControl();
+			bindEmagazineChecklist();
 			tries++;
 			var toggle = findToggle();
 			if ( ! toggle ) {

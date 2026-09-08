@@ -6,8 +6,8 @@
  * Description: A two-column gallery for an image pair with individual captions.
  */
 ?>
-<!-- wp:gallery {"linkTo":"none","align":"wide","columns":2} -->
-<figure class="wp-block-gallery alignwide has-nested-images columns-2 is-cropped"><!-- wp:image {"sizeSlug":"large"} -->
+<!-- wp:gallery {"linkTo":"none","columns":2,"className":"pgds-emagazine-image-pair"} -->
+<figure class="wp-block-gallery has-nested-images columns-2 is-cropped pgds-emagazine-image-pair"><!-- wp:image {"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large"><figcaption class="wp-element-caption">Chú thích ảnh thứ nhất</figcaption></figure>
 <!-- /wp:image -->
 

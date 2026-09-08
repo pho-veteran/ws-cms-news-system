@@ -1406,102 +1406,322 @@
       {
         "source_id": "preview-2026-emagazine-01",
         "asset_id": "photo-02",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-01",
+        "asset_id": "photo-04",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-02",
         "asset_id": "photo-03",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-02",
+        "asset_id": "photo-05",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-03",
         "asset_id": "photo-04",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-03",
+        "asset_id": "photo-06",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-04",
         "asset_id": "photo-05",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-04",
+        "asset_id": "photo-08",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-05",
         "asset_id": "photo-06",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-05",
+        "asset_id": "photo-10",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-06",
         "asset_id": "photo-08",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-06",
+        "asset_id": "photo-12",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-07",
         "asset_id": "photo-10",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-07",
+        "asset_id": "photo-13",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-08",
         "asset_id": "photo-12",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-08",
+        "asset_id": "photo-14",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-09",
         "asset_id": "photo-13",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-09",
+        "asset_id": "photo-15",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-10",
         "asset_id": "photo-14",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-10",
+        "asset_id": "photo-16",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-11",
         "asset_id": "photo-15",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-11",
+        "asset_id": "photo-17",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-12",
         "asset_id": "photo-16",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-12",
+        "asset_id": "photo-18",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-13",
         "asset_id": "photo-17",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-13",
+        "asset_id": "photo-19",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-14",
         "asset_id": "photo-18",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-14",
+        "asset_id": "photo-20",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-15",
         "asset_id": "photo-19",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-15",
+        "asset_id": "photo-21",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-16",
         "asset_id": "photo-20",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-16",
+        "asset_id": "photo-22",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-17",
         "asset_id": "photo-21",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-17",
+        "asset_id": "photo-23",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-18",
         "asset_id": "photo-22",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-18",
+        "asset_id": "photo-24",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-19",
         "asset_id": "photo-23",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-19",
+        "asset_id": "photo-01",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-emagazine-20",
         "asset_id": "photo-24",
-        "size": "large"
+        "size": "large",
+        "marker": "<!--pgds-preview-emag-wide-->",
+        "align": "wide",
+        "class_name": "pgds-emagazine-figure"
+      },
+      {
+        "source_id": "preview-2026-emagazine-20",
+        "asset_id": "photo-02",
+        "size": "full",
+        "marker": "<!--pgds-preview-emag-full-->",
+        "align": "full",
+        "class_name": "pgds-emagazine-figure pgds-emagazine-figure--full"
       },
       {
         "source_id": "preview-2026-vietnam-buddhism-01",
