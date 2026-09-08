@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div>
 			<h4><?php bloginfo( 'name' ); ?></h4>
 			<p class="pgds-footer__intro">
-				<?php echo esc_html( __( 'Chuyên trang tin điện tử - tin tức, đời sống và văn hóa Phật giáo', 'pgds' ) ); ?>
+				<?php echo esc_html( __( 'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.', 'pgds' ) ); ?>
 			</p>
 			<?php
 			/*
@@ -72,7 +72,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php
 		printf(
 			/* translators: %1$s year, %2$s site name */
-			esc_html__( '© %1$s %2$s — Bản quyền thuộc về toà soạn.', 'pgds' ),
+			esc_html__( '© %1$s %2$s', 'pgds' ),
 			esc_html( date_i18n( 'Y' ) ),
 			esc_html( get_bloginfo( 'name' ) )
 		);

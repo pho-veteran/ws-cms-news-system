@@ -554,7 +554,16 @@ if (
 	200 !== (int) wp_remote_retrieve_response_code( $homepage_response ) ||
 	false === strpos( $homepage_markup, 'src="' . esc_url( PGDS_LOGO_URI ) . '"' ) ||
 	false === strpos( $homepage_markup, '"url":"' . $escaped_logo_url . '"' ) ||
-	1 === preg_match( '#/wp-content/uploads/[^"\']*logo#i', $homepage_markup )
+	1 === preg_match( '#/wp-content/uploads/[^"\']*logo#i', $homepage_markup ) ||
+	3 !== preg_match_all( '/class="pgds-photo-panel__dot(?: is-active)?"/', $homepage_markup ) ||
+	8 !== substr_count( $homepage_markup, 'class="pgds-media-thumb"' ) ||
+	2 !== substr_count( $homepage_markup, 'class="pgds-media-bullets"' ) ||
+	5 !== substr_count( $homepage_markup, 'class="pgds-play' ) ||
+	false === strpos( $homepage_markup, '>Vietnam Buddhism<' ) ||
+	false === strpos( $homepage_markup, '>View more<' ) ||
+	false === strpos( $homepage_markup, 'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.' ) ||
+	false === strpos( $homepage_markup, '© ' . date_i18n( 'Y' ) . ' ' . get_bloginfo( 'name' ) ) ||
+	false !== strpos( $homepage_markup, 'Bản quyền thuộc về toà soạn' )
 ) {
 	WP_CLI::warning( 'Homepage route contract failed during preview verification.' );
 	++$route_errors;
@@ -572,6 +581,18 @@ foreach ( $sample_source_ids as $source_id ) {
 	$markup   = is_wp_error( $response ) ? '' : (string) wp_remote_retrieve_body( $response );
 	if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) || '' === $markup ) {
 		WP_CLI::warning( sprintf( 'Base route failed for %1$s: %2$s', $source_id, $url ) );
+		++$route_errors;
+	}
+	$expected_footer_intro = 'preview-2026-vietnam-buddhism-01' === $source_id
+		? 'A Buddhist news, culture, and lifestyle publication.'
+		: 'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.';
+	if (
+		false === strpos( $markup, 'class="pgds-footer block"' ) ||
+		false === strpos( $markup, $expected_footer_intro ) ||
+		false === strpos( $markup, '© ' . date_i18n( 'Y' ) . ' ' . get_bloginfo( 'name' ) ) ||
+		false !== strpos( $markup, 'Bản quyền thuộc về toà soạn' )
+	) {
+		WP_CLI::warning( sprintf( 'Shared footer contract failed for %s.', $source_id ) );
 		++$route_errors;
 	}
 	if ( 'preview-2026-video-01' === $source_id && false === strpos( $markup, 'data-pgds="youtube-facade"' ) ) {

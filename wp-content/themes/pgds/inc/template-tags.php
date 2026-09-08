@@ -554,9 +554,10 @@ function pgds_english_reader_strings() {
 		'Mệnh ngày:'                                                             => 'Day element:',
 		'Giờ hoàng đạo:'                                                         => 'Auspicious hours:',
 		'Chuyên trang tin điện tử - tin tức, đời sống và văn hóa Phật giáo'       => 'A Buddhist news, culture, and lifestyle publication',
+		'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.'      => 'A Buddhist news, culture, and lifestyle publication.',
 		'Liên hệ'                                                                => 'Contact',
 		'Tổng biên tập: [Họ tên]'                                                => 'Editor-in-Chief: [Name]',
-		'© %1$s %2$s — Bản quyền thuộc về toà soạn.'                             => '© %1$s %2$s — All rights reserved.',
+		'© %1$s %2$s'                                                             => '© %1$s %2$s',
 	);
 }
 
@@ -790,5 +791,5 @@ function pgds_format_duration( $seconds ) {
  * Play button SVG (shared).
  */
 function pgds_play_svg() {
-	echo '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>';
+	echo '<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="19"></circle><path d="M17 13l13 7-13 7z"></path></svg>';
 }

@@ -17,13 +17,13 @@
     // container and pushed the last tab off-screen (horizontal page scroll).
     flex-wrap: wrap;
     gap: $sp-3;
-    margin-bottom: $sp-5;
+    margin-bottom: 18px;
   }
 
   &__head-left {
     display: flex;
     align-items: center;
-    gap: $sp-2;
+    gap: 6px;
   }
 
   &__dot {
@@ -53,11 +53,9 @@
   justify-content: center;
   font-size: $fs-3xs;
   color: var(--pgds-gilt-pale);
-  // The comfortable target, not just the 24px WCAG floor: these are primary
-  // touch controls on the busiest block of the page.
-  min-block-size: $target-comfortable;
-  padding: 0 $sp-4;
-  border-radius: $radius-pill;
+  min-block-size: 28px;
+  padding: 0 13px;
+  border-radius: 14px;
   border: 1px solid var(--pgds-on-dark-25);
   background: none;
   cursor: pointer;
@@ -86,8 +84,12 @@
 .pgds-media-layout {
   display: grid;
   grid-template-columns: 1fr 2.05fr;
-  gap: $sp-6;
-  margin-bottom: $sp-5;
+  gap: 22px;
+  margin-bottom: 18px;
+
+  &--single {
+    grid-template-columns: 1fr;
+  }
 
   @include mq-max(lg) {
     grid-template-columns: 1fr;
@@ -96,6 +98,8 @@
 
 .pgds-media-feature {
   position: relative;
+  display: block;
+  height: 100%;
   border-radius: $radius-lg;
   overflow: hidden;
   min-height: 230px;
@@ -124,11 +128,12 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: $sp-4;
+  gap: 14px;
 }
 
 .pgds-media-thumb {
   position: relative;
+  display: block;
 
   .pgds-art {
     @include ratio(16, 11);
@@ -179,6 +184,21 @@
   width: 44px;
   height: 44px;
   z-index: 2;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  circle {
+    fill: var(--pgds-white);
+    opacity: .92;
+  }
+
+  path {
+    fill: var(--color-brand-strong);
+  }
 }
 
 // Thumbnail-scale play badge (the feature uses the full 44px).

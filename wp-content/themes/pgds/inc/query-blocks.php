@@ -349,7 +349,7 @@ function pgds_home_blocks() {
 		array(
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
-			'posts_per_page' => 5,
+			'posts_per_page' => 3,
 			'no_found_rows'  => true,
 			'post__not_in'   => PGDS_Used_Ids::all(),
 			'meta_query'     => array(
@@ -362,45 +362,24 @@ function pgds_home_blocks() {
 	);
 	PGDS_Used_Ids::mark( $photo->posts );
 
-	// (3) Media block: 1 feature + 4 thumbs (video category), 3 bullets (infographic only).
-	// Bullets query 'emagazine' SEPARATELY (don't query the parent 'media' to
-	// avoid stealing video posts from the thumbs).
-	// The media block is topped up from the wider 'media' parent rather than the whole
-	// site: a text news post in a video thumbnail grid (with a play badge over it)
-	// would misrepresent the content. If 'media' cannot fill it, the grid adapts its
-	// column count instead.
-	$media_feature = pgds_query_posts( 'video', 1 );
-	$media_thumbs  = pgds_query_posts( 'video', 4 );
-	if ( count( $media_thumbs ) < 4 ) {
-		$media_thumbs = array_merge(
-			$media_thumbs,
-			pgds_query_posts( 'media', 4 - count( $media_thumbs ) )
-		);
-	}
-	$media_bullets = pgds_query_posts( 'emagazine', 3 );
+	// (3) Media block: each editorial surface follows one chronological sequence.
+	// The five newest entries carry imagery (one feature + four thumbs); the next
+	// three become the compact text list. Keeping each panel within its own surface
+	// prevents E-magazine headlines from being presented as older Video entries.
+	$video_media_posts     = pgds_query_posts( 'video', 8 );
+	$emagazine_media_posts = pgds_query_posts( 'emagazine', 8 );
+	$media_feature         = $video_media_posts[0] ?? null;
+	$media_thumbs          = array_slice( $video_media_posts, 1, 4 );
+	$media_bullets         = array_slice( $video_media_posts, 5, 3 );
 
-	/*
-	 * Tabs 2 and 3 of the media block.
-	 *
-	 * The panels existed but held the literal text "Nội dung Emagazine sẽ cập nhật." /
-	 * "Nội dung Infographic sẽ cập nhật.". Because media-tabs.js implements the real
-	 * WAI-ARIA tabs pattern, both tabs were fully operable — so two of the three tabs on
-	 * the front page's largest interactive component led to a dead end. The client's demo
-	 * shows all three as content groups, and §2.2 specifies "3 tabs".
-	 *
-	 * Split by TAG, not by category: §4.1 fixes the taxonomy at one combined
-	 * `emagazine` child, and the seed data already distinguishes the two with
-	 * `infographic` and `emagazine` tags. Adding categories would contradict §4.1 (and the
-	 * import now refuses slugs outside that set), so the tag is the available signal.
-	 *
-	 * Not deduplicated against the video tab on purpose: a post only ever renders in ONE
-	 * visible panel (the other two are `hidden`), so excluding these from the tracker
-	 * would let the earlier tabs consume the posts these panels need and leave a visible
-	 * panel empty again. The §4.4 rule is about what a reader can see twice.
-	 */
+	// E-magazine uses the same visual chronology as Video. The structured shape is
+	// passed to the shared panel renderer so the two tabs cannot drift apart again.
 	$media_tabs = array(
-		'emagazine'   => pgds_query_tagged_posts( 'emagazine', 4 ),
-		'infographic' => pgds_query_tagged_posts( 'infographic', 4 ),
+		'emagazine' => array(
+			'feature' => $emagazine_media_posts[0] ?? null,
+			'thumbs'  => array_slice( $emagazine_media_posts, 1, 4 ),
+			'bullets' => array_slice( $emagazine_media_posts, 5, 3 ),
+		),
 	);
 
 	// ---------------------------------------------------------------------------
@@ -464,7 +443,7 @@ function pgds_home_blocks() {
 		'lead'          => $lead[0] ?? null,
 		'secondary'     => $secondary,
 		'photo'         => $photo->posts,
-		'media_feature' => $media_feature[0] ?? null,
+		'media_feature' => $media_feature,
 		'media_thumbs'  => $media_thumbs,
 		'media_bullets' => $media_bullets,
 		'media_tabs'    => $media_tabs,

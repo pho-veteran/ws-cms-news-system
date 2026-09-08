@@ -122,7 +122,37 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 	</div>
 
 	<!-- ============ (5) MEDIA BLOCK ============ -->
-	<?php if ( $B['media_feature'] || ! empty( $B['media_thumbs'] ) ) : ?>
+	<?php
+	$pgds_media_panels = array(
+		'video' => array(
+			'id'      => 'pgds-panel-video',
+			'tab'     => 'pgds-tab-video',
+			'label'   => __( 'Video', 'pgds' ),
+			'feature' => $B['media_feature'],
+			'thumbs'  => $B['media_thumbs'],
+			'bullets' => $B['media_bullets'],
+			'play'    => true,
+			'empty'   => __( 'Chưa có nội dung Video.', 'pgds' ),
+		),
+		'ema'   => array(
+			'id'      => 'pgds-panel-ema',
+			'tab'     => 'pgds-tab-ema',
+			'label'   => __( 'E-magazine', 'pgds' ),
+			'feature' => $B['media_tabs']['emagazine']['feature'] ?? null,
+			'thumbs'  => $B['media_tabs']['emagazine']['thumbs'] ?? array(),
+			'bullets' => $B['media_tabs']['emagazine']['bullets'] ?? array(),
+			'play'    => false,
+			'empty'   => __( 'Chưa có nội dung E-magazine.', 'pgds' ),
+		),
+	);
+	$pgds_has_media = array_filter(
+		$pgds_media_panels,
+		static function ( $panel ) {
+			return $panel['feature'] instanceof WP_Post || ! empty( $panel['thumbs'] ) || ! empty( $panel['bullets'] );
+		}
+	);
+	?>
+	<?php if ( $pgds_has_media ) : ?>
 	<section class="pgds-media-block" aria-labelledby="pgds-media-title">
 		<div class="pgds-media-block__head">
 			<div class="pgds-media-block__head-left">
@@ -130,87 +160,79 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 				<h2 class="pgds-media-block__title" id="pgds-media-title"><?php esc_html_e( 'Media', 'pgds' ); ?></h2>
 			</div>
 			<div class="pgds-media-block__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Loại media', 'pgds' ); ?>">
-				<button class="pgds-tab" role="tab" id="pgds-tab-video" aria-selected="true" aria-controls="pgds-panel-video"><?php esc_html_e( 'Video', 'pgds' ); ?></button>
-				<button class="pgds-tab" role="tab" id="pgds-tab-ema" aria-selected="false" aria-controls="pgds-panel-ema" tabindex="-1"><?php esc_html_e( 'E-magazine', 'pgds' ); ?></button>
+				<?php foreach ( $pgds_media_panels as $pgds_panel_key => $pgds_panel ) : ?>
+					<button class="pgds-tab" role="tab"
+						id="<?php echo esc_attr( $pgds_panel['tab'] ); ?>"
+						aria-selected="<?php echo esc_attr( 'video' === $pgds_panel_key ? 'true' : 'false' ); ?>"
+						aria-controls="<?php echo esc_attr( $pgds_panel['id'] ); ?>"
+						<?php echo 'video' !== $pgds_panel_key ? 'tabindex="-1"' : ''; ?>><?php echo esc_html( $pgds_panel['label'] ); ?></button>
+				<?php endforeach; ?>
 			</div>
 		</div>
 
-		<div class="pgds-tabpanel" role="tabpanel" id="pgds-panel-video" aria-labelledby="pgds-tab-video">
-			<div class="pgds-media-layout">
-				<?php if ( $B['media_feature'] ) : $mf = $B['media_feature']; ?>
-					<a class="pgds-media-feature" href="<?php echo esc_url( get_permalink( $mf ) ); ?>">
-						<?php pgds_art( $mf, 'pgds-lead', 'pgds-ratio-video' ); ?>
-						<span class="pgds-play" aria-hidden="true"><?php pgds_play_svg(); ?></span>
+		<?php foreach ( $pgds_media_panels as $pgds_panel_key => $pgds_panel ) : ?>
+			<?php
+			$pgds_panel_feature  = $pgds_panel['feature'] instanceof WP_Post ? $pgds_panel['feature'] : null;
+			$pgds_panel_thumbs   = array_filter( (array) $pgds_panel['thumbs'], static fn( $post ) => $post instanceof WP_Post );
+			$pgds_panel_bullets  = array_filter( (array) $pgds_panel['bullets'], static fn( $post ) => $post instanceof WP_Post );
+			$pgds_panel_has_right = $pgds_panel_thumbs || $pgds_panel_bullets;
+			$pgds_layout_classes  = array( 'pgds-media-layout' );
+			if ( ! $pgds_panel_feature || ! $pgds_panel_has_right ) {
+				$pgds_layout_classes[] = 'pgds-media-layout--single';
+			}
+			?>
+			<div class="pgds-tabpanel" role="tabpanel"
+				id="<?php echo esc_attr( $pgds_panel['id'] ); ?>"
+				aria-labelledby="<?php echo esc_attr( $pgds_panel['tab'] ); ?>"
+				<?php echo 'video' !== $pgds_panel_key ? 'hidden' : ''; ?>>
+				<?php if ( $pgds_panel_feature || $pgds_panel_has_right ) : ?>
+				<div class="<?php echo esc_attr( implode( ' ', $pgds_layout_classes ) ); ?>">
+				<?php if ( $pgds_panel_feature ) : ?>
+					<a class="pgds-media-feature" href="<?php echo esc_url( get_permalink( $pgds_panel_feature ) ); ?>">
+						<?php pgds_art( $pgds_panel_feature, 'pgds-lead', 'pgds-ratio-video' ); ?>
+						<?php if ( $pgds_panel['play'] ) : ?>
+							<span class="pgds-play" aria-hidden="true"><?php pgds_play_svg(); ?></span>
+						<?php endif; ?>
 						<span class="pgds-media-feature__overlay">
-							<span class="pgds-media-feature__title"><?php echo esc_html( get_the_title( $mf ) ); ?></span>
+							<span class="pgds-media-feature__title"><?php echo esc_html( get_the_title( $pgds_panel_feature ) ); ?></span>
 						</span>
 					</a>
 				<?php endif; ?>
 
+				<?php if ( $pgds_panel_has_right ) : ?>
 				<div class="pgds-media-right">
-					<div class="pgds-grid-4">
-						<?php foreach ( (array) $B['media_thumbs'] as $mt ) : ?>
+					<?php if ( $pgds_panel_thumbs ) : ?>
+						<div class="pgds-grid-4">
+						<?php foreach ( $pgds_panel_thumbs as $mt ) : ?>
 							<a class="pgds-media-thumb" href="<?php echo esc_url( get_permalink( $mt ) ); ?>">
 								<?php pgds_art( $mt, 'pgds-thumb', 'pgds-ratio-thumb' ); ?>
-								<span class="pgds-play pgds-play--sm" aria-hidden="true"><?php pgds_play_svg(); ?></span>
+								<?php if ( $pgds_panel['play'] ) : ?>
+									<span class="pgds-play pgds-play--sm" aria-hidden="true"><?php pgds_play_svg(); ?></span>
+								<?php endif; ?>
 								<span class="pgds-media-thumb__title"><?php echo esc_html( get_the_title( $mt ) ); ?></span>
 							</a>
 						<?php endforeach; ?>
-					</div>
+						</div>
+					<?php endif; ?>
 
-					<?php if ( ! empty( $B['media_bullets'] ) ) : ?>
+					<?php if ( $pgds_panel_bullets ) : ?>
 						<ul class="pgds-media-bullets">
-							<?php foreach ( $B['media_bullets'] as $mb ) : ?>
+							<?php foreach ( $pgds_panel_bullets as $mb ) : ?>
 								<li>
-									<span class="pgds-media-bullets__dot"></span>
+									<span class="pgds-media-bullets__dot" aria-hidden="true"></span>
 									<a href="<?php echo esc_url( get_permalink( $mb ) ); ?>"><?php echo esc_html( get_the_title( $mb ) ); ?></a>
 								</li>
 							<?php endforeach; ?>
 						</ul>
 					<?php endif; ?>
 				</div>
+				<?php endif; ?>
 			</div>
-		</div>
-
-		<?php
-		/*
-		 * Tabs 2 and 3 previously held "Nội dung Emagazine sẽ cập nhật." — but the tabs are
-		 * fully operable (media-tabs.js implements the real WAI-ARIA pattern), so two of the
-		 * three tabs on the page's largest interactive component were dead ends. Rendered
-		 * with the same thumbnail grid as the video tab so the three panels are visually
-		 * consistent, minus the play badge: these are articles, not videos, and a play
-		 * affordance over an infographic would promise something that cannot happen.
-		 *
-		 * A panel with genuinely no posts keeps an explanatory line rather than collapsing
-		 * to nothing, so the tab does not look broken.
-		 */
-		$pgds_media_panels = array(
-			'ema'  => array(
-				'id'    => 'pgds-panel-ema',
-				'tab'   => 'pgds-tab-ema',
-				'posts' => $B['media_tabs']['emagazine'] ?? array(),
-				'empty' => __( 'Chưa có nội dung E-magazine.', 'pgds' ),
-			),
-		);
-		foreach ( $pgds_media_panels as $pgds_panel ) :
-			?>
-			<div class="pgds-tabpanel" role="tabpanel" id="<?php echo esc_attr( $pgds_panel['id'] ); ?>" aria-labelledby="<?php echo esc_attr( $pgds_panel['tab'] ); ?>" hidden>
-				<?php if ( ! empty( $pgds_panel['posts'] ) ) : ?>
-					<div class="pgds-grid-4">
-						<?php foreach ( $pgds_panel['posts'] as $pgds_mp ) : ?>
-							<a class="pgds-media-thumb" href="<?php echo esc_url( get_permalink( $pgds_mp ) ); ?>">
-								<?php pgds_art( $pgds_mp, 'pgds-thumb', 'pgds-ratio-thumb' ); ?>
-								<span class="pgds-media-thumb__title"><?php echo esc_html( get_the_title( $pgds_mp ) ); ?></span>
-							</a>
-						<?php endforeach; ?>
-					</div>
 				<?php else : ?>
 					<p class="pgds-tabpanel__empty"><?php echo esc_html( $pgds_panel['empty'] ); ?></p>
 				<?php endif; ?>
 			</div>
-			<?php
-		endforeach;
-		?>
+		<?php endforeach; ?>
 	</section>
 	<?php endif; ?>
 
@@ -291,8 +313,8 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 			<?php if ( ! empty( $B['vn_list'] ) ) : ?>
 				<section class="pgds-section" aria-labelledby="pgds-vn-title">
 					<div class="pgds-cat-head">
-						<h2 id="pgds-vn-title"><?php esc_html_e( 'Phật giáo Việt Nam', 'pgds' ); ?></h2>
-						<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>"><?php esc_html_e( 'Xem thêm', 'pgds' ); ?><?php pgds_icon( 'chevron', array( 'size' => 14 ) ); ?></a>
+						<h2 id="pgds-vn-title"><?php esc_html_e( 'Vietnam Buddhism', 'pgds' ); ?></h2>
+						<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'vietnam-buddhism', 'category' ) ); ?>"><?php esc_html_e( 'View more', 'pgds' ); ?><?php pgds_icon( 'chevron', array( 'size' => 14 ) ); ?></a>
 					</div>
 					<ul class="pgds-compact">
 						<?php foreach ( $B['vn_list'] as $p ) : ?>
