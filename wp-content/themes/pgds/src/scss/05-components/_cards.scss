@@ -264,6 +264,10 @@
   margin-bottom: 6px;
   color: var(--color-text);
   @include line-clamp(2);
+  // Horizontal list rows are not aligned as equal-height cards. Let a
+  // one-line headline collapse to its real height so the meta and sapo do not
+  // inherit the empty second line reserved by the shared clamp mixin.
+  min-height: 0;
 }
 
 .pgds-list__meta {

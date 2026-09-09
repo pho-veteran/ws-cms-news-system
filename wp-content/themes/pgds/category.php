@@ -34,6 +34,22 @@ if ( $term instanceof WP_Term ) {
 	if ( is_wp_error( $children ) ) {
 		$children = array();
 	}
+
+	if ( $parent instanceof WP_Term && 'media' === $parent->slug ) {
+		$media_child_order = array(
+			'video'      => 0,
+			'emagazine' => 1,
+		);
+		usort(
+			$children,
+			static function ( $left, $right ) use ( $media_child_order ) {
+				$left_order  = $media_child_order[ $left->slug ] ?? PHP_INT_MAX;
+				$right_order = $media_child_order[ $right->slug ] ?? PHP_INT_MAX;
+
+				return $left_order <=> $right_order ?: strcasecmp( $left->name, $right->name );
+			}
+		);
+	}
 }
 
 if ( have_posts() ) {
@@ -69,10 +85,6 @@ if ( have_posts() ) {
 				<h1 class="pgds-category__title"><?php echo esc_html( pgds_category_display_label( $term instanceof WP_Term ? $term->slug : '', single_term_title( '', false ) ) ); ?></h1>
 			<?php endif; ?>
 		</nav>
-
-		<?php if ( term_description() ) : ?>
-			<div class="pgds-category__description"><?php echo wp_kses_post( term_description() ); ?></div>
-		<?php endif; ?>
 	</header>
 	<div class="pgds-category__rule" aria-hidden="true"></div>
 
