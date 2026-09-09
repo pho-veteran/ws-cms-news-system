@@ -17,6 +17,10 @@ define( 'PGDS_LUNAR_DIR', plugin_dir_path( __FILE__ ) );
 // phpcs:disable -- UTF-8 string literals are intentional.
 /**
  * Daily Buddhist quotes for sidebar rotation.
+ *
+ * Pool size matches the longest month (31). Selection is deterministic
+ * per calendar day but offset by month/year so the order is not fixed:
+ * every day in a month gets a distinct quote.
  */
 class PGDS_Lunar_Quotes {
 
@@ -34,16 +38,72 @@ class PGDS_Lunar_Quotes {
 		'"Buông xả không có nghĩa là từ bỏ, mà là không còn chấp giữ." — Thiền sư Thích Nhất Hạnh',
 		'"Mỗi ngày là một cơ hội để gieo trồng hạt giống thiện lành." — Lời Phật dạy',
 		'"Sống trong hiện tại là cách tu tập đơn giản nhất." — Thiền sư Thích Nhất Hạnh',
+		'"Im lặng là câu trả lời tốt nhất cho những ai không hiểu giá trị của lời nói chân thật." — Lời Phật dạy',
+		'"Đừng bám víu vào quá khứ, đừng mơ tưởng đến tương lai, hãy an trú trong hiện tại." — Kinh Bốn Mươi Hai Chương',
+		'"Người chiến thắng chính mình còn vinh quang hơn chiến thắng cả nghìn trận chiến." — Kinh Pháp Cú',
+		'"Tâm như đất, chứa đựng mọi thứ; không chọn lọc, không từ chối." — Lời Phật dạy',
+		'"Một ngọn đèn có thể thắp nghìn ngọn đèn khác mà không hề tắt đi." — Kinh Hoa Nghiêm',
+		'"Khi bạn nhận ra mình đã phạm sai lầm, hãy lập tức sửa đổi — đó là bước đầu của sự thức tỉnh." — Lời Phật dạy',
+		'"Thân người khó được, Phật pháp khó nghe, thiện tri thức khó gặp." — Kinh Niết Bàn',
+		'"Nước trong thì cá không ở, tâm chấp thì trí không khai." — Thiền ngữ',
+		'"Đi chậm không sao, chỉ sợ dừng lại." — Lời Phật dạy',
+		'"Từ bi không phải là cảm xúc thương hại, mà là trí tuệ thấy rõ sự liên kết giữa muôn loài." — Thiền sư Thích Nhất Hạnh',
+		'"Mỗi hơi thở là một cơ hội để bắt đầu lại." — Thiền ngữ',
+		'"Không ai làm tổn thương bạn nhiều hơn chính những suy nghĩ thiếu chánh niệm của bạn." — Đức Phật',
+		'"Cây мощн sinh ra từ hạt giống nhỏ; hành trình vạn dặm bắt đầu từ một bước chân." — Lời Phật dạy',
+		'"Lòng biết ơn là ký ức của trái tim." — Thiền sư Thích Nhất Hạnh',
+		'"Đừng tìm chân lý ở nơi xa — hãy quay về nhìn tâm mình." — Thiền ngữ',
+		'"Sân hận như nắm than nóng, bạn định ném người khác nhưng chính mình bị bỏng." — Đức Phật',
+		'"Một ngày không cười là một ngày lãng phí." — Lời Phật dạy',
+		'"Tất cả những gì chúng ta là kết quả của những gì chúng ta nghĩ." — Kinh Pháp Cú',
+		'"Hạnh phúc không có nghĩa là nhiều hơn, mà là cần ít hơn." — Thiền sư Thích Nhất Hạnh',
+		'"Khi một cánh cửa đóng lại, cánh cửa khác sẽ mở ra — nhưng ta thường nhìn mãi cánh cửa đã đóng." — Lời Phật dạy',
+		'"An trú trong hơi thở, bạn đã về nhà." — Thiền sư Thích Nhất Hạnh',
 	];
 
 	/**
 	 * Get the quote for today.
 	 *
+	 * Deterministic and cache-friendly: same site date → same quote.
+	 * Fisher-Yates seeded by year-month so each month has a different
+	 * order; day-of-month indexes that order → 31 distinct quotes per month.
+	 *
 	 * @return string
 	 */
 	public static function today(): string {
-		$day_of_year = (int) gmdate( 'z' );
-		return self::$QUOTES[ $day_of_year % count( self::$QUOTES ) ];
+		$now          = current_datetime();
+		$day_of_month = (int) $now->format( 'j' );
+		$month_key    = $now->format( 'Y-m' );
+
+		$pool = self::shuffled_for_month( $month_key );
+
+		return $pool[ $day_of_month - 1 ];
+	}
+
+	/**
+	 * Seeded Fisher-Yates shuffle of the quote pool for a given Y-m key.
+	 *
+	 * Uses a local LCG so the global RNG is not polluted. Same month key
+	 * always yields the same order (stable under object cache).
+	 *
+	 * @param string $month_key Site-local year-month, e.g. "2026-09".
+	 * @return string[]
+	 */
+	private static function shuffled_for_month( string $month_key ): array {
+		$pool = self::$QUOTES;
+		$n    = count( $pool );
+		$seed = crc32( $month_key );
+
+		for ( $i = $n - 1; $i > 0; $i-- ) {
+			// LCG (Numerical Recipes constants), masked to 31-bit.
+			$seed = (int) ( ( $seed * 1103515245 + 12345 ) & 0x7fffffff );
+			$j    = $seed % ( $i + 1 );
+			$tmp  = $pool[ $i ];
+			$pool[ $i ] = $pool[ $j ];
+			$pool[ $j ] = $tmp;
+		}
+
+		return $pool;
 	}
 }
 // phpcs:enable
