@@ -392,6 +392,81 @@ function pgds_video_id( $post ) {
 }
 
 /**
+ * Canonical YouTube watch URL for a video ID.
+ *
+ * Uses youtube.com (not nocookie) because this is a user-facing outbound
+ * link, not an embed facade.
+ *
+ * @param string $video_id Valid 11-character video ID.
+ * @return string Empty string when the ID is invalid.
+ */
+function pgds_youtube_watch_url( $video_id ) {
+	$video_id = pgds_validate_youtube_id( $video_id );
+	return $video_id ? 'https://www.youtube.com/watch?v=' . $video_id : '';
+}
+
+/**
+ * Public destination for a Lời Phật dạy card.
+ *
+ * YouTube when the teaching has a video ID; otherwise the permalink as a
+ * fallback for legacy items that have not been migrated yet.
+ *
+ * @param int|WP_Post $post Teaching post.
+ * @return string
+ */
+function pgds_teaching_url( $post ) {
+	$post = get_post( $post );
+	if ( ! $post instanceof WP_Post || 'pgds_teaching' !== $post->post_type ) {
+		return '';
+	}
+
+	$watch = pgds_youtube_watch_url( get_post_meta( $post->ID, '_pgds_youtube_id', true ) );
+	return $watch ? $watch : get_permalink( $post );
+}
+
+/**
+ * Redirect singular Lời Phật dạy views to YouTube (or home when unmigrated).
+ *
+ * @return void
+ */
+function pgds_teaching_redirect() {
+	if ( ! is_singular( 'pgds_teaching' ) ) {
+		return;
+	}
+
+	$post = get_queried_object();
+	if ( ! $post instanceof WP_Post ) {
+		return;
+	}
+
+	$watch = pgds_youtube_watch_url( get_post_meta( $post->ID, '_pgds_youtube_id', true ) );
+	if ( $watch ) {
+		wp_safe_redirect( $watch, 302, 'pgds-teaching-youtube' );
+		exit;
+	}
+
+	// Legacy teaching without a YouTube link: no on-site body to show.
+	wp_safe_redirect( home_url( '/' ), 302, 'pgds-teaching-unmigrated' );
+	exit;
+}
+add_action( 'template_redirect', 'pgds_teaching_redirect' );
+
+/**
+ * Allow wp_safe_redirect to leave the site for YouTube teaching links.
+ *
+ * @param string[] $hosts Allowed host names.
+ * @return string[]
+ */
+function pgds_allow_youtube_redirect_hosts( $hosts ) {
+	$hosts[] = 'youtube.com';
+	$hosts[] = 'www.youtube.com';
+	$hosts[] = 'm.youtube.com';
+	$hosts[] = 'youtu.be';
+	return array_unique( $hosts );
+}
+add_filter( 'allowed_redirect_hosts', 'pgds_allow_youtube_redirect_hosts' );
+
+/**
  * Return the closed detail-layout policy value for a post.
  *
  * Specialized layouts require an explicitly stored, valid, assigned primary category.

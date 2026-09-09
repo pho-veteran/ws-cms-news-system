@@ -427,8 +427,10 @@ function pgds_home_blocks() {
 	$teaching = get_posts(
 		array(
 			'post_type'      => 'pgds_teaching',
-			'posts_per_page' => 4,
+			'posts_per_page' => -1,
 			'post_status'    => 'publish',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
 		)
 	);
 	$lunar = get_posts(

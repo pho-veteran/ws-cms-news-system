@@ -359,9 +359,15 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 					<h3 class="pgds-side-block__title" id="pgds-teaching-title"><?php esc_html_e( 'Lời Phật dạy', 'pgds' ); ?></h3>
 					<ul class="pgds-teaching">
 						<?php foreach ( $B['teaching'] as $t ) : ?>
+							<?php
+							$teaching_url = pgds_teaching_url( $t );
+							$is_external  = (bool) pgds_youtube_watch_url( get_post_meta( $t->ID, '_pgds_youtube_id', true ) );
+							?>
 							<li>
 								<span class="pgds-teaching__icon"><?php pgds_icon( 'headphones', array( 'size' => 16 ) ); ?></span>
-								<span><a href="<?php echo esc_url( get_permalink( $t ) ); ?>"><?php echo esc_html( get_the_title( $t ) ); ?></a></span>
+								<span>
+									<a href="<?php echo esc_url( $teaching_url ); ?>"<?php echo $is_external ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>><?php echo esc_html( get_the_title( $t ) ); ?></a>
+								</span>
 							</li>
 						<?php endforeach; ?>
 					</ul>

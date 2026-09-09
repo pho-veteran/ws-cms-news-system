@@ -1451,3 +1451,145 @@ function pgds_rest_clear_empty_youtube_meta( $post, $request, $creating ) {
 
 add_action( 'rest_after_insert_post', 'pgds_rest_clear_empty_youtube_meta', 10, 3 );
 add_filter( 'rest_pre_insert_post', 'pgds_rest_validate_article_meta', 10, 2 );
+
+/**
+ * Register YouTube metadata for Lời Phật dạy (teaching link cards).
+ */
+function pgds_register_teaching_meta() {
+	register_post_meta(
+		'pgds_teaching',
+		'_pgds_youtube_id',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest'      => true,
+			'sanitize_callback' => 'sanitize_text_field',
+			'auth_callback'     => static function ( $allowed, $meta_key, $post_id, $user_id ) {
+				unset( $allowed, $meta_key );
+				if ( $post_id ) {
+					return user_can( $user_id, 'edit_post', $post_id );
+				}
+
+				return user_can( $user_id, 'edit_posts' );
+			},
+		)
+	);
+}
+add_action( 'init', 'pgds_register_teaching_meta' );
+
+/**
+ * Meta box for a Lời Phật dạy YouTube link card.
+ */
+function pgds_add_teaching_meta_box() {
+	add_meta_box(
+		'pgds_teaching_youtube',
+		__( 'Liên kết YouTube', 'pgds' ),
+		'pgds_render_teaching_meta_box',
+		'pgds_teaching',
+		'normal',
+		'high'
+	);
+}
+add_action( 'add_meta_boxes', 'pgds_add_teaching_meta_box' );
+
+/**
+ * Render the teaching YouTube meta box.
+ *
+ * @param WP_Post $post Current post.
+ * @return void
+ */
+function pgds_render_teaching_meta_box( $post ) {
+	wp_nonce_field( 'pgds_teaching_meta_save', 'pgds_teaching_meta_nonce' );
+	$value = get_post_meta( $post->ID, '_pgds_youtube_id', true );
+	?>
+	<p>
+		<label for="pgds_teaching_youtube_id"><strong><?php esc_html_e( 'Video YouTube', 'pgds' ); ?></strong></label>
+		<input type="url"
+			id="pgds_teaching_youtube_id"
+			name="_pgds_youtube_id"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="widefat"
+			placeholder="https://www.youtube.com/watch?v=..."
+			pattern="https?://.*|[A-Za-z0-9_-]{11}" />
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'Dán đường dẫn YouTube hoặc mã video 11 ký tự. Người đọc bấm tiêu đề sẽ mở video này trên YouTube. Không có link thì trang chi tiết sẽ chuyển về trang chủ.', 'pgds' ); ?>
+	</p>
+	<?php
+}
+
+/**
+ * Save the teaching YouTube link.
+ *
+ * @param int $post_id Post ID.
+ * @return void
+ */
+function pgds_save_teaching_meta( $post_id ) {
+	if ( ! isset( $_POST['pgds_teaching_meta_nonce'] ) ) {
+		return;
+	}
+
+	$nonce = sanitize_text_field( wp_unslash( $_POST['pgds_teaching_meta_nonce'] ) );
+	if ( ! wp_verify_nonce( $nonce, 'pgds_teaching_meta_save' ) || ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+
+	if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+
+	if ( ! isset( $_POST['_pgds_youtube_id'] ) ) {
+		return;
+	}
+
+	$youtube_id = pgds_normalize_youtube_input( wp_unslash( $_POST['_pgds_youtube_id'] ) );
+	if ( is_wp_error( $youtube_id ) ) {
+		return;
+	}
+
+	if ( '' === $youtube_id ) {
+		delete_post_meta( $post_id, '_pgds_youtube_id' );
+		return;
+	}
+
+	update_post_meta( $post_id, '_pgds_youtube_id', $youtube_id );
+}
+add_action( 'save_post_pgds_teaching', 'pgds_save_teaching_meta' );
+
+/**
+ * Admin list columns for Lời Phật dạy.
+ *
+ * @param array $columns Columns.
+ * @return array
+ */
+function pgds_teaching_admin_columns( $columns ) {
+	$columns['pgds_teaching_youtube'] = __( 'YouTube', 'pgds' );
+	return $columns;
+}
+add_filter( 'manage_pgds_teaching_posts_columns', 'pgds_teaching_admin_columns' );
+
+/**
+ * Render the YouTube column on the teaching list table.
+ *
+ * @param string $column  Column key.
+ * @param int    $post_id Post ID.
+ * @return void
+ */
+function pgds_teaching_admin_column_content( $column, $post_id ) {
+	if ( 'pgds_teaching_youtube' !== $column ) {
+		return;
+	}
+
+	$watch = pgds_youtube_watch_url( get_post_meta( $post_id, '_pgds_youtube_id', true ) );
+	if ( ! $watch ) {
+		echo '<span aria-hidden="true">—</span><span class="screen-reader-text">' . esc_html__( 'Chưa có link YouTube', 'pgds' ) . '</span>';
+		return;
+	}
+
+	printf(
+		'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
+		esc_url( $watch ),
+		esc_html__( 'Xem video', 'pgds' )
+	);
+}
+add_action( 'manage_pgds_teaching_posts_custom_column', 'pgds_teaching_admin_column_content', 10, 2 );
