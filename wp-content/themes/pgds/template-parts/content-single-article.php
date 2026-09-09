@@ -41,7 +41,7 @@ $display_author = pgds_display_author( get_post() );
 				<h1 class="pgds-article__title"><?php the_title(); ?></h1>
 
 				<time class="pgds-article__date publish-time" datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
-					<?php echo esc_html( pgds_reader_time_ago( $post_id ) ); ?>
+					<?php echo esc_html( get_the_date( 'Y-m-d H:i:s', $post_id ) ); ?>
 				</time>
 
 				<?php $sapo = pgds_has_editorial_sapo( $post_id ) ? pgds_sapo( $post_id ) : ''; ?>

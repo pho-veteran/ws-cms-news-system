@@ -389,6 +389,10 @@ try {
 		}
 		pgds_cms_editor_assert( false === strpos( $related_markup, 'pgds-article__author' ), 'article render omits an empty display-author paragraph' );
 		pgds_cms_editor_assert( false === strpos( $related_markup, 'id="comments"' ), 'closed article without comments omits an empty comments section' );
+		pgds_cms_editor_assert(
+			1 === preg_match( '/<time\b[^>]*\bpublish-time\b[^>]*>\s*' . preg_quote( get_the_date( 'Y-m-d H:i:s', $related_current_id ), '/' ) . '\s*<\/time>/', $related_markup ),
+			'article detail renders an absolute publication timestamp'
+		);
 
 
 		$post_id = wp_insert_post(
@@ -1133,6 +1137,8 @@ try {
 		update_post_meta( $fixture_id, '_pgds_primary_cat', $surface_terms[ $fixture_slug ] );
 	}
 	update_post_meta( $surface_fixture_ids['video'], '_pgds_video_unavailable', '1' );
+	pgds_cms_editor_assert( 'Just now' === pgds_reader_time_ago( $surface_fixture_ids['vietnam-buddhism'] ), 'Vietnam Buddhism card time remains English outside its dedicated route' );
+	pgds_cms_editor_assert( 'Vừa xong' === pgds_reader_time_ago( $surface_fixture_ids['article'] ), 'Vietnamese Article card time remains Vietnamese' );
 
 	$missing_primary_id = wp_insert_post(
 		array(

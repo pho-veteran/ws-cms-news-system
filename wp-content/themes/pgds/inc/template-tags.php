@@ -695,19 +695,23 @@ function pgds_reader_month_year( $timestamp = null ) {
 }
 
 /**
- * Reader-facing relative publication time for the active detail language.
+ * Reader-facing relative publication time for the post's editorial language.
+ *
+ * Vietnam Buddhism remains English wherever its cards are reused, including on
+ * the Vietnamese homepage. The request-level check still covers shared elements
+ * rendered on the dedicated English reader routes.
  *
  * @param int|WP_Post $post Post.
  * @return string
  */
 function pgds_reader_time_ago( $post ) {
-	if ( ! pgds_is_english_reader_request() ) {
-		return pgds_time_ago( $post );
-	}
-
 	$post = get_post( $post );
 	if ( ! $post ) {
 		return '';
+	}
+
+	if ( ! pgds_is_english_reader_request() && 'vietnam-buddhism' !== pgds_detail_layout( $post ) ) {
+		return pgds_time_ago( $post );
 	}
 
 	$timestamp = get_post_timestamp( $post );

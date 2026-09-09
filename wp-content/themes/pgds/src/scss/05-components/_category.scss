@@ -53,14 +53,6 @@
     color: var(--pgds-line-soft);
   }
 
-  &__description {
-    max-width: 70ch;
-    padding: 0 0 $sp-4;
-    font-size: $fs-sm;
-    line-height: $lh-relax;
-    color: var(--color-text-muted);
-  }
-
   // The reference keeps the category tabs and their separator rule as two
   // independent rows. Keeping the rule explicit preserves the exact 22px
   // hand-off into the hero, including when a term description is present.

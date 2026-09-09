@@ -326,7 +326,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 								</a>
 								<div>
 									<h3><a href="<?php echo esc_url( get_permalink( $p ) ); ?>"><?php echo esc_html( get_the_title( $p ) ); ?></a></h3>
-									<div class="pgds-compact__meta"><?php echo esc_html( pgds_time_ago( $p ) ); ?></div>
+									<div class="pgds-compact__meta"><?php echo esc_html( pgds_reader_time_ago( $p ) ); ?></div>
 								</div>
 							</li>
 						<?php endforeach; ?>
