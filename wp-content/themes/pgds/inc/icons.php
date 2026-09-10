@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function pgds_icon_paths( $name ) {
 	$icons = array(
-		// Headphones - the "Lời Phật dạy" audio teachings list.
+		// Headphones - the "Lời Phật dạy" teachings list.
 		'headphones' => '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 15a2 2 0 0 1 2-2h1v6H6a2 2 0 0 1-2-2z"/><path d="M20 15a2 2 0 0 0-2-2h-1v6h1a2 2 0 0 0 2-2z"/>',
 
 		// Play - video affordances.

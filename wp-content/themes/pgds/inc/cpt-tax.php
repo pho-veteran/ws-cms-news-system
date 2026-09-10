@@ -92,7 +92,11 @@ function pgds_category_tree() {
  * Register CPTs + taxonomy.
  */
 function pgds_register_cpt_tax() {
-	// --- CPT: Buddha's teachings --------------------------------------------
+	/*
+	 * --- CPT: Buddha's teachings ------------------------------------------
+	 * Lightweight link cards, not full articles: editors add a title and a
+	 * YouTube URL. Front-end links out to YouTube; the single route redirects.
+	 */
 	register_post_type(
 		'pgds_teaching',
 		array(
@@ -106,7 +110,7 @@ function pgds_register_cpt_tax() {
 			'show_in_rest' => true,
 			'menu_icon'    => 'dashicons-format-quote',
 			'menu_position' => 21,
-			'supports'     => array( 'title', 'editor', 'thumbnail' ),
+			'supports'     => array( 'title' ),
 			'has_archive'  => false,
 			'rewrite'      => array( 'slug' => 'loi-phat-day' ),
 		)
