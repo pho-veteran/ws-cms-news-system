@@ -424,8 +424,8 @@ function pgds_home_blocks() {
 	// broken rather than merely short. So category ownership is resolved first and
 	// the site-wide backfill happens in pass 2, over what is genuinely left over.
 	// ---------------------------------------------------------------------------
-	$phatsu_cards = pgds_query_posts( 'tin-phat-su', 3 );
-	$phatsu_list  = pgds_query_posts( 'tin-phat-su', 7 );
+	$phatsu_cards = pgds_query_posts( '', 3 );
+	$phatsu_list  = pgds_query_posts( '', 7 );
 
 	$col_song = pgds_query_cat_column( 'song-an-lanh', 2 );
 	$col_phat = pgds_query_cat_column( 'phat-tich', 2 );

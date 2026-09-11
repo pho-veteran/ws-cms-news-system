@@ -243,12 +243,9 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		<div>
 			<?php // Skip the whole section when it has nothing to show: a heading plus a "Xem thêm" link above empty space reads as a fault, not as a section. ?>
 			<?php if ( ! empty( $B['phatsu_cards'] ) || ! empty( $B['phatsu_list'] ) ) : ?>
-			<section class="pgds-section pgds-section--flush" aria-labelledby="pgds-phatsu-title">
+			<section class="pgds-section pgds-section--flush" aria-labelledby="pgds-latest-title">
 				<div class="pgds-cat-head">
-					<h2 id="pgds-phatsu-title"><?php esc_html_e( 'Tin Phật sự', 'pgds' ); ?></h2>
-					<a class="pgds-cat-head__more" href="<?php echo esc_url( get_term_link( 'tin-phat-su', 'category' ) ); ?>">
-						<?php esc_html_e( 'Xem thêm', 'pgds' ); ?><?php pgds_icon( 'chevron', array( 'size' => 14 ) ); ?>
-					</a>
+					<h2 id="pgds-latest-title"><?php esc_html_e( 'Tin mới', 'pgds' ); ?></h2>
 				</div>
 
 				<?php if ( ! empty( $B['phatsu_cards'] ) ) : ?>
