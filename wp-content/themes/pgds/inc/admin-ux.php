@@ -534,6 +534,10 @@ function pgds_admin_column_content( $col, $post_id ) {
 	if ( '1' === get_post_meta( $post_id, '_pgds_photo_story', true ) ) {
 		$flags[] = $english ? '📷 Photo story' : '📷 Tin ảnh';
 	}
+	if ( '1' === get_post_meta( $post_id, '_pgds_is_popular', true ) ) {
+		$popular_rank = (int) get_post_meta( $post_id, '_pgds_popular_rank', true );
+		$flags[]      = ( $english ? '🔥 Most read' : '🔥 Đọc nhiều' ) . ( $popular_rank ? " (#{$popular_rank})" : '' );
+	}
 	if ( get_post_meta( $post_id, '_pgds_youtube_id', true ) ) {
 		$flags[] = '▶ Video';
 	}
@@ -808,6 +812,8 @@ function pgds_admin_editor_hints( $hook ) {
 		var currentSurface = <?php echo wp_json_encode( $surface ); ?>;
 		var featureRankEnabledText = <?php echo wp_json_encode( 'vietnam-buddhism' === $surface ? 'Choose a position from 1 to 4 for a Featured article.' : 'Chọn vị trí từ 1 đến 4 cho bài Tin nổi bật.' ); ?>;
 		var featureRankDisabledText = <?php echo wp_json_encode( 'vietnam-buddhism' === $surface ? 'Choose a position from 1 to 4 only when Featured is enabled.' : 'Chỉ cần chọn vị trí từ 1 đến 4 khi bật Tin nổi bật.' ); ?>;
+		var popularRankEnabledText = <?php echo wp_json_encode( 'vietnam-buddhism' === $surface ? 'Choose a position from 1 to 4 for a Most read article.' : 'Chọn vị trí từ 1 đến 4 cho bài Đọc nhiều.' ); ?>;
+		var popularRankDisabledText = <?php echo wp_json_encode( 'vietnam-buddhism' === $surface ? 'Choose a position from 1 to 4 only when Most read is enabled.' : 'Chỉ cần chọn vị trí từ 1 đến 4 khi bật Đọc nhiều.' ); ?>;
 		var tries = 0;
 		var bridgeTries = 0;
 
@@ -948,7 +954,7 @@ function pgds_admin_editor_hints( $hook ) {
 		function updateFeatureRankControl() {
 			var featured = document.getElementById( '_pgds_is_featured' );
 			var rank = document.getElementById( '_pgds_feature_rank' );
-			var state = document.querySelector( '.pgds-metabox__feature-rank-state' );
+			var state = rank ? rank.closest( '.pgds-metabox__field' ).querySelector( '.pgds-metabox__feature-rank-state' ) : null;
 			if ( ! featured || ! rank ) {
 				return;
 			}
@@ -969,6 +975,32 @@ function pgds_admin_editor_hints( $hook ) {
 			featured.dataset.pgdsBound = '1';
 			featured.addEventListener( 'change', updateFeatureRankControl );
 			updateFeatureRankControl();
+		}
+
+		function updatePopularRankControl() {
+			var popular = document.getElementById( '_pgds_is_popular' );
+			var rank = document.getElementById( '_pgds_popular_rank' );
+			var state = rank ? rank.closest( '.pgds-metabox__field' ).querySelector( '.pgds-metabox__feature-rank-state' ) : null;
+			if ( ! popular || ! rank ) {
+				return;
+			}
+
+			var enabled = popular.checked;
+			rank.setAttribute( 'aria-disabled', enabled ? 'false' : 'true' );
+			if ( state ) {
+				state.textContent = enabled ? popularRankEnabledText : popularRankDisabledText;
+			}
+		}
+
+		function bindPopularRankControl() {
+			var popular = document.getElementById( '_pgds_is_popular' );
+			if ( ! popular || popular.dataset.pgdsBound ) {
+				return;
+			}
+
+			popular.dataset.pgdsBound = '1';
+			popular.addEventListener( 'change', updatePopularRankControl );
+			updatePopularRankControl();
 		}
 
 		function bindGroupToggles() {
@@ -1209,6 +1241,7 @@ function pgds_admin_editor_hints( $hook ) {
 			setCategoryPanelVisibility( currentSurface );
 			installEditorContextObserver();
 			bindFeatureRankControl();
+			bindPopularRankControl();
 			bindGroupToggles();
 			bindClassificationControl();
 			bindEmagazineChecklist();

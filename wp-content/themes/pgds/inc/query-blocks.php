@@ -237,7 +237,12 @@ function pgds_query_tagged_posts( $tag, $count ) {
 }
 
 /**
- * Most read posts (sidebar). Prioritises comment_count, falls back to most recent.
+ * Most read posts (sidebar).
+ *
+ * Editors may curate the widget by flagging posts with `_pgds_is_popular` and assigning
+ * them a `_pgds_popular_rank` (1–4), the same pattern the Featured slot uses. Curated
+ * posts lead the list in rank order; any remaining slots are filled automatically by
+ * comment_count (the original behaviour), so an untouched site keeps ranking on its own.
  *
  * Participates in the §4.4 deduplication pass, which lists the sidebar as its final step
  * ("curated slots -> media block -> content grid 1 -> three-category block -> content
@@ -270,43 +275,71 @@ function pgds_query_tagged_posts( $tag, $count ) {
 function pgds_query_popular( $count = 5, $dedup = true ) {
 	$used = $dedup ? PGDS_Used_Ids::all() : array();
 
-	$base = array(
-		'post_type'      => 'post',
-		'post_status'    => 'publish',
-		'no_found_rows'  => true,
-		'orderby'        => array(
-			'comment_count' => 'DESC',
-			'date'          => 'DESC',
-		),
-	);
-
-	$q = new WP_Query(
-		array_merge(
-			$base,
-			array(
-				'posts_per_page' => $count,
-				'post__not_in'   => $used,
-			)
+	// (1) Curated posts first, in their explicit rank order.
+	$curated_q = new WP_Query(
+		array(
+			'post_type'      => 'post',
+			'post_status'    => 'publish',
+			'posts_per_page' => $count,
+			'no_found_rows'  => true,
+			'post__not_in'   => $used,
+			'meta_key'       => '_pgds_popular_rank',
+			'orderby'        => 'meta_value_num',
+			'order'          => 'ASC',
+			'meta_query'     => array(
+				array(
+					'key'   => '_pgds_is_popular',
+					'value' => '1',
+				),
+			),
 		)
 	);
-	$posts = $q->posts;
+	$posts = $curated_q->posts;
 
-	/*
-	 * Top up when the front page has consumed so many posts that fewer than $count remain
-	 * unused. A short "most read" list reads as a fault rather than as an honest ranking,
-	 * and on a small site the exclusion set can easily exceed the post count — so the
-	 * fallback allows repeats rather than rendering three items in a five-item box. Ranking
-	 * order is preserved: the deduplicated rows come first.
-	 */
+	// (2) Fill any remaining slots automatically by comment_count.
 	if ( count( $posts ) < $count ) {
+		$base = array(
+			'post_type'      => 'post',
+			'post_status'    => 'publish',
+			'no_found_rows'  => true,
+			'orderby'        => array(
+				'comment_count' => 'DESC',
+				'date'          => 'DESC',
+			),
+		);
 		$have = wp_list_pluck( $posts, 'ID' );
 		$fill = new WP_Query(
 			array_merge(
 				$base,
 				array(
 					'posts_per_page' => $count - count( $posts ),
-					'post__not_in'   => $have,
+					'post__not_in'   => array_merge( $used, $have ),
 				)
+			)
+		);
+		$posts = array_merge( $posts, $fill->posts );
+	}
+
+	/*
+	 * Top up when the front page has consumed so many posts that fewer than $count remain
+	 * unused. A short "most read" list reads as a fault rather than as an honest ranking,
+	 * and on a small site the exclusion set can easily exceed the post count — so the
+	 * fallback allows repeats rather than rendering three items in a five-item box. Ranking
+	 * order is preserved: the curated rows come first.
+	 */
+	if ( count( $posts ) < $count ) {
+		$have = wp_list_pluck( $posts, 'ID' );
+		$fill = new WP_Query(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'no_found_rows'  => true,
+				'posts_per_page' => $count - count( $posts ),
+				'post__not_in'   => $have,
+				'orderby'        => array(
+					'comment_count' => 'DESC',
+					'date'          => 'DESC',
+				),
 			)
 		);
 		$posts = array_merge( $posts, $fill->posts );
@@ -423,7 +456,7 @@ function pgds_home_blocks() {
 	$mixed_list = pgds_query_posts( '', 5 );
 
 	// (7) Sidebar: popular (may overlap), teaching CPT, lunar CPT.
-	$popular  = pgds_query_popular( 4 );
+	$popular  = pgds_query_popular( 4, false );
 	$teaching = get_posts(
 		array(
 			'post_type'      => 'pgds_teaching',

@@ -445,7 +445,7 @@ try {
 	$fields          = pgds_meta_fields();
 	$expected_groups = array(
 		'editorial' => array( '_pgds_sapo', '_pgds_primary_cat', '_pgds_source', '_pgds_display_author' ),
-		'homepage'  => array( '_pgds_is_featured', '_pgds_feature_rank', '_pgds_photo_story' ),
+		'homepage'  => array( '_pgds_is_featured', '_pgds_feature_rank', '_pgds_photo_story', '_pgds_is_popular', '_pgds_popular_rank' ),
 		'video'     => array( '_pgds_youtube_id', '_pgds_youtube_title', '_pgds_youtube_dur' ),
 	);
 	foreach ( $expected_groups as $group => $keys ) {
@@ -454,7 +454,7 @@ try {
 			pgds_cms_editor_assert( isset( $fields[ $key ] ) && $group === $fields[ $key ]['group'], sprintf( '%s belongs to the %s group', $key, $group ) );
 		}
 	}
-	pgds_cms_editor_assert( ! empty( $groups['homepage']['collapsed'] ), 'Homepage curation is collapsed by default' );
+	pgds_cms_editor_assert( empty( $groups['homepage']['collapsed'] ), 'Homepage curation is expanded by default so the Most read fields are visible immediately' );
 	foreach ( array( '_pgds_youtube_title', '_pgds_youtube_dur' ) as $key ) {
 		pgds_cms_editor_assert( isset( $fields[ $key ]['editable'] ) && ! $fields[ $key ]['editable'], sprintf( '%s is centrally marked read-only', $key ) );
 		pgds_cms_editor_assert( in_array( $key, pgds_synchronized_meta_keys(), true ), sprintf( '%s remains synchronization-owned', $key ) );
@@ -483,6 +483,8 @@ try {
 		'_pgds_is_featured'    => '1',
 		'_pgds_feature_rank'   => '2',
 		'_pgds_photo_story'    => '1',
+		'_pgds_is_popular'     => '1',
+		'_pgds_popular_rank'   => '3',
 		'_pgds_youtube_id'     => 'https://www.youtube.com/watch?v=M7lc1UVf-VE',
 	);
 	$submitted_values                         = $valid_values;
@@ -498,6 +500,8 @@ try {
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_featured', '1', 'featured flag saves' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_feature_rank', '2', 'featured rank saves within bounds' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_photo_story', '1', 'photo-story flag saves' );
+	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '1', 'popular flag saves' );
+	pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '3', 'popular rank saves within bounds' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_id', 'M7lc1UVf-VE', 'YouTube watch URL normalizes to its canonical ID' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_dur', '367', 'editor input cannot overwrite synchronized video duration' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_title', 'Legacy synchronized title', 'editor input cannot overwrite synchronized video title' );
@@ -540,6 +544,8 @@ try {
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_featured', '', 'explicit Homepage submission can clear an unchecked Featured flag' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_feature_rank', '0', 'explicit Homepage submission can clear Featured rank' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_photo_story', '', 'explicit Homepage submission can clear an unchecked photo-story flag' );
+	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '', 'explicit Homepage submission can clear an unchecked Most read flag' );
+	pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '0', 'explicit Homepage submission can clear Most read rank' );
 
 	pgds_cms_editor_submit( $post_id, array( '_pgds_source' => 'No marker source' ), 'valid', null, null );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_source', 'Editorial-only source', 'a request without group markers preserves editor metadata' );
@@ -584,6 +590,35 @@ try {
 
 	$valid_values['_pgds_feature_rank'] = '2';
 	pgds_cms_editor_submit( $post_id, $valid_values );
+
+	foreach ( array( '1', '2', '3', '4' ) as $valid_rank ) {
+		$popular_values                       = $valid_values;
+		$popular_values['_pgds_popular_rank'] = $valid_rank;
+		pgds_cms_editor_submit( $post_id, $popular_values );
+		pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', $valid_rank, sprintf( 'exact Most read rank %s saves', $valid_rank ) );
+	}
+
+	$popular_rank_failures = array(
+		'word'   => 'nonnumeric Most read rank',
+		'2.5'    => 'fractional Most read rank',
+		'-1'     => 'Most read rank below one',
+		'0'      => 'Most read rank zero',
+		'5'      => 'Most read rank above four',
+	);
+	foreach ( $popular_rank_failures as $rank_input => $rank_label ) {
+		$popular_values                       = $valid_values;
+		$popular_values['_pgds_popular_rank'] = $rank_input;
+		pgds_cms_editor_submit( $post_id, $popular_values );
+		pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '1', $rank_label . ' preserves the prior Most read flag' );
+		pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '4', $rank_label . ' preserves the prior valid Most read rank' );
+	}
+
+	$not_popular_values = $valid_values;
+	unset( $not_popular_values['_pgds_is_popular'] );
+	$not_popular_values['_pgds_popular_rank'] = '';
+	pgds_cms_editor_submit( $post_id, $not_popular_values );
+	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '', 'disabling Most read accepts a blank rank' );
+	pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '0', 'disabling Most read stores the blank rank as zero' );
 
 	$invalid_primary_category = $valid_values;
 	$invalid_primary_category['_pgds_primary_cat'] = (string) $invalid_category['term_id'];
@@ -1081,7 +1116,7 @@ try {
 		pgds_cms_editor_assert( false !== strpos( $metabox_markup, $group['label'] ), sprintf( 'editor meta box renders the %s group', $group['label'] ) );
 	}
 	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'min="1"' ) && false !== strpos( $metabox_markup, 'max="4"' ) && false !== strpos( $metabox_markup, 'step="1"' ), 'featured-rank input provides 1–4 progressive guidance' );
-	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'aria-controls="pgds-meta-group-homepage"' ) && false !== strpos( $metabox_markup, 'id="pgds-meta-group-homepage" class="pgds-metabox__group-content" hidden' ), 'Homepage curation renders collapsed behind an accessible toggle' );
+	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'id="pgds-meta-group-homepage" class="pgds-metabox__group-content"' ) && false === strpos( $metabox_markup, 'id="pgds-meta-group-homepage" class="pgds-metabox__group-content" hidden' ), 'Homepage curation renders expanded without a collapse toggle' );
 	foreach ( array( 'editorial', 'homepage' ) as $group_key ) {
 		pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'name="pgds_meta_groups[]" value="' . $group_key . '"' ), sprintf( '%s group emits an explicit save marker', $group_key ) );
 	}
