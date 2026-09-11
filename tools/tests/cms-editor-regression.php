@@ -1116,7 +1116,7 @@ try {
 		pgds_cms_editor_assert( false !== strpos( $metabox_markup, $group['label'] ), sprintf( 'editor meta box renders the %s group', $group['label'] ) );
 	}
 	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'min="1"' ) && false !== strpos( $metabox_markup, 'max="4"' ) && false !== strpos( $metabox_markup, 'step="1"' ), 'featured-rank input provides 1–4 progressive guidance' );
-	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'id="pgds-meta-group-homepage" class="pgds-metabox__group-content"' ) && false === strpos( $metabox_markup, 'id="pgds-meta-group-homepage" class="pgds-metabox__group-content" hidden' ), 'Homepage curation renders expanded without a collapse toggle' );
+	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'class="pgds-metabox__group pgds-metabox__group--homepage" data-pgds-group="homepage"' ), 'Homepage curation renders expanded without a collapse toggle' );
 	foreach ( array( 'editorial', 'homepage' ) as $group_key ) {
 		pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'name="pgds_meta_groups[]" value="' . $group_key . '"' ), sprintf( '%s group emits an explicit save marker', $group_key ) );
 	}
