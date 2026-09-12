@@ -243,6 +243,8 @@ try {
 		'pgds_meta_groups',
 		'pgds_synchronized_meta_keys',
 		'pgds_validate_featured_rank',
+		'pgds_validate_popular_rank',
+		'pgds_find_popular_rank_conflict',
 		'pgds_validate_primary_category',
 		'pgds_normalize_youtube_input',
 		'pgds_get_article_warnings',
@@ -1034,9 +1036,13 @@ try {
 	$pgds_cms_editor_posts[] = (int) $warning_post_id;
 	update_post_meta( $conflict_post_id, '_pgds_is_featured', '1' );
 	update_post_meta( $conflict_post_id, '_pgds_feature_rank', '1' );
+	update_post_meta( $conflict_post_id, '_pgds_is_popular', '1' );
+	update_post_meta( $conflict_post_id, '_pgds_popular_rank', '1' );
 	update_post_meta( $warning_post_id, '_pgds_is_featured', '1' );
 	update_post_meta( $warning_post_id, '_pgds_feature_rank', '1' );
 	update_post_meta( $warning_post_id, '_pgds_photo_story', '1' );
+	update_post_meta( $warning_post_id, '_pgds_is_popular', '1' );
+	update_post_meta( $warning_post_id, '_pgds_popular_rank', '1' );
 	delete_post_meta( $warning_post_id, '_pgds_sapo' );
 
 	$warnings      = pgds_get_article_warnings( $warning_post_id );
@@ -1044,16 +1050,23 @@ try {
 	pgds_cms_editor_assert( in_array( 'pgds_missing_featured_image', $warning_codes, true ), 'featured or photo-story article without an image has a nonblocking warning' );
 	pgds_cms_editor_assert( in_array( 'pgds_missing_sapo', $warning_codes, true ), 'featured or photo-story article without a sapo has a nonblocking warning' );
 	pgds_cms_editor_assert( in_array( 'pgds_duplicate_featured_rank', $warning_codes, true ), 'duplicate published featured rank has a nonblocking warning' );
+	pgds_cms_editor_assert( in_array( 'pgds_duplicate_popular_rank', $warning_codes, true ), 'duplicate published Most read rank has a nonblocking warning' );
 	$duplicate_warning = array();
+	$duplicate_popular_warning = array();
 	foreach ( $warnings as $warning ) {
 		if ( 'pgds_duplicate_featured_rank' === $warning['code'] ) {
 			$duplicate_warning = $warning;
-			break;
+		}
+		if ( 'pgds_duplicate_popular_rank' === $warning['code'] ) {
+			$duplicate_popular_warning = $warning;
 		}
 	}
 	pgds_cms_editor_assert( ! empty( $duplicate_warning['edit_url'] ), 'duplicate featured-rank warning includes an editor link for an authorized user' );
+	pgds_cms_editor_assert( ! empty( $duplicate_popular_warning['edit_url'] ), 'duplicate Most read-rank warning includes an editor link for an authorized user' );
 	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_is_featured', '1', 'warning lookup does not alter the conflicting post Featured flag' );
 	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_feature_rank', '1', 'warning lookup does not reassign the conflicting post rank' );
+	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_is_popular', '1', 'warning lookup does not alter the conflicting post Most read flag' );
+	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_popular_rank', '1', 'warning lookup does not reassign the conflicting post Most read rank' );
 
 	wp_set_current_user( (int) $subscriber_id );
 	$restricted_warnings = pgds_get_article_warnings( $warning_post_id );
@@ -1069,6 +1082,60 @@ try {
 		'duplicate-rank warning omits the edit link for a user who cannot edit the conflict'
 	);
 	wp_set_current_user( (int) $administrators[0] );
+
+	$duplicate_popular_ids = array( (int) $conflict_post_id );
+	for ( $index = 0; $index < 3; $index++ ) {
+		$duplicate_popular_id = wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+				'post_title'  => sprintf( 'PGDS duplicate Most read rank %d %s', $index, $token ),
+			),
+			true
+		);
+		if ( is_wp_error( $duplicate_popular_id ) ) {
+			throw new RuntimeException( 'The regression suite could not create a duplicate Most read fixture.' );
+		}
+		$duplicate_popular_id       = (int) $duplicate_popular_id;
+		$pgds_cms_editor_posts[]     = $duplicate_popular_id;
+		$duplicate_popular_ids[]     = $duplicate_popular_id;
+		update_post_meta( $duplicate_popular_id, '_pgds_is_popular', '1' );
+		update_post_meta( $duplicate_popular_id, '_pgds_popular_rank', '1' );
+	}
+
+	$rank_four_popular_id = wp_insert_post(
+		array(
+			'post_type'   => 'post',
+			'post_status' => 'publish',
+			'post_title'  => 'PGDS exact Most read rank 4 ' . $token,
+		),
+		true
+	);
+	if ( is_wp_error( $rank_four_popular_id ) ) {
+		throw new RuntimeException( 'The regression suite could not create an exact Most read fixture.' );
+	}
+	$rank_four_popular_id      = (int) $rank_four_popular_id;
+	$pgds_cms_editor_posts[]    = $rank_four_popular_id;
+	update_post_meta( $rank_four_popular_id, '_pgds_is_popular', '1' );
+	update_post_meta( $rank_four_popular_id, '_pgds_popular_rank', '4' );
+
+	PGDS_Used_Ids::reset();
+	$popular_with_conflicts     = pgds_query_popular( 4, false );
+	$popular_with_conflict_ids = array_map( 'intval', wp_list_pluck( $popular_with_conflicts, 'ID' ) );
+	pgds_cms_editor_assert( in_array( $rank_four_popular_id, $popular_with_conflict_ids, true ), 'duplicate lower ranks cannot crowd an exact later Most read rank out of the query' );
+	pgds_cms_editor_assert( 1 === count( array_intersect( $duplicate_popular_ids, $popular_with_conflict_ids ) ), 'only one post from a duplicate Most read rank can occupy the widget' );
+
+	PGDS_Used_Ids::reset();
+	$popular_without_dedup = pgds_query_popular( 5, false );
+	$fallback_post         = end( $popular_without_dedup );
+	if ( ! $fallback_post instanceof WP_Post ) {
+		throw new RuntimeException( 'The regression suite requires one automatic Most read fallback post.' );
+	}
+	PGDS_Used_Ids::reset();
+	PGDS_Used_Ids::mark( array( $fallback_post ) );
+	$popular_with_dedup_ids = array_map( 'intval', wp_list_pluck( pgds_query_popular( 5, true ), 'ID' ) );
+	pgds_cms_editor_assert( ! in_array( (int) $fallback_post->ID, $popular_with_dedup_ids, true ), 'Most read automatic fallback excludes posts already used by earlier homepage blocks' );
+	PGDS_Used_Ids::reset();
 
 	$columns = pgds_admin_columns( array( 'cb' => '<input>', 'title' => 'Title', 'date' => 'Date' ) );
 	pgds_cms_editor_assert( isset( $columns['pgds_flags'] ) && 'PGDS' === $columns['pgds_flags'], 'Posts list retains the PGDS metadata column' );

@@ -503,6 +503,51 @@ function pgds_find_featured_rank_conflict( $post_id, $rank ) {
 }
 
 /**
+ * Find one published post using the same Most read rank.
+ *
+ * @param int $post_id Current post ID.
+ * @param int $rank    Most read rank.
+ * @return int Conflicting post ID or zero.
+ */
+function pgds_find_popular_rank_conflict( $post_id, $rank ) {
+	if ( $rank < 1 || $rank > 4 ) {
+		return 0;
+	}
+
+	$query = new WP_Query(
+		array(
+			'post_type'              => 'post',
+			'post_status'            => 'publish',
+			'posts_per_page'         => 1,
+			'fields'                 => 'ids',
+			'no_found_rows'          => true,
+			'post__not_in'           => $post_id ? array( (int) $post_id ) : array(),
+			'orderby'                => array(
+				'date' => 'DESC',
+				'ID'   => 'DESC',
+			),
+			'cache_results'          => false,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+			'meta_query'             => array(
+				array(
+					'key'   => '_pgds_is_popular',
+					'value' => '1',
+				),
+				array(
+					'key'     => '_pgds_popular_rank',
+					'value'   => (int) $rank,
+					'type'    => 'NUMERIC',
+					'compare' => '=',
+				),
+			),
+		)
+	);
+
+	return isset( $query->posts[0] ) ? (int) $query->posts[0] : 0;
+}
+
+/**
  * Describe the placement selected for quality-warning text.
  *
  * @param bool $featured   Whether Featured is enabled.
@@ -536,6 +581,7 @@ function pgds_get_article_warnings( $post_id ) {
 	$warnings    = array();
 	$featured    = '1' === get_post_meta( $post_id, '_pgds_is_featured', true );
 	$photo_story = '1' === get_post_meta( $post_id, '_pgds_photo_story', true );
+	$popular     = '1' === get_post_meta( $post_id, '_pgds_is_popular', true );
 	$english     = 'vietnam-buddhism' === pgds_current_editorial_surface( $post_id );
 
 	if ( $featured || $photo_story ) {
@@ -570,6 +616,26 @@ function pgds_get_article_warnings( $post_id ) {
 				'message'     => $english
 					? sprintf( 'Another published post already uses Featured position %d. Both posts were left unchanged.', $rank )
 					: sprintf( 'Một bài đã xuất bản khác đang dùng vị trí Tin nổi bật %d. Cả hai bài vẫn được giữ nguyên.', $rank ),
+				'conflict_id' => $conflict_id,
+				'edit_label'  => $english ? 'Open the post using this position' : 'Mở bài đang trùng vị trí',
+			);
+			if ( current_user_can( 'edit_post', $conflict_id ) ) {
+				$warning['edit_url'] = get_edit_post_link( $conflict_id, 'raw' );
+			}
+			$warnings[] = $warning;
+		}
+	}
+
+	if ( $popular ) {
+		$rank        = (int) get_post_meta( $post_id, '_pgds_popular_rank', true );
+		$conflict_id = pgds_find_popular_rank_conflict( $post_id, $rank );
+
+		if ( $conflict_id ) {
+			$warning = array(
+				'code'        => 'pgds_duplicate_popular_rank',
+				'message'     => $english
+					? sprintf( 'Another published post already uses Most read position %d. The newest post wins that position until the conflict is resolved.', $rank )
+					: sprintf( 'Một bài đã xuất bản khác đang dùng vị trí Đọc nhiều %d. Bài mới hơn sẽ giữ vị trí này cho đến khi bạn xử lý xung đột.', $rank ),
 				'conflict_id' => $conflict_id,
 				'edit_label'  => $english ? 'Open the post using this position' : 'Mở bài đang trùng vị trí',
 			);

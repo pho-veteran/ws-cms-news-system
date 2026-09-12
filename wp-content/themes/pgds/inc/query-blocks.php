@@ -275,35 +275,38 @@ function pgds_query_tagged_posts( $tag, $count ) {
 function pgds_query_popular( $count = 5, $dedup = true ) {
 	$used = $dedup ? PGDS_Used_Ids::all() : array();
 
-	// (1) Curated posts first, mapped to their explicit rank.
-	$curated_q = new WP_Query(
-		array(
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'posts_per_page' => $count,
-			'no_found_rows'  => true,
-			'post__not_in'   => $used,
-			'meta_key'       => '_pgds_popular_rank',
-			'orderby'        => 'meta_value_num',
-			'order'          => 'ASC',
-			'meta_query'     => array(
-				array(
-					'key'   => '_pgds_is_popular',
-					'value' => '1',
-				),
-			),
-		)
-	);
-
+	// (1) Curated posts first, mapped to their explicit rank. A curated choice
+	// intentionally overrides request-level deduplication. If editors temporarily
+	// assign one rank twice, the newest post wins deterministically and the meta box
+	// warns about the conflict.
 	$mapped = array_fill( 0, $count, null );
-	$have   = array();
-	foreach ( $curated_q->posts as $p ) {
-		$rank = (int) get_post_meta( $p->ID, '_pgds_popular_rank', true );
-		if ( $rank >= 1 && $rank <= $count ) {
-			if ( null === $mapped[ $rank - 1 ] ) {
-				$mapped[ $rank - 1 ] = $p;
-				$have[]              = $p->ID;
-			}
+	for ( $rank = 1; $rank <= min( 4, $count ); $rank++ ) {
+		$curated_q = new WP_Query(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'no_found_rows'  => true,
+				'orderby'        => array(
+					'date' => 'DESC',
+					'ID'   => 'DESC',
+				),
+				'meta_query'     => array(
+					array(
+						'key'   => '_pgds_is_popular',
+						'value' => '1',
+					),
+					array(
+						'key'     => '_pgds_popular_rank',
+						'value'   => $rank,
+						'type'    => 'NUMERIC',
+						'compare' => '=',
+					),
+				),
+			)
+		);
+		if ( isset( $curated_q->posts[0] ) ) {
+			$mapped[ $rank - 1 ] = $curated_q->posts[0];
 		}
 	}
 
@@ -314,6 +317,18 @@ function pgds_query_popular( $count = 5, $dedup = true ) {
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
 			'no_found_rows'  => true,
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array(
+					'key'     => '_pgds_is_popular',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => '_pgds_is_popular',
+					'value'   => '1',
+					'compare' => '!=',
+				),
+			),
 			'orderby'        => array(
 				'comment_count' => 'DESC',
 				'date'          => 'DESC',
@@ -324,7 +339,7 @@ function pgds_query_popular( $count = 5, $dedup = true ) {
 				$base,
 				array(
 					'posts_per_page' => $empty_count,
-					'post__not_in'   => array_merge( $used, $have ),
+					'post__not_in'   => $used,
 				)
 			)
 		);
@@ -341,7 +356,7 @@ function pgds_query_popular( $count = 5, $dedup = true ) {
 					$base,
 					array(
 						'posts_per_page' => $empty_count - count( $fill_posts ),
-						'post__not_in'   => array_merge( $have, $have_fill ),
+						'post__not_in'   => $have_fill,
 					)
 				)
 			);
@@ -468,8 +483,8 @@ function pgds_home_blocks() {
 	// is queried last and is allowed to come up short without leaving a hole.
 	$mixed_list = pgds_query_posts( '', 5 );
 
-	// (7) Sidebar: popular (may overlap), teaching CPT, lunar CPT.
-	$popular  = pgds_query_popular( 4, false );
+	// (7) Sidebar: popular, teaching CPT, lunar CPT.
+	$popular  = pgds_query_popular( 4 );
 	$teaching = get_posts(
 		array(
 			'post_type'      => 'pgds_teaching',
