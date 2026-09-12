@@ -437,8 +437,8 @@ function pgds_home_blocks() {
 	// broken rather than merely short. So category ownership is resolved first and
 	// the site-wide backfill happens in pass 2, over what is genuinely left over.
 	// ---------------------------------------------------------------------------
-	$phatsu_cards = pgds_query_posts( '', 3 );
-	$phatsu_list  = pgds_query_posts( '', 7 );
+	$latest_cards = pgds_query_posts( '', 3 );
+	$latest_list  = pgds_query_posts( '', 7 );
 
 	$col_song = pgds_query_cat_column( 'song-an-lanh', 2 );
 	$col_phat = pgds_query_cat_column( 'phat-tich', 2 );
@@ -451,16 +451,16 @@ function pgds_home_blocks() {
 	// remains. Grid 1 sits beside the tall popular + calendar sidebar, so a short
 	// main column there leaves the largest void on the page; it is filled first.
 	// ---------------------------------------------------------------------------
-	if ( count( $phatsu_cards ) < 3 ) {
-		$phatsu_cards = array_merge(
-			$phatsu_cards,
-			pgds_query_posts( '', 3 - count( $phatsu_cards ) )
+	if ( count( $latest_cards ) < 3 ) {
+		$latest_cards = array_merge(
+			$latest_cards,
+			pgds_query_posts( '', 3 - count( $latest_cards ) )
 		);
 	}
-	if ( count( $phatsu_list ) < 7 ) {
-		$phatsu_list = array_merge(
-			$phatsu_list,
-			pgds_query_posts( '', 7 - count( $phatsu_list ) )
+	if ( count( $latest_list ) < 7 ) {
+		$latest_list = array_merge(
+			$latest_list,
+			pgds_query_posts( '', 7 - count( $latest_list ) )
 		);
 	}
 

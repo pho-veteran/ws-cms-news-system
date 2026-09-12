@@ -242,23 +242,23 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 	<div class="pgds-content-grid">
 		<div>
 			<?php // Skip the whole section when it has nothing to show: a heading plus a "Xem thêm" link above empty space reads as a fault, not as a section. ?>
-			<?php if ( ! empty( $B['phatsu_cards'] ) || ! empty( $B['phatsu_list'] ) ) : ?>
+			<?php if ( ! empty( $B['latest_cards'] ) || ! empty( $B['latest_list'] ) ) : ?>
 			<section class="pgds-section pgds-section--flush" aria-labelledby="pgds-latest-title">
 				<div class="pgds-cat-head">
 					<h2 id="pgds-latest-title"><?php esc_html_e( 'Tin mới', 'pgds' ); ?></h2>
 				</div>
 
-				<?php if ( ! empty( $B['phatsu_cards'] ) ) : ?>
+				<?php if ( ! empty( $B['latest_cards'] ) ) : ?>
 					<div class="pgds-grid-3">
-						<?php foreach ( $B['phatsu_cards'] as $p ) : ?>
+						<?php foreach ( $B['latest_cards'] as $p ) : ?>
 							<?php get_template_part( 'template-parts/card-secondary', null, array( 'post' => $p, 'variant' => 'full', 'bordered' => true ) ); ?>
 						<?php endforeach; ?>
 					</div>
 				<?php endif; ?>
 
-				<?php if ( ! empty( $B['phatsu_list'] ) ) : ?>
+				<?php if ( ! empty( $B['latest_list'] ) ) : ?>
 					<div class="pgds-list">
-						<?php $render_each( 'list-item', $B['phatsu_list'] ); ?>
+						<?php $render_each( 'list-item', $B['latest_list'] ); ?>
 					</div>
 				<?php endif; ?>
 			</section>
