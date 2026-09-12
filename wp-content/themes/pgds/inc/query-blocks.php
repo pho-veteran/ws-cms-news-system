@@ -510,8 +510,8 @@ function pgds_home_blocks() {
 		'media_thumbs'  => $media_thumbs,
 		'media_bullets' => $media_bullets,
 		'media_tabs'    => $media_tabs,
-		'phatsu_cards'  => $phatsu_cards,
-		'phatsu_list'   => $phatsu_list,
+		'latest_cards'  => $latest_cards,
+		'latest_list'   => $latest_list,
 		'columns'       => array(
 			array( 'slug' => 'song-an-lanh', 'label' => 'Sống an lành', 'data' => $col_song ),
 			array( 'slug' => 'phat-tich', 'label' => 'Phật tích', 'data' => $col_phat ),
