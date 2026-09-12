@@ -243,10 +243,6 @@ try {
 		'pgds_meta_groups',
 		'pgds_synchronized_meta_keys',
 		'pgds_validate_featured_rank',
-		'pgds_validate_popular_rank',
-		'pgds_find_popular_rank_conflict',
-		'pgds_claim_curation_rank',
-		'pgds_reconcile_curation_rank_ownership',
 		'pgds_validate_primary_category',
 		'pgds_normalize_youtube_input',
 		'pgds_get_article_warnings',
@@ -449,7 +445,7 @@ try {
 	$fields          = pgds_meta_fields();
 	$expected_groups = array(
 		'editorial' => array( '_pgds_sapo', '_pgds_primary_cat', '_pgds_source', '_pgds_display_author' ),
-		'homepage'  => array( '_pgds_is_featured', '_pgds_feature_rank', '_pgds_photo_story', '_pgds_is_popular', '_pgds_popular_rank' ),
+		'homepage'  => array( '_pgds_is_featured', '_pgds_feature_rank', '_pgds_photo_story' ),
 		'video'     => array( '_pgds_youtube_id', '_pgds_youtube_title', '_pgds_youtube_dur' ),
 	);
 	foreach ( $expected_groups as $group => $keys ) {
@@ -458,7 +454,7 @@ try {
 			pgds_cms_editor_assert( isset( $fields[ $key ] ) && $group === $fields[ $key ]['group'], sprintf( '%s belongs to the %s group', $key, $group ) );
 		}
 	}
-	pgds_cms_editor_assert( empty( $groups['homepage']['collapsed'] ), 'Homepage curation is expanded by default so the Most read fields are visible immediately' );
+	pgds_cms_editor_assert( ! empty( $groups['homepage']['collapsed'] ), 'Homepage curation is collapsed by default' );
 	foreach ( array( '_pgds_youtube_title', '_pgds_youtube_dur' ) as $key ) {
 		pgds_cms_editor_assert( isset( $fields[ $key ]['editable'] ) && ! $fields[ $key ]['editable'], sprintf( '%s is centrally marked read-only', $key ) );
 		pgds_cms_editor_assert( in_array( $key, pgds_synchronized_meta_keys(), true ), sprintf( '%s remains synchronization-owned', $key ) );
@@ -487,8 +483,6 @@ try {
 		'_pgds_is_featured'    => '1',
 		'_pgds_feature_rank'   => '2',
 		'_pgds_photo_story'    => '1',
-		'_pgds_is_popular'     => '1',
-		'_pgds_popular_rank'   => '3',
 		'_pgds_youtube_id'     => 'https://www.youtube.com/watch?v=M7lc1UVf-VE',
 	);
 	$submitted_values                         = $valid_values;
@@ -504,8 +498,6 @@ try {
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_featured', '1', 'featured flag saves' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_feature_rank', '2', 'featured rank saves within bounds' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_photo_story', '1', 'photo-story flag saves' );
-	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '1', 'popular flag saves' );
-	pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '3', 'popular rank saves within bounds' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_id', 'M7lc1UVf-VE', 'YouTube watch URL normalizes to its canonical ID' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_dur', '367', 'editor input cannot overwrite synchronized video duration' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_title', 'Legacy synchronized title', 'editor input cannot overwrite synchronized video title' );
@@ -548,8 +540,6 @@ try {
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_featured', '', 'explicit Homepage submission can clear an unchecked Featured flag' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_feature_rank', '0', 'explicit Homepage submission can clear Featured rank' );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_photo_story', '', 'explicit Homepage submission can clear an unchecked photo-story flag' );
-	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '', 'explicit Homepage submission can clear an unchecked Most read flag' );
-	pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '0', 'explicit Homepage submission can clear Most read rank' );
 
 	pgds_cms_editor_submit( $post_id, array( '_pgds_source' => 'No marker source' ), 'valid', null, null );
 	pgds_cms_editor_assert_meta( $post_id, '_pgds_source', 'Editorial-only source', 'a request without group markers preserves editor metadata' );
@@ -594,35 +584,6 @@ try {
 
 	$valid_values['_pgds_feature_rank'] = '2';
 	pgds_cms_editor_submit( $post_id, $valid_values );
-
-	foreach ( array( '1', '2', '3', '4' ) as $valid_rank ) {
-		$popular_values                       = $valid_values;
-		$popular_values['_pgds_popular_rank'] = $valid_rank;
-		pgds_cms_editor_submit( $post_id, $popular_values );
-		pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', $valid_rank, sprintf( 'exact Most read rank %s saves', $valid_rank ) );
-	}
-
-	$popular_rank_failures = array(
-		'word'   => 'nonnumeric Most read rank',
-		'2.5'    => 'fractional Most read rank',
-		'-1'     => 'Most read rank below one',
-		'0'      => 'Most read rank zero',
-		'5'      => 'Most read rank above four',
-	);
-	foreach ( $popular_rank_failures as $rank_input => $rank_label ) {
-		$popular_values                       = $valid_values;
-		$popular_values['_pgds_popular_rank'] = $rank_input;
-		pgds_cms_editor_submit( $post_id, $popular_values );
-		pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '1', $rank_label . ' preserves the prior Most read flag' );
-		pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '4', $rank_label . ' preserves the prior valid Most read rank' );
-	}
-
-	$not_popular_values = $valid_values;
-	unset( $not_popular_values['_pgds_is_popular'] );
-	$not_popular_values['_pgds_popular_rank'] = '';
-	pgds_cms_editor_submit( $post_id, $not_popular_values );
-	pgds_cms_editor_assert_meta( $post_id, '_pgds_is_popular', '', 'disabling Most read accepts a blank rank' );
-	pgds_cms_editor_assert_meta( $post_id, '_pgds_popular_rank', '0', 'disabling Most read stores the blank rank as zero' );
 
 	$invalid_primary_category = $valid_values;
 	$invalid_primary_category['_pgds_primary_cat'] = (string) $invalid_category['term_id'];
@@ -976,8 +937,7 @@ try {
 	pgds_cms_editor_assert_meta( $rest_post_id, '_pgds_sapo', $rest_previous_sapo, 'unauthorized REST request preserves editor metadata' );
 	wp_set_current_user( (int) $administrators[0] );
 
-	$rest_create_id = 0;
-	$rest_create    = pgds_cms_editor_rest_request(
+	$rest_create = pgds_cms_editor_rest_request(
 		'POST',
 		'/wp/v2/posts',
 		array(
@@ -1039,13 +999,9 @@ try {
 	$pgds_cms_editor_posts[] = (int) $warning_post_id;
 	update_post_meta( $conflict_post_id, '_pgds_is_featured', '1' );
 	update_post_meta( $conflict_post_id, '_pgds_feature_rank', '1' );
-	update_post_meta( $conflict_post_id, '_pgds_is_popular', '1' );
-	update_post_meta( $conflict_post_id, '_pgds_popular_rank', '1' );
 	update_post_meta( $warning_post_id, '_pgds_is_featured', '1' );
 	update_post_meta( $warning_post_id, '_pgds_feature_rank', '1' );
 	update_post_meta( $warning_post_id, '_pgds_photo_story', '1' );
-	update_post_meta( $warning_post_id, '_pgds_is_popular', '1' );
-	update_post_meta( $warning_post_id, '_pgds_popular_rank', '1' );
 	delete_post_meta( $warning_post_id, '_pgds_sapo' );
 
 	$warnings      = pgds_get_article_warnings( $warning_post_id );
@@ -1053,23 +1009,16 @@ try {
 	pgds_cms_editor_assert( in_array( 'pgds_missing_featured_image', $warning_codes, true ), 'featured or photo-story article without an image has a nonblocking warning' );
 	pgds_cms_editor_assert( in_array( 'pgds_missing_sapo', $warning_codes, true ), 'featured or photo-story article without a sapo has a nonblocking warning' );
 	pgds_cms_editor_assert( in_array( 'pgds_duplicate_featured_rank', $warning_codes, true ), 'duplicate published featured rank has a nonblocking warning' );
-	pgds_cms_editor_assert( in_array( 'pgds_duplicate_popular_rank', $warning_codes, true ), 'duplicate published Most read rank has a nonblocking warning' );
 	$duplicate_warning = array();
-	$duplicate_popular_warning = array();
 	foreach ( $warnings as $warning ) {
 		if ( 'pgds_duplicate_featured_rank' === $warning['code'] ) {
 			$duplicate_warning = $warning;
-		}
-		if ( 'pgds_duplicate_popular_rank' === $warning['code'] ) {
-			$duplicate_popular_warning = $warning;
+			break;
 		}
 	}
 	pgds_cms_editor_assert( ! empty( $duplicate_warning['edit_url'] ), 'duplicate featured-rank warning includes an editor link for an authorized user' );
-	pgds_cms_editor_assert( ! empty( $duplicate_popular_warning['edit_url'] ), 'duplicate Most read-rank warning includes an editor link for an authorized user' );
 	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_is_featured', '1', 'warning lookup does not alter the conflicting post Featured flag' );
 	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_feature_rank', '1', 'warning lookup does not reassign the conflicting post rank' );
-	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_is_popular', '1', 'warning lookup does not alter the conflicting post Most read flag' );
-	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_popular_rank', '1', 'warning lookup does not reassign the conflicting post Most read rank' );
 
 	wp_set_current_user( (int) $subscriber_id );
 	$restricted_warnings = pgds_get_article_warnings( $warning_post_id );
@@ -1085,131 +1034,6 @@ try {
 		'duplicate-rank warning omits the edit link for a user who cannot edit the conflict'
 	);
 	wp_set_current_user( (int) $administrators[0] );
-
-	$duplicate_popular_ids = array( (int) $conflict_post_id );
-	for ( $index = 0; $index < 3; $index++ ) {
-		$duplicate_popular_id = wp_insert_post(
-			array(
-				'post_type'   => 'post',
-				'post_status' => 'publish',
-				'post_title'  => sprintf( 'PGDS duplicate Most read rank %d %s', $index, $token ),
-			),
-			true
-		);
-		if ( is_wp_error( $duplicate_popular_id ) ) {
-			throw new RuntimeException( 'The regression suite could not create a duplicate Most read fixture.' );
-		}
-		$duplicate_popular_id       = (int) $duplicate_popular_id;
-		$pgds_cms_editor_posts[]     = $duplicate_popular_id;
-		$duplicate_popular_ids[]     = $duplicate_popular_id;
-		update_post_meta( $duplicate_popular_id, '_pgds_is_popular', '1' );
-		update_post_meta( $duplicate_popular_id, '_pgds_popular_rank', '1' );
-	}
-
-	$rank_four_popular_id = wp_insert_post(
-		array(
-			'post_type'   => 'post',
-			'post_status' => 'publish',
-			'post_title'  => 'PGDS exact Most read rank 4 ' . $token,
-		),
-		true
-	);
-	if ( is_wp_error( $rank_four_popular_id ) ) {
-		throw new RuntimeException( 'The regression suite could not create an exact Most read fixture.' );
-	}
-	$rank_four_popular_id      = (int) $rank_four_popular_id;
-	$pgds_cms_editor_posts[]    = $rank_four_popular_id;
-	update_post_meta( $rank_four_popular_id, '_pgds_is_popular', '1' );
-	update_post_meta( $rank_four_popular_id, '_pgds_popular_rank', '4' );
-
-	PGDS_Used_Ids::reset();
-	$popular_with_conflicts     = pgds_query_popular( 4, false );
-	$popular_with_conflict_ids = array_map( 'intval', wp_list_pluck( $popular_with_conflicts, 'ID' ) );
-	pgds_cms_editor_assert( in_array( $rank_four_popular_id, $popular_with_conflict_ids, true ), 'duplicate lower ranks cannot crowd an exact later Most read rank out of the query' );
-	pgds_cms_editor_assert( 1 === count( array_intersect( $duplicate_popular_ids, $popular_with_conflict_ids ) ), 'only one post from a duplicate Most read rank can occupy the widget' );
-
-	PGDS_Used_Ids::reset();
-	$popular_without_dedup = pgds_query_popular( 5, false );
-	$fallback_post         = end( $popular_without_dedup );
-	if ( ! $fallback_post instanceof WP_Post ) {
-		throw new RuntimeException( 'The regression suite requires one automatic Most read fallback post.' );
-	}
-	PGDS_Used_Ids::reset();
-	PGDS_Used_Ids::mark( array( $fallback_post ) );
-	$popular_with_dedup_ids = array_map( 'intval', wp_list_pluck( pgds_query_popular( 5, true ), 'ID' ) );
-	pgds_cms_editor_assert( ! in_array( (int) $fallback_post->ID, $popular_with_dedup_ids, true ), 'Most read automatic fallback excludes posts already used by earlier homepage blocks' );
-	PGDS_Used_Ids::reset();
-
-	wp_update_post(
-		array(
-			'ID'          => $warning_post_id,
-			'post_status' => 'publish',
-		)
-	);
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_featured', '1', 'publishing a Featured claimant keeps its selected slot' );
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_feature_rank', '1', 'publishing a Featured claimant keeps its selected rank' );
-	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_is_featured', '', 'publishing a Featured claimant releases the previous published owner' );
-	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_feature_rank', '0', 'released Featured owner no longer retains a stale rank' );
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_popular', '1', 'publishing a Most read claimant keeps its selected slot' );
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_popular_rank', '1', 'publishing a Most read claimant keeps its selected rank' );
-	foreach ( $duplicate_popular_ids as $released_popular_id ) {
-		pgds_cms_editor_assert_meta( $released_popular_id, '_pgds_is_popular', '', 'publishing a Most read claimant releases every previous owner of the rank' );
-		pgds_cms_editor_assert_meta( $released_popular_id, '_pgds_popular_rank', '0', 'released Most read owner no longer retains a stale rank' );
-	}
-
-	$draft_claimant_id = wp_insert_post(
-		array(
-			'post_type'   => 'post',
-			'post_status' => 'draft',
-			'post_title'  => 'PGDS draft curation claimant ' . $token,
-			'meta_input'  => array(
-				'_pgds_is_featured'  => '1',
-				'_pgds_feature_rank' => 1,
-				'_pgds_is_popular'   => '1',
-				'_pgds_popular_rank' => 1,
-			),
-		),
-		true
-	);
-	if ( is_wp_error( $draft_claimant_id ) ) {
-		throw new RuntimeException( 'The regression suite could not create a draft curation claimant.' );
-	}
-	$draft_claimant_id       = (int) $draft_claimant_id;
-	$pgds_cms_editor_posts[] = $draft_claimant_id;
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_featured', '1', 'a draft does not displace the published Featured owner' );
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_popular', '1', 'a draft does not displace the published Most read owner' );
-
-	wp_update_post(
-		array(
-			'ID'          => $draft_claimant_id,
-			'post_status' => 'publish',
-		)
-	);
-	pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_featured', '1', 'the last published Featured claimant owns the slot' );
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_featured', '', 'the previous Featured owner is deactivated when a new post claims its rank' );
-	pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_popular', '1', 'the last published Most read claimant owns the slot' );
-	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_popular', '', 'the previous Most read owner is deactivated when a new post claims its rank' );
-
-	if ( $rest_create_id ) {
-		$rest_claim = pgds_cms_editor_rest_request(
-			'POST',
-			'/wp/v2/posts/' . $rest_create_id,
-			array(
-				'status' => 'publish',
-				'meta'   => array(
-					'_pgds_is_featured'  => true,
-					'_pgds_feature_rank' => 1,
-					'_pgds_is_popular'   => true,
-					'_pgds_popular_rank' => 1,
-				),
-			)
-		);
-		pgds_cms_editor_assert( 200 === $rest_claim->get_status(), 'REST can publish a post while claiming Featured and Most read ranks' );
-		pgds_cms_editor_assert_meta( $rest_create_id, '_pgds_is_featured', '1', 'REST Featured claimant owns the requested slot' );
-		pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_featured', '', 'REST Featured claim deactivates the previous owner' );
-		pgds_cms_editor_assert_meta( $rest_create_id, '_pgds_is_popular', '1', 'REST Most read claimant owns the requested slot' );
-		pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_popular', '', 'REST Most read claim deactivates the previous owner' );
-	}
 
 	$columns = pgds_admin_columns( array( 'cb' => '<input>', 'title' => 'Title', 'date' => 'Date' ) );
 	pgds_cms_editor_assert( isset( $columns['pgds_flags'] ) && 'PGDS' === $columns['pgds_flags'], 'Posts list retains the PGDS metadata column' );
@@ -1257,7 +1081,7 @@ try {
 		pgds_cms_editor_assert( false !== strpos( $metabox_markup, $group['label'] ), sprintf( 'editor meta box renders the %s group', $group['label'] ) );
 	}
 	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'min="1"' ) && false !== strpos( $metabox_markup, 'max="4"' ) && false !== strpos( $metabox_markup, 'step="1"' ), 'featured-rank input provides 1–4 progressive guidance' );
-	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'class="pgds-metabox__group pgds-metabox__group--homepage" data-pgds-group="homepage"' ), 'Homepage curation renders expanded without a collapse toggle' );
+	pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'aria-controls="pgds-meta-group-homepage"' ) && false !== strpos( $metabox_markup, 'id="pgds-meta-group-homepage" class="pgds-metabox__group-content" hidden' ), 'Homepage curation renders collapsed behind an accessible toggle' );
 	foreach ( array( 'editorial', 'homepage' ) as $group_key ) {
 		pgds_cms_editor_assert( false !== strpos( $metabox_markup, 'name="pgds_meta_groups[]" value="' . $group_key . '"' ), sprintf( '%s group emits an explicit save marker', $group_key ) );
 	}
