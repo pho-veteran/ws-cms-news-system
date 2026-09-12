@@ -275,7 +275,7 @@ function pgds_query_tagged_posts( $tag, $count ) {
 function pgds_query_popular( $count = 5, $dedup = true ) {
 	$used = $dedup ? PGDS_Used_Ids::all() : array();
 
-	// (1) Curated posts first, in their explicit rank order.
+	// (1) Curated posts first, mapped to their explicit rank.
 	$curated_q = new WP_Query(
 		array(
 			'post_type'      => 'post',
@@ -294,10 +294,22 @@ function pgds_query_popular( $count = 5, $dedup = true ) {
 			),
 		)
 	);
-	$posts = $curated_q->posts;
 
-	// (2) Fill any remaining slots automatically by comment_count.
-	if ( count( $posts ) < $count ) {
+	$mapped = array_fill( 0, $count, null );
+	$have   = array();
+	foreach ( $curated_q->posts as $p ) {
+		$rank = (int) get_post_meta( $p->ID, '_pgds_popular_rank', true );
+		if ( $rank >= 1 && $rank <= $count ) {
+			if ( null === $mapped[ $rank - 1 ] ) {
+				$mapped[ $rank - 1 ] = $p;
+				$have[]              = $p->ID;
+			}
+		}
+	}
+
+	// (2) Fill remaining slots automatically by comment_count.
+	$empty_count = $count - count( array_filter( $mapped ) );
+	if ( $empty_count > 0 ) {
 		$base = array(
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
@@ -307,44 +319,45 @@ function pgds_query_popular( $count = 5, $dedup = true ) {
 				'date'          => 'DESC',
 			),
 		);
-		$have = wp_list_pluck( $posts, 'ID' );
 		$fill = new WP_Query(
 			array_merge(
 				$base,
 				array(
-					'posts_per_page' => $count - count( $posts ),
+					'posts_per_page' => $empty_count,
 					'post__not_in'   => array_merge( $used, $have ),
 				)
 			)
 		);
-		$posts = array_merge( $posts, $fill->posts );
+		$fill_posts = $fill->posts;
+
+		/*
+		 * Top up when the front page has consumed so many posts that fewer than $count remain
+		 * unused. A short "most read" list reads as a fault rather than as an honest ranking.
+		 */
+		if ( count( $fill_posts ) < $empty_count ) {
+			$have_fill = wp_list_pluck( $fill_posts, 'ID' );
+			$topup = new WP_Query(
+				array_merge(
+					$base,
+					array(
+						'posts_per_page' => $empty_count - count( $fill_posts ),
+						'post__not_in'   => array_merge( $have, $have_fill ),
+					)
+				)
+			);
+			$fill_posts = array_merge( $fill_posts, $topup->posts );
+		}
+
+		$fill_idx = 0;
+		for ( $i = 0; $i < $count; $i++ ) {
+			if ( null === $mapped[ $i ] && isset( $fill_posts[ $fill_idx ] ) ) {
+				$mapped[ $i ] = $fill_posts[ $fill_idx ];
+				$fill_idx++;
+			}
+		}
 	}
 
-	/*
-	 * Top up when the front page has consumed so many posts that fewer than $count remain
-	 * unused. A short "most read" list reads as a fault rather than as an honest ranking,
-	 * and on a small site the exclusion set can easily exceed the post count — so the
-	 * fallback allows repeats rather than rendering three items in a five-item box. Ranking
-	 * order is preserved: the curated rows come first.
-	 */
-	if ( count( $posts ) < $count ) {
-		$have = wp_list_pluck( $posts, 'ID' );
-		$fill = new WP_Query(
-			array(
-				'post_type'      => 'post',
-				'post_status'    => 'publish',
-				'no_found_rows'  => true,
-				'posts_per_page' => $count - count( $posts ),
-				'post__not_in'   => $have,
-				'orderby'        => array(
-					'comment_count' => 'DESC',
-					'date'          => 'DESC',
-				),
-			)
-		);
-		$posts = array_merge( $posts, $fill->posts );
-	}
-
+	$posts = array_values( array_filter( $mapped ) );
 	PGDS_Used_Ids::mark( $posts );
 	return $posts;
 }
