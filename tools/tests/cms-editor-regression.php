@@ -245,6 +245,8 @@ try {
 		'pgds_validate_featured_rank',
 		'pgds_validate_popular_rank',
 		'pgds_find_popular_rank_conflict',
+		'pgds_claim_curation_rank',
+		'pgds_reconcile_curation_rank_ownership',
 		'pgds_validate_primary_category',
 		'pgds_normalize_youtube_input',
 		'pgds_get_article_warnings',
@@ -974,7 +976,8 @@ try {
 	pgds_cms_editor_assert_meta( $rest_post_id, '_pgds_sapo', $rest_previous_sapo, 'unauthorized REST request preserves editor metadata' );
 	wp_set_current_user( (int) $administrators[0] );
 
-	$rest_create = pgds_cms_editor_rest_request(
+	$rest_create_id = 0;
+	$rest_create    = pgds_cms_editor_rest_request(
 		'POST',
 		'/wp/v2/posts',
 		array(
@@ -1136,6 +1139,77 @@ try {
 	$popular_with_dedup_ids = array_map( 'intval', wp_list_pluck( pgds_query_popular( 5, true ), 'ID' ) );
 	pgds_cms_editor_assert( ! in_array( (int) $fallback_post->ID, $popular_with_dedup_ids, true ), 'Most read automatic fallback excludes posts already used by earlier homepage blocks' );
 	PGDS_Used_Ids::reset();
+
+	wp_update_post(
+		array(
+			'ID'          => $warning_post_id,
+			'post_status' => 'publish',
+		)
+	);
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_featured', '1', 'publishing a Featured claimant keeps its selected slot' );
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_feature_rank', '1', 'publishing a Featured claimant keeps its selected rank' );
+	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_is_featured', '', 'publishing a Featured claimant releases the previous published owner' );
+	pgds_cms_editor_assert_meta( $conflict_post_id, '_pgds_feature_rank', '0', 'released Featured owner no longer retains a stale rank' );
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_popular', '1', 'publishing a Most read claimant keeps its selected slot' );
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_popular_rank', '1', 'publishing a Most read claimant keeps its selected rank' );
+	foreach ( $duplicate_popular_ids as $released_popular_id ) {
+		pgds_cms_editor_assert_meta( $released_popular_id, '_pgds_is_popular', '', 'publishing a Most read claimant releases every previous owner of the rank' );
+		pgds_cms_editor_assert_meta( $released_popular_id, '_pgds_popular_rank', '0', 'released Most read owner no longer retains a stale rank' );
+	}
+
+	$draft_claimant_id = wp_insert_post(
+		array(
+			'post_type'   => 'post',
+			'post_status' => 'draft',
+			'post_title'  => 'PGDS draft curation claimant ' . $token,
+			'meta_input'  => array(
+				'_pgds_is_featured'  => '1',
+				'_pgds_feature_rank' => 1,
+				'_pgds_is_popular'   => '1',
+				'_pgds_popular_rank' => 1,
+			),
+		),
+		true
+	);
+	if ( is_wp_error( $draft_claimant_id ) ) {
+		throw new RuntimeException( 'The regression suite could not create a draft curation claimant.' );
+	}
+	$draft_claimant_id       = (int) $draft_claimant_id;
+	$pgds_cms_editor_posts[] = $draft_claimant_id;
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_featured', '1', 'a draft does not displace the published Featured owner' );
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_popular', '1', 'a draft does not displace the published Most read owner' );
+
+	wp_update_post(
+		array(
+			'ID'          => $draft_claimant_id,
+			'post_status' => 'publish',
+		)
+	);
+	pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_featured', '1', 'the last published Featured claimant owns the slot' );
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_featured', '', 'the previous Featured owner is deactivated when a new post claims its rank' );
+	pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_popular', '1', 'the last published Most read claimant owns the slot' );
+	pgds_cms_editor_assert_meta( $warning_post_id, '_pgds_is_popular', '', 'the previous Most read owner is deactivated when a new post claims its rank' );
+
+	if ( $rest_create_id ) {
+		$rest_claim = pgds_cms_editor_rest_request(
+			'POST',
+			'/wp/v2/posts/' . $rest_create_id,
+			array(
+				'status' => 'publish',
+				'meta'   => array(
+					'_pgds_is_featured'  => true,
+					'_pgds_feature_rank' => 1,
+					'_pgds_is_popular'   => true,
+					'_pgds_popular_rank' => 1,
+				),
+			)
+		);
+		pgds_cms_editor_assert( 200 === $rest_claim->get_status(), 'REST can publish a post while claiming Featured and Most read ranks' );
+		pgds_cms_editor_assert_meta( $rest_create_id, '_pgds_is_featured', '1', 'REST Featured claimant owns the requested slot' );
+		pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_featured', '', 'REST Featured claim deactivates the previous owner' );
+		pgds_cms_editor_assert_meta( $rest_create_id, '_pgds_is_popular', '1', 'REST Most read claimant owns the requested slot' );
+		pgds_cms_editor_assert_meta( $draft_claimant_id, '_pgds_is_popular', '', 'REST Most read claim deactivates the previous owner' );
+	}
 
 	$columns = pgds_admin_columns( array( 'cb' => '<input>', 'title' => 'Title', 'date' => 'Date' ) );
 	pgds_cms_editor_assert( isset( $columns['pgds_flags'] ) && 'PGDS' === $columns['pgds_flags'], 'Posts list retains the PGDS metadata column' );
