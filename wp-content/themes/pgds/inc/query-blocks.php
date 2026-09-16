@@ -466,18 +466,8 @@ function pgds_home_blocks() {
 	// remains. Grid 1 sits beside the tall popular + calendar sidebar, so a short
 	// main column there leaves the largest void on the page; it is filled first.
 	// ---------------------------------------------------------------------------
-	if ( count( $latest_cards ) < 3 ) {
-		$latest_cards = array_merge(
-			$latest_cards,
-			pgds_query_posts( '', 3 - count( $latest_cards ) )
-		);
-	}
-	if ( count( $latest_list ) < 7 ) {
-		$latest_list = array_merge(
-			$latest_list,
-			pgds_query_posts( '', 7 - count( $latest_list ) )
-		);
-	}
+	// (Fallback logic removed because latest_cards and latest_list already query 
+	// all categories and pull everything available, making array_merge redundant).
 
 	// mixed_list is the catch-all tail: it takes what nothing else claimed, so it
 	// is queried last and is allowed to come up short without leaving a hole.
