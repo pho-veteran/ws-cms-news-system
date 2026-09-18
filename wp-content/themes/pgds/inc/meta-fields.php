@@ -74,6 +74,23 @@ function pgds_meta_fields( $surface = '' ) {
 			'type'     => 'checkbox',
 			'editable' => true,
 		),
+		'_pgds_is_popular'     => array(
+			'group'    => 'homepage',
+			'label'    => 'Đọc nhiều',
+			'help'     => 'Bật để bài viết có thể xuất hiện trong khối Đọc nhiều ở cột bên.',
+			'type'     => 'checkbox',
+			'editable' => true,
+		),
+		'_pgds_popular_rank'   => array(
+			'group'    => 'homepage',
+			'label'    => 'Vị trí Đọc nhiều',
+			'help'     => 'Chọn từ 1 đến 4 để sắp xếp thứ tự hiển thị trong khối Đọc nhiều.',
+			'type'     => 'number',
+			'editable' => true,
+			'min'      => 1,
+			'max'      => 4,
+			'step'     => 1,
+		),
 		'_pgds_youtube_id'     => array(
 			'group'    => 'video',
 			'label'    => 'Video YouTube',
@@ -117,6 +134,10 @@ function pgds_meta_fields( $surface = '' ) {
 		$fields['_pgds_feature_rank']['help']          = 'Choose a position from 1 to 4 when Featured is enabled.';
 		$fields['_pgds_photo_story']['label']          = 'Photo story';
 		$fields['_pgds_photo_story']['help']           = 'Allow this article to appear in the Photo Story section.';
+		$fields['_pgds_is_popular']['label']           = 'Most read';
+		$fields['_pgds_is_popular']['help']            = 'Allow this article to appear in the Most read sidebar.';
+		$fields['_pgds_popular_rank']['label']         = 'Most read position';
+		$fields['_pgds_popular_rank']['help']          = 'Choose a position from 1 to 4 when Most read is enabled.';
 		$fields['_pgds_youtube_id']['label']            = 'YouTube video';
 		$fields['_pgds_youtube_id']['help']             = 'Paste a YouTube URL or its 11-character video ID.';
 		$fields['_pgds_youtube_title']['label']         = 'YouTube title';
@@ -144,7 +165,6 @@ function pgds_meta_groups( $surface = '' ) {
 		'homepage'  => array(
 			'label'       => 'Điều kiện và vị trí hiển thị trang chủ',
 			'description' => 'Bạn chọn nơi bài có thể xuất hiện; các khối trên trang chủ sẽ tự lấy bài phù hợp.',
-			'collapsed'   => true,
 		),
 		'video'     => array(
 			'label'       => 'Video',
@@ -212,6 +232,8 @@ function pgds_register_meta() {
 		'_pgds_is_featured'       => 'boolean',
 		'_pgds_feature_rank'      => 'integer',
 		'_pgds_photo_story'       => 'boolean',
+		'_pgds_is_popular'        => 'boolean',
+		'_pgds_popular_rank'      => 'integer',
 		'_pgds_source'            => 'string',
 		'_pgds_display_author'    => 'string',
 	);
@@ -301,6 +323,143 @@ function pgds_validate_featured_rank( $featured, $rank ) {
 	}
 
 	return (int) $rank;
+}
+
+/**
+ * Validate the Most read flag and rank as one unit.
+ *
+ * @param bool  $popular Whether Most read is enabled.
+ * @param mixed $rank    Submitted rank.
+ * @return int|WP_Error Normalized rank or validation error.
+ */
+function pgds_validate_popular_rank( $popular, $rank ) {
+	if ( is_string( $rank ) ) {
+		$rank = trim( $rank );
+	}
+
+	if ( '' === $rank || null === $rank || 0 === $rank || '0' === $rank ) {
+		if ( $popular ) {
+			return new WP_Error( 'pgds_invalid_popular_rank' );
+		}
+
+		return 0;
+	}
+
+	$is_valid = ( is_int( $rank ) && $rank >= 1 && $rank <= 4 ) ||
+		( is_string( $rank ) && 1 === preg_match( '/^[1-4]$/', $rank ) );
+
+	if ( ! $is_valid ) {
+		return new WP_Error( 'pgds_invalid_popular_rank' );
+	}
+
+	return (int) $rank;
+}
+
+/**
+ * Return the two exclusive homepage slot definitions.
+ *
+ * @return array<string,array{flag:string,rank:string}>
+ */
+function pgds_curation_rank_definitions() {
+	return array(
+		'featured' => array(
+			'flag' => '_pgds_is_featured',
+			'rank' => '_pgds_feature_rank',
+		),
+		'popular'  => array(
+			'flag' => '_pgds_is_popular',
+			'rank' => '_pgds_popular_rank',
+		),
+	);
+}
+
+/**
+ * Give one published post exclusive ownership of a curated homepage slot.
+ *
+ * A per-slot database advisory lock serializes simultaneous editor/REST saves.
+ * Drafts may retain a desired rank but do not displace the published owner until
+ * they are published.
+ *
+ * @param int    $post_id Post claiming the slot.
+ * @param string $type    Curation type key.
+ * @return int[]|WP_Error Released post IDs, or a lock error.
+ */
+function pgds_claim_curation_rank( $post_id, $type ) {
+	global $wpdb;
+
+	$definitions = pgds_curation_rank_definitions();
+	if ( ! isset( $definitions[ $type ] ) ) {
+		return new WP_Error( 'pgds_invalid_curation_type' );
+	}
+
+	$post_id  = absint( $post_id );
+	$post     = get_post( $post_id );
+	$flag     = $definitions[ $type ]['flag'];
+	$rank_key = $definitions[ $type ]['rank'];
+	$rank     = (int) get_post_meta( $post_id, $rank_key, true );
+	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type || 'publish' !== $post->post_status || '1' !== get_post_meta( $post_id, $flag, true ) || $rank < 1 || $rank > 4 ) {
+		return array();
+	}
+
+	$lock_name = 'pgds-curation-' . substr( hash( 'sha256', $wpdb->prefix . $type . ':' . $rank ), 0, 40 );
+	$locked    = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', $lock_name, 10 ) );
+	if ( 1 !== $locked ) {
+		return new WP_Error( 'pgds_curation_rank_busy' );
+	}
+
+	$released = array();
+	try {
+		// Re-read the publish state inside the lock. Keep the requested rank captured
+		// above: another claimant may have cleared this post while this save waited,
+		// and the claimant processed last must still be able to take ownership.
+		clean_post_cache( $post_id );
+		$post = get_post( $post_id );
+		if ( ! $post instanceof WP_Post || 'publish' !== $post->post_status ) {
+			return array();
+		}
+
+		// Reassert the request's claim after acquiring the lock. Without this, the
+		// first concurrent claimant could deactivate a waiter and incorrectly win.
+		update_post_meta( $post_id, $flag, '1' );
+		update_post_meta( $post_id, $rank_key, $rank );
+
+		$conflicts = get_posts(
+			array(
+				'post_type'              => 'post',
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'post__not_in'           => array( $post_id ),
+				'cache_results'          => false,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'meta_query'             => array(
+					array(
+						'key'   => $flag,
+						'value' => '1',
+					),
+					array(
+						'key'     => $rank_key,
+						'value'   => $rank,
+						'type'    => 'NUMERIC',
+						'compare' => '=',
+					),
+				),
+			)
+		);
+
+		foreach ( $conflicts as $conflict_id ) {
+			$conflict_id = (int) $conflict_id;
+			update_post_meta( $conflict_id, $flag, '' );
+			update_post_meta( $conflict_id, $rank_key, 0 );
+			$released[] = $conflict_id;
+		}
+	} finally {
+		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock_name ) );
+	}
+
+	return $released;
 }
 
 /**
@@ -451,6 +610,51 @@ function pgds_find_featured_rank_conflict( $post_id, $rank ) {
 }
 
 /**
+ * Find one published post using the same Most read rank.
+ *
+ * @param int $post_id Current post ID.
+ * @param int $rank    Most read rank.
+ * @return int Conflicting post ID or zero.
+ */
+function pgds_find_popular_rank_conflict( $post_id, $rank ) {
+	if ( $rank < 1 || $rank > 4 ) {
+		return 0;
+	}
+
+	$query = new WP_Query(
+		array(
+			'post_type'              => 'post',
+			'post_status'            => 'publish',
+			'posts_per_page'         => 1,
+			'fields'                 => 'ids',
+			'no_found_rows'          => true,
+			'post__not_in'           => $post_id ? array( (int) $post_id ) : array(),
+			'orderby'                => array(
+				'date' => 'DESC',
+				'ID'   => 'DESC',
+			),
+			'cache_results'          => false,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+			'meta_query'             => array(
+				array(
+					'key'   => '_pgds_is_popular',
+					'value' => '1',
+				),
+				array(
+					'key'     => '_pgds_popular_rank',
+					'value'   => (int) $rank,
+					'type'    => 'NUMERIC',
+					'compare' => '=',
+				),
+			),
+		)
+	);
+
+	return isset( $query->posts[0] ) ? (int) $query->posts[0] : 0;
+}
+
+/**
  * Describe the placement selected for quality-warning text.
  *
  * @param bool $featured   Whether Featured is enabled.
@@ -484,6 +688,7 @@ function pgds_get_article_warnings( $post_id ) {
 	$warnings    = array();
 	$featured    = '1' === get_post_meta( $post_id, '_pgds_is_featured', true );
 	$photo_story = '1' === get_post_meta( $post_id, '_pgds_photo_story', true );
+	$popular     = '1' === get_post_meta( $post_id, '_pgds_is_popular', true );
 	$english     = 'vietnam-buddhism' === pgds_current_editorial_surface( $post_id );
 
 	if ( $featured || $photo_story ) {
@@ -516,8 +721,28 @@ function pgds_get_article_warnings( $post_id ) {
 			$warning = array(
 				'code'        => 'pgds_duplicate_featured_rank',
 				'message'     => $english
-					? sprintf( 'Another published post already uses Featured position %d. Both posts were left unchanged.', $rank )
-					: sprintf( 'Một bài đã xuất bản khác đang dùng vị trí Tin nổi bật %d. Cả hai bài vẫn được giữ nguyên.', $rank ),
+					? sprintf( 'Another published post currently uses Featured position %d. Publishing or saving this post as published will move the position here.', $rank )
+					: sprintf( 'Một bài đã xuất bản khác đang dùng vị trí Tin nổi bật %d. Khi bài này được xuất bản hoặc lưu ở trạng thái đã xuất bản, vị trí sẽ chuyển sang bài này.', $rank ),
+				'conflict_id' => $conflict_id,
+				'edit_label'  => $english ? 'Open the post using this position' : 'Mở bài đang trùng vị trí',
+			);
+			if ( current_user_can( 'edit_post', $conflict_id ) ) {
+				$warning['edit_url'] = get_edit_post_link( $conflict_id, 'raw' );
+			}
+			$warnings[] = $warning;
+		}
+	}
+
+	if ( $popular ) {
+		$rank        = (int) get_post_meta( $post_id, '_pgds_popular_rank', true );
+		$conflict_id = pgds_find_popular_rank_conflict( $post_id, $rank );
+
+		if ( $conflict_id ) {
+			$warning = array(
+				'code'        => 'pgds_duplicate_popular_rank',
+				'message'     => $english
+					? sprintf( 'Another published post currently uses Most read position %d. Publishing or saving this post as published will move the position here.', $rank )
+					: sprintf( 'Một bài đã xuất bản khác đang dùng vị trí Đọc nhiều %d. Khi bài này được xuất bản hoặc lưu ở trạng thái đã xuất bản, vị trí sẽ chuyển sang bài này.', $rank ),
 				'conflict_id' => $conflict_id,
 				'edit_label'  => $english ? 'Open the post using this position' : 'Mở bài đang trùng vị trí',
 			);
@@ -539,6 +764,8 @@ function pgds_get_article_warnings( $post_id ) {
 function pgds_meta_feedback_messages( $surface = '' ) {
 	$messages = array(
 		'pgds_invalid_featured_rank'                 => 'Thiết lập Tin nổi bật chưa được cập nhật. Khi bật Tin nổi bật, hãy chọn vị trí từ 1 đến 4. Giá trị hợp lệ trước đó được giữ nguyên.',
+		'pgds_invalid_popular_rank'                  => 'Thiết lập Đọc nhiều chưa được cập nhật. Khi bật Đọc nhiều, hãy chọn vị trí từ 1 đến 4. Giá trị hợp lệ trước đó được giữ nguyên.',
+		'pgds_curation_rank_busy'                    => 'Vị trí hiển thị đang được một lượt lưu khác cập nhật. Bài này chưa chiếm vị trí; hãy lưu lại để thử lần nữa.',
 		'pgds_invalid_primary_category'              => 'Chuyên mục chính chưa được cập nhật. Hãy chọn một chuyên mục đã được đánh dấu cho bài viết. Giá trị hợp lệ trước đó được giữ nguyên.',
 		'pgds_invalid_youtube'                       => 'Video YouTube chưa được cập nhật. Hãy dán đúng đường dẫn YouTube hoặc mã video gồm 11 ký tự. Video hợp lệ trước đó được giữ nguyên.',
 		'pgds_invalid_editorial_surface'             => 'Loại nội dung không hợp lệ. Giá trị phân loại trước đó được giữ nguyên.',
@@ -553,6 +780,8 @@ function pgds_meta_feedback_messages( $surface = '' ) {
 	$surface = $surface ? $surface : pgds_requested_editorial_surface();
 	if ( 'vietnam-buddhism' === $surface ) {
 		$messages['pgds_invalid_featured_rank']                 = 'Featured settings were not updated. Choose a position from 1 to 4 when Featured is enabled.';
+		$messages['pgds_invalid_popular_rank']                  = 'Most read settings were not updated. Choose a position from 1 to 4 when Most read is enabled.';
+		$messages['pgds_curation_rank_busy']                    = 'Another save is updating this position. This post did not claim the slot; save again to retry.';
 		$messages['pgds_invalid_primary_category']              = 'The primary category was not updated. The previous valid value was preserved.';
 		$messages['pgds_invalid_youtube']                       = 'The YouTube video was not updated. Paste a valid YouTube URL or 11-character video ID.';
 		$messages['pgds_invalid_editorial_surface']             = 'The selected content type is invalid. The previous classification was preserved.';
@@ -1202,6 +1431,16 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 			update_post_meta( $post_id, '_pgds_feature_rank', $rank );
 			update_post_meta( $post_id, '_pgds_photo_story', isset( $_POST['_pgds_photo_story'] ) ? '1' : '' );
 		}
+
+		$new_popular  = isset( $_POST['_pgds_is_popular'] );
+		$popular_rank = pgds_validate_popular_rank( $new_popular, isset( $_POST['_pgds_popular_rank'] ) ? wp_unslash( $_POST['_pgds_popular_rank'] ) : '' );
+
+		if ( is_wp_error( $popular_rank ) ) {
+			$errors[] = $popular_rank->get_error_code();
+		} else {
+			update_post_meta( $post_id, '_pgds_is_popular', $new_popular ? '1' : '' );
+			update_post_meta( $post_id, '_pgds_popular_rank', $popular_rank );
+		}
 	}
 
 	if ( in_array( 'video', $submitted_groups, true ) && isset( $_POST['_pgds_youtube_id'] ) ) {
@@ -1251,6 +1490,55 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 	pgds_record_meta_feedback( $post_id, $errors );
 }
 add_action( 'wp_after_insert_post', 'pgds_save_meta', 10, 4 );
+
+/**
+ * Enforce one published owner for every Featured and Most read rank.
+ *
+ * @param int          $post_id     Post ID.
+ * @param WP_Post      $post        Post after the save.
+ * @param bool         $update      Whether this is an existing post.
+ * @param WP_Post|null $post_before Post before the save.
+ * @return void
+ */
+function pgds_reconcile_curation_rank_ownership( $post_id, $post, $update = false, $post_before = null ) {
+	unset( $update, $post_before );
+
+	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type || wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+
+	foreach ( array_keys( pgds_curation_rank_definitions() ) as $type ) {
+		$result = pgds_claim_curation_rank( $post_id, $type );
+		if ( ! is_wp_error( $result ) ) {
+			continue;
+		}
+
+		$definition = pgds_curation_rank_definitions()[ $type ];
+		update_post_meta( $post_id, $definition['flag'], '' );
+		update_post_meta( $post_id, $definition['rank'], 0 );
+		$feedback = $GLOBALS['pgds_meta_feedback'] ?? array();
+		$codes    = (int) ( $feedback['post_id'] ?? 0 ) === (int) $post_id ? (array) ( $feedback['codes'] ?? array() ) : array();
+		$codes[]  = $result->get_error_code();
+		pgds_record_meta_feedback( $post_id, $codes );
+	}
+}
+add_action( 'wp_after_insert_post', 'pgds_reconcile_curation_rank_ownership', 20, 4 );
+
+/**
+ * Reconcile REST writes after the controller has persisted registered metadata.
+ *
+ * @param WP_Post         $post     Inserted or updated post.
+ * @param WP_REST_Request $request  REST request.
+ * @param bool            $creating Whether this is a new post.
+ * @return void
+ */
+function pgds_rest_reconcile_curation_rank_ownership( $post, $request, $creating ) {
+	unset( $request, $creating );
+
+	if ( $post instanceof WP_Post ) {
+		pgds_reconcile_curation_rank_ownership( $post->ID, $post );
+	}
+}
 
 /**
  * Get an existing value or a default for REST preflight validation.
@@ -1342,6 +1630,26 @@ function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 		}
 		$meta['_pgds_is_featured']  = $featured;
 		$meta['_pgds_feature_rank'] = $rank;
+	}
+
+	if ( array_key_exists( '_pgds_is_popular', $meta ) || array_key_exists( '_pgds_popular_rank', $meta ) ) {
+		$popular = array_key_exists( '_pgds_is_popular', $meta )
+			? rest_sanitize_boolean( $meta['_pgds_is_popular'] )
+			: rest_sanitize_boolean( pgds_rest_existing_meta( $post_id, '_pgds_is_popular', false ) );
+		$popular_rank_raw = array_key_exists( '_pgds_popular_rank', $meta )
+			? $meta['_pgds_popular_rank']
+			: pgds_rest_existing_meta( $post_id, '_pgds_popular_rank', 0 );
+		$popular_rank = pgds_validate_popular_rank( $popular, $popular_rank_raw );
+
+		if ( is_wp_error( $popular_rank ) ) {
+			return new WP_Error(
+				$popular_rank->get_error_code(),
+				pgds_meta_feedback_messages( $rest_surface )[ $popular_rank->get_error_code() ],
+				array( 'status' => 400 )
+			);
+		}
+		$meta['_pgds_is_popular']  = $popular;
+		$meta['_pgds_popular_rank'] = $popular_rank;
 	}
 
 	if ( $categories_supplied ) {
@@ -1450,6 +1758,7 @@ function pgds_rest_clear_empty_youtube_meta( $post, $request, $creating ) {
 }
 
 add_action( 'rest_after_insert_post', 'pgds_rest_clear_empty_youtube_meta', 10, 3 );
+add_action( 'rest_after_insert_post', 'pgds_rest_reconcile_curation_rank_ownership', 20, 3 );
 add_filter( 'rest_pre_insert_post', 'pgds_rest_validate_article_meta', 10, 2 );
 
 /**
