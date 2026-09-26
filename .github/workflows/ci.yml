@@ -173,6 +173,44 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
+  trivy-evaluation:
+    name: Trivy security scan (evaluation)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Scan dependencies, configuration, and secrets
+        # Pin trivy-action v0.36.0 and the Trivy CLI release independently.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          format: json
+          output: trivy.json
+          exit-code: "0"
+          version: v0.74.0
+          cache-dir: ${{ runner.temp }}/trivy-cache
+
+      - name: Show Trivy summary and create SARIF
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy convert --format table --report summary --scanners vuln,misconfig,secret trivy.json
+          trivy convert --format sarif --output trivy.sarif trivy.json
+
+      - name: Save Trivy findings
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-reports
+          path: |
+            trivy.json
+            trivy.sarif
+          if-no-files-found: error
+          retention-days: 7
+
   build:
     name: Build theme assets
     needs:

@@ -7,6 +7,9 @@ the generated manifest, and uploads the build output as artifacts. Pull requests
 Synapse against dependencies and source. Synapse is in evaluation mode: its high/critical
 gate result is visible in the job summary, while a SARIF report is retained for review and
 findings do not block the build. A missing or invalid SARIF report still fails the scan job.
+Pull requests also run Trivy for a comparison of dependency, IaC, and secret findings; its
+native table summary appears in the job log, and JSON plus SARIF reports are retained as
+artifacts. Trivy findings are advisory during this evaluation.
 
 `deploy.yml` runs for pushes to `main` and for a manual `workflow_dispatch`. Its lint and
 build jobs are hard gates. As of 2026-09-05, the deployment job packages and promotes a
