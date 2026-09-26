@@ -126,12 +126,52 @@ jobs:
 
       - name: Save Synapse findings
         if: always()
+        id: synapse-report
         uses: actions/upload-artifact@v4
         with:
           name: synapse-sarif
           path: synapse.sarif
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
+
+      - name: Summarize Synapse findings
+        if: always()
+        shell: bash
+        env:
+          SYNAPSE_OUTCOME: ${{ steps.synapse.outcome }}
+          SYNAPSE_REPORT_URL: ${{ steps.synapse-report.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          [ -s synapse.sarif ] || {
+            echo "::error::Synapse did not produce a SARIF report"
+            exit 1
+          }
+          jq -e '.version == "2.1.0" and (.runs | type == "array")' synapse.sarif >/dev/null
+          {
+            echo '### Synapse security scan (evaluation)'
+            echo
+            echo "Scanner step: ${SYNAPSE_OUTCOME}. Findings are advisory during evaluation."
+            echo
+            echo '| Severity | Findings |'
+            echo '| --- | ---: |'
+            for severity in critical high medium low info; do
+              count="$(jq --arg severity "$severity" '[.runs[].results[] | select(.properties.severity == $severity)] | length' synapse.sarif)"
+              echo "| ${severity} | ${count} |"
+            done
+            echo
+            echo '#### Critical and high findings'
+            for severity in critical high; do
+              jq -r --arg severity "$severity" '
+                .runs[].results[]
+                | select(.properties.severity == $severity)
+                | "- **\($severity)** \(.message.text | gsub("[\\r\\n]"; " "))"
+              ' synapse.sarif
+            done
+            echo
+            if [ -n "$SYNAPSE_REPORT_URL" ]; then
+              echo "[Download full SARIF report](${SYNAPSE_REPORT_URL})"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   build:
     name: Build theme assets
