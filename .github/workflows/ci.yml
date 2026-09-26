@@ -105,6 +105,21 @@ jobs:
           cd infra/local
           docker compose down --volumes --remove-orphans
 
+  synapse-sca:
+    name: Synapse SCA security scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Scan dependencies and source
+        # Pin the action to its v0.2.1 commit and use the matching CLI release.
+        uses: KKloudTarus/synapse-ce@0613b8b7950554cd0a9fb54e1484991d6f1b93ea # v0.2.1
+        with:
+          path: .
+          fail-on: high
+          version: v0.2.1
+
   build:
     name: Build theme assets
     needs:
@@ -112,6 +127,7 @@ jobs:
       - lint-js
       - test-release-deploy
       - test-cms-editor
+      - synapse-sca
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository

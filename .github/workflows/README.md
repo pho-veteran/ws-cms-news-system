@@ -2,8 +2,9 @@
 
 `ci.yml` runs on every push and pull request. It lints PHP and JavaScript, runs the isolated
 CMS workflow plus EPIC #3 category/SEO/importer/cron/cache regressions, verifies the static
-release boundary, fetches the self-hosted fonts, builds the content-hashed assets, validates
-the generated manifest, and uploads the build output as artifacts.
+release boundary, scans dependencies and source with Synapse (failing on high or critical
+findings), fetches the self-hosted fonts, builds the content-hashed assets, validates the
+generated manifest, and uploads the build output as artifacts.
 
 `deploy.yml` runs for pushes to `main` and for a manual `workflow_dispatch`. Its lint and
 build jobs are hard gates. As of 2026-09-05, the deployment job packages and promotes a
