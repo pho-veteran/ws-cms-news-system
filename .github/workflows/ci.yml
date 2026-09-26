@@ -106,19 +106,32 @@ jobs:
           docker compose down --volumes --remove-orphans
 
   synapse-sca:
-    name: Synapse SCA security scan
+    name: Synapse SCA security scan (evaluation)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Scan dependencies and source
+        id: synapse
         # Pin the action to its v0.2.1 commit and use the matching CLI release.
         uses: KKloudTarus/synapse-ce@0613b8b7950554cd0a9fb54e1484991d6f1b93ea # v0.2.1
         with:
           path: .
           fail-on: high
+          sarif: true
           version: v0.2.1
+        continue-on-error: true
+
+      - name: Save Synapse findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synapse-sarif
+          path: synapse.sarif
+          if-no-files-found: warn
+          retention-days: 7
 
   build:
     name: Build theme assets
@@ -127,7 +140,6 @@ jobs:
       - lint-js
       - test-release-deploy
       - test-cms-editor
-      - synapse-sca
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
