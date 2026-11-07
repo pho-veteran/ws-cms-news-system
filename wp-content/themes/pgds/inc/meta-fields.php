@@ -1497,13 +1497,13 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 
 	/*
 	 * A submission for review (Phóng viên → Chờ duyệt) must carry title, sapo, body and
-	 * category. Checked here, after the sapo and classification above are stored, so the
-	 * classic form is validated against what it just saved. The block editor submits via
-	 * REST and is validated in pgds_rest_validate_pending_submission(); its follow-up
-	 * meta-box request arrives with the post already pending and is skipped here.
+	 * category, and must keep them while it waits. Checked here, after the sapo and
+	 * classification above are stored, so the classic form is validated against what it
+	 * just saved, on submission and on every later save of a pending post. The block editor
+	 * is validated in pgds_rest_validate_pending_submission(); its follow-up meta-box
+	 * request carries the same values REST has just accepted, so it passes here too.
 	 */
-	$was_pending = $post_before instanceof WP_Post && 'pending' === $post_before->post_status;
-	if ( 'pending' === $post->post_status && ! $was_pending && function_exists( 'pgds_pending_submission_errors_for_post' ) ) {
+	if ( 'pending' === $post->post_status && function_exists( 'pgds_pending_submission_errors_for_post' ) ) {
 		$pending_errors = pgds_pending_submission_errors_for_post( $post_id );
 		if ( $pending_errors ) {
 			$errors = array_merge( $errors, $pending_errors );

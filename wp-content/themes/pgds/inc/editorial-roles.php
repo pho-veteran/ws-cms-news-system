@@ -16,11 +16,13 @@
  *
  * WordPress already turns the editor's primary button into "Gửi duyệt" (Submit for
  * Review) for any user without `publish_posts`, and core converts a publish request from
- * such a user to `pending`; this module only has to remove the capability.
+ * such a user to `pending`; this module only has to remove the capability. Moderating
+ * comments and managing one's own media stay available (pgds_map_editorial_meta_caps()).
  *
- * A submission for review is accepted only when the title, sapo, body and category are
- * all present (the feedback's step 2). The same check runs for the block editor (REST)
- * and for the classic form path in pgds_save_meta().
+ * A post is accepted into "Chờ duyệt", and kept there, only while the title, sapo, body
+ * and category are all present (the feedback's step 2). The block editor is checked over
+ * REST, the classic form in pgds_save_meta(), and every other path (Quick Edit, Bulk Edit,
+ * XML-RPC) by pgds_enforce_pending_completeness(), which sends the post back to draft.
  *
  * @package pgds
  */
@@ -124,6 +126,58 @@ function pgds_restrict_publishing_caps( $allcaps ) {
 }
 add_filter( 'user_has_cap', 'pgds_restrict_publishing_caps', 10, 1 );
 
+/**
+ * Keep two everyday tasks that core ties to `edit_published_*` but that do not change an
+ * article readers see.
+ *
+ *   - Moderating a reader comment: core maps `edit_comment` to `edit_post` on the comment's
+ *     article, which for a live article needs `edit_published_posts`. Comment moderators
+ *     (`moderate_comments`) keep approving, marking spam and trashing comments.
+ *   - A user's own media: core treats an unattached upload as published, so editing its alt
+ *     text or caption, cropping or deleting it needs `edit/delete_published_posts`. The
+ *     uploader (`upload_files`) keeps managing their own files.
+ *
+ * @param string[] $caps    Primitive capabilities required.
+ * @param string   $cap     Meta capability being checked.
+ * @param int      $user_id User ID.
+ * @param array    $args    Extra arguments (object ID first).
+ * @return string[]
+ */
+function pgds_map_editorial_meta_caps( $caps, $cap, $user_id, $args ) {
+	if ( 'edit_comment' === $cap ) {
+		return pgds_swap_required_caps( $caps, array( 'edit_published_posts', 'edit_published_pages' ), 'moderate_comments' );
+	}
+
+	if ( ( 'edit_post' === $cap || 'delete_post' === $cap ) && ! empty( $args[0] ) ) {
+		$post = get_post( $args[0] );
+		if ( $post instanceof WP_Post && 'attachment' === $post->post_type && (int) $post->post_author === (int) $user_id ) {
+			return pgds_swap_required_caps( $caps, array( 'edit_published_posts', 'delete_published_posts' ), 'upload_files' );
+		}
+	}
+
+	return $caps;
+}
+add_filter( 'map_meta_cap', 'pgds_map_editorial_meta_caps', 10, 4 );
+
+/**
+ * Replace some required primitive capabilities with another one.
+ *
+ * @param string[] $caps        Required capabilities.
+ * @param string[] $replace     Capabilities to replace.
+ * @param string   $replacement Capability required instead.
+ * @return string[]
+ */
+function pgds_swap_required_caps( $caps, array $replace, $replacement ) {
+	if ( ! is_array( $caps ) || ! array_intersect( $caps, $replace ) ) {
+		return $caps;
+	}
+
+	$caps   = array_diff( $caps, $replace );
+	$caps[] = $replacement;
+
+	return array_values( array_unique( $caps ) );
+}
+
 /* ===========================================================================
  * Submission for review: title, sapo, body and category are required.
  * ======================================================================== */
@@ -218,9 +272,10 @@ function pgds_pending_submission_errors_for_post( $post_id ) {
  *
  * @param string[] $codes   Missing-part codes.
  * @param string   $surface Editorial surface (Vietnam Buddhism uses English labels).
+ * @param bool     $editing True when the post is already waiting for review (an edit, not a submission).
  * @return string
  */
-function pgds_pending_submission_message( array $codes, $surface = '' ) {
+function pgds_pending_submission_message( array $codes, $surface = '', $editing = false ) {
 	$english = 'vietnam-buddhism' === $surface;
 	$labels  = $english
 		? array(
@@ -243,9 +298,17 @@ function pgds_pending_submission_message( array $codes, $surface = '' ) {
 		}
 	}
 
+	$list = implode( ', ', $missing );
+
+	if ( $editing ) {
+		return $english
+			? sprintf( 'Not saved. A post waiting for review must keep its title, summary, body and category. Missing: %s. Add them, or switch the post to draft first.', $list )
+			: sprintf( 'Chưa lưu được. Bài đang chờ duyệt phải giữ đủ tít, sa-pô, nội dung bài và chuyên mục. Còn thiếu: %s. Hãy bổ sung, hoặc chuyển bài về bản nháp trước.', $list );
+	}
+
 	return $english
-		? sprintf( 'The article was not submitted for review. Fill in the title, summary and body, and choose a category. Missing: %s.', implode( ', ', $missing ) )
-		: sprintf( 'Bài chưa được gửi chờ duyệt. Cần nhập đầy đủ tít, sa-pô, nội dung bài và chọn chuyên mục. Còn thiếu: %s.', implode( ', ', $missing ) );
+		? sprintf( 'The article was not submitted for review. Fill in the title, summary and body, and choose a category. Missing: %s.', $list )
+		: sprintf( 'Bài chưa được gửi chờ duyệt. Cần nhập đầy đủ tít, sa-pô, nội dung bài và chọn chuyên mục. Còn thiếu: %s.', $list );
 }
 
 /**
@@ -261,11 +324,13 @@ function pgds_pending_submission_message( array $codes, $surface = '' ) {
  * @return stdClass|WP_Error
  */
 function pgds_rest_validate_pending_submission( $prepared_post, $request ) {
-	if ( is_wp_error( $prepared_post ) || ! $request->has_param( 'status' ) ) {
+	if ( is_wp_error( $prepared_post ) ) {
 		return $prepared_post;
 	}
 
-	if ( 'pending' !== sanitize_key( (string) $request->get_param( 'status' ) ) ) {
+	// Autosaves run through the same filter. Rejecting them would raise an error while the
+	// reporter is still typing; the explicit save that follows is validated instead.
+	if ( false !== strpos( (string) $request->get_route(), '/autosaves' ) ) {
 		return $prepared_post;
 	}
 
@@ -273,10 +338,16 @@ function pgds_rest_validate_pending_submission( $prepared_post, $request ) {
 	$existing = $post_id ? get_post( $post_id ) : null;
 	$existing = $existing instanceof WP_Post ? $existing : null;
 
-	// Saving a post that is already waiting for review is an edit, not a new submission.
-	if ( $existing && 'pending' === $existing->post_status ) {
+	// The status the post will have after this save: the requested one, else the current one.
+	// An edit to a post already waiting for review must keep it complete too, otherwise a
+	// reporter could submit a full article and then empty it while it sits in the queue.
+	$status = $request->has_param( 'status' )
+		? sanitize_key( (string) $request->get_param( 'status' ) )
+		: ( $existing ? $existing->post_status : '' );
+	if ( 'pending' !== $status ) {
 		return $prepared_post;
 	}
+	$editing = $existing && 'pending' === $existing->post_status;
 
 	$meta = $request->has_param( 'meta' ) ? $request->get_param( 'meta' ) : array();
 	$meta = is_array( $meta ) ? $meta : array();
@@ -305,7 +376,7 @@ function pgds_rest_validate_pending_submission( $prepared_post, $request ) {
 
 	return new WP_Error(
 		'pgds_pending_incomplete',
-		pgds_pending_submission_message( $codes, $surface ),
+		pgds_pending_submission_message( $codes, $surface, $editing ),
 		array(
 			'status'  => 400,
 			'missing' => $codes,
@@ -313,6 +384,50 @@ function pgds_rest_validate_pending_submission( $prepared_post, $request ) {
 	);
 }
 add_filter( 'rest_pre_insert_post', 'pgds_rest_validate_pending_submission', 20, 2 );
+
+/**
+ * Send an incomplete post back to draft whatever path put it in "Chờ duyệt".
+ *
+ * The REST check above and the meta-box check in pgds_save_meta() cover the two editors,
+ * but other paths save posts without either: Quick Edit and Bulk Edit on the posts list,
+ * XML-RPC, plugins calling wp_update_post(). This runs after pgds_save_meta() (priority 10)
+ * so the classic form is judged on the values it has just stored, and it re-reads the
+ * status because an earlier callback may already have reverted the post.
+ *
+ * Limited to logged-in accounts that cannot publish: the rule is about what a reporter
+ * hands to the Trưởng BBT, not about system writes (cron, WP-CLI) or the reviewer.
+ *
+ * @param int          $post_id     Post ID.
+ * @param WP_Post      $post        Post object.
+ * @param bool         $update      Whether this is an update.
+ * @param WP_Post|null $post_before Post before the save.
+ */
+function pgds_enforce_pending_completeness( $post_id, $post, $update, $post_before ) {
+	unset( $update, $post_before );
+
+	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
+		return;
+	}
+	if ( 'pending' !== get_post_status( $post_id ) ) {
+		return;
+	}
+	if ( ! get_current_user_id() || current_user_can( 'publish_posts' ) ) {
+		return;
+	}
+	if ( ! pgds_pending_submission_errors_for_post( $post_id ) ) {
+		return;
+	}
+
+	remove_action( 'wp_after_insert_post', 'pgds_enforce_pending_completeness', 20 );
+	wp_update_post(
+		array(
+			'ID'          => $post_id,
+			'post_status' => 'draft',
+		)
+	);
+	add_action( 'wp_after_insert_post', 'pgds_enforce_pending_completeness', 20, 4 );
+}
+add_action( 'wp_after_insert_post', 'pgds_enforce_pending_completeness', 20, 4 );
 
 /* ===========================================================================
  * Review queue for the Trưởng BBT.
