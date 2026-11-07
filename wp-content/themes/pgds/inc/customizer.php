@@ -106,6 +106,65 @@ function pgds_customize_register( $wp_customize ) {
 			'type'    => 'email',
 		)
 	);
+
+	/*
+	 * Sidebar poster.
+	 *
+	 * Newsroom feedback: the front-page sidebar ends after Lịch Vạn Niên while the
+	 * "Tin mới" column keeps going, leaving a tall empty strip. A poster (campaign
+	 * banner, event, notice) fills it. Stored as options like the rest of this file so
+	 * the cache-flush mu-plugin's `customize_save_after` hook purges the page cache.
+	 */
+	$wp_customize->add_section(
+		'pgds_sidebar_poster',
+		array(
+			'title'       => __( 'Poster bên lề', 'pgds' ),
+			'priority'    => 31,
+			'description' => __( 'Ảnh poster hiển thị ở cột bên phải, dưới Lịch Vạn Niên (trang chủ, bài viết, chuyên mục). Nên dùng ảnh dọc, rộng 640px trở lên (ví dụ 640 × 1280). Để trống thì không hiển thị.', 'pgds' ),
+		)
+	);
+
+	$wp_customize->add_setting(
+		'pgds_sidebar_poster_id',
+		array(
+			'default'           => 0,
+			'type'              => 'option',
+			'capability'        => 'edit_theme_options',
+			'sanitize_callback' => 'absint',
+			'transport'         => 'refresh',
+		)
+	);
+	$wp_customize->add_control(
+		new WP_Customize_Media_Control(
+			$wp_customize,
+			'pgds_sidebar_poster_id',
+			array(
+				'section'   => 'pgds_sidebar_poster',
+				'label'     => __( 'Ảnh poster', 'pgds' ),
+				'mime_type' => 'image',
+			)
+		)
+	);
+
+	$wp_customize->add_setting(
+		'pgds_sidebar_poster_url',
+		array(
+			'default'           => '',
+			'type'              => 'option',
+			'capability'        => 'edit_theme_options',
+			'sanitize_callback' => 'esc_url_raw',
+			'transport'         => 'refresh',
+		)
+	);
+	$wp_customize->add_control(
+		'pgds_sidebar_poster_url',
+		array(
+			'section'     => 'pgds_sidebar_poster',
+			'label'       => __( 'Liên kết khi bấm vào poster (không bắt buộc)', 'pgds' ),
+			'description' => __( 'Ví dụ: đường dẫn tới bài viết hoặc sự kiện. Liên kết ngoài trang sẽ mở ở tab mới.', 'pgds' ),
+			'type'        => 'url',
+		)
+	);
 }
 add_action( 'customize_register', 'pgds_customize_register' );
 

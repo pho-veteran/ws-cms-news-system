@@ -17,7 +17,9 @@
     }
     grid-template-columns: 1.4fr 1fr 1fr 1fr;
     gap: $sp-7;
-    padding: $sp-10 0 $sp-6;
+    // Vertical only: keep .pgds-wrap's side gutters so the logo plate never touches the edge.
+    padding-top: $sp-10;
+    padding-bottom: $sp-6;
 
     @include mq-max(lg) {
       grid-template-columns: 1fr 1fr;
@@ -44,6 +46,24 @@
   }
 
   a:hover { color: var(--pgds-white); }
+
+  &__brand {
+    display: inline-block;
+    max-width: 300px;
+    margin-bottom: $sp-4;
+    padding: $sp-3 $sp-4;
+    background: var(--pgds-paper);
+    border-radius: $radius-lg;
+    line-height: 0;
+
+    &:focus-visible { @include focus-ring; }
+  }
+
+  &__logo {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
 
   &__intro {
     font-size: $fs-xs;
