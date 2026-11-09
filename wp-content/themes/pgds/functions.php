@@ -28,7 +28,6 @@ $pgds_modules = array(
 	'inc/cpt-tax.php',       // CPT + taxonomy
 	'inc/editorial-surfaces.php', // four admin workflows over the shared post model
 	'inc/meta-fields.php',   // custom field + meta box (no ACF)
-	'inc/editorial-roles.php', // Trưởng BBT publishes, Phóng viên submits for review
 	'inc/template-tags.php', // display helpers
 	'inc/comments.php',      // reader-comment approval and presentation
 	'inc/query-blocks.php',  // query for the 11 front-page blocks + dedup

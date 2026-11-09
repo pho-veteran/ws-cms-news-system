@@ -1163,48 +1163,6 @@ function pgds_admin_editor_hints( $hook ) {
 			update();
 		}
 
-		/*
-		 * Mirror the meta-box sapo into the editor record.
-		 *
-		 * The block editor saves the post through REST first and posts the meta box form
-		 * afterwards. Submitting for review is validated during the REST save
-		 * (pgds_rest_validate_pending_submission), so without this a sapo typed on screen
-		 * would not yet be visible to that check.
-		 */
-		function bindSapoSync() {
-			var sapo = document.getElementById( '_pgds_sapo' );
-			if ( ! sapo || sapo.dataset.pgdsSapoBound ) {
-				return;
-			}
-
-			sapo.dataset.pgdsSapoBound = '1';
-
-			function sync() {
-				if ( ! window.wp || ! window.wp.data ) {
-					return;
-				}
-				var editorSelect = window.wp.data.select( 'core/editor' );
-				var editorDispatch = window.wp.data.dispatch( 'core/editor' );
-				if (
-					! editorSelect ||
-					! editorDispatch ||
-					'function' !== typeof editorSelect.getCurrentPostType ||
-					'post' !== editorSelect.getCurrentPostType()
-				) {
-					return;
-				}
-				var meta = Object.assign( {}, editorSelect.getEditedPostAttribute( 'meta' ) || {} );
-				if ( String( meta._pgds_sapo || '' ) === sapo.value ) {
-					return;
-				}
-				meta._pgds_sapo = sapo.value;
-				editorDispatch.editPost( { meta: meta } );
-			}
-
-			sapo.addEventListener( 'input', sync );
-			sapo.addEventListener( 'change', sync );
-		}
-
 		function bindEmagazineChecklist() {
 			var checklist = document.querySelector( '[data-pgds="emagazine-checklist"]' );
 			if ( ! checklist || checklist.dataset.pgdsBound ) {
@@ -1286,7 +1244,6 @@ function pgds_admin_editor_hints( $hook ) {
 			bindPopularRankControl();
 			bindGroupToggles();
 			bindClassificationControl();
-			bindSapoSync();
 			bindEmagazineChecklist();
 			tries++;
 			var toggle = findToggle();
