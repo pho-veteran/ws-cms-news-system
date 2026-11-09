@@ -774,6 +774,10 @@ function pgds_meta_feedback_messages( $surface = '' ) {
 		'pgds_surface_change_confirmation_required' => 'Hãy xác nhận trước khi chuyển bài sang một loại nội dung khác.',
 		'pgds_missing_editorial_category'            => 'Không tìm thấy chuyên mục bắt buộc. Hãy chạy lại bước khôi phục taxonomy trước khi lưu.',
 		'pgds_classification_write_failed'           => 'Không thể cập nhật đồng thời loại nội dung và chuyên mục. Phân loại trước đó đã được giữ nguyên.',
+		'pgds_pending_missing_title'                 => 'Bài chưa được gửi chờ duyệt vì chưa có tít (tiêu đề). Bài đã được lưu ở trạng thái nháp.',
+		'pgds_pending_missing_sapo'                  => 'Bài chưa được gửi chờ duyệt vì chưa có sa-pô. Bài đã được lưu ở trạng thái nháp.',
+		'pgds_pending_missing_content'               => 'Bài chưa được gửi chờ duyệt vì chưa có nội dung bài. Bài đã được lưu ở trạng thái nháp.',
+		'pgds_pending_missing_category'              => 'Bài chưa được gửi chờ duyệt vì chưa chọn chuyên mục. Bài đã được lưu ở trạng thái nháp.',
 	);
 
 	$surface = pgds_sanitize_editorial_surface( $surface );
@@ -790,6 +794,10 @@ function pgds_meta_feedback_messages( $surface = '' ) {
 		$messages['pgds_surface_change_confirmation_required'] = 'Confirm the change before moving this post to another content type.';
 		$messages['pgds_missing_editorial_category']            = 'The required category is unavailable. Restore the canonical taxonomy before saving.';
 		$messages['pgds_classification_write_failed']           = 'The content type and category could not be updated together. The previous classification was preserved.';
+		$messages['pgds_pending_missing_title']                 = 'Not submitted for review: the title is missing. The post was saved as a draft.';
+		$messages['pgds_pending_missing_sapo']                  = 'Not submitted for review: the summary (sapo) is missing. The post was saved as a draft.';
+		$messages['pgds_pending_missing_content']               = 'Not submitted for review: the body is missing. The post was saved as a draft.';
+		$messages['pgds_pending_missing_category']              = 'Not submitted for review: no category is chosen. The post was saved as a draft.';
 	}
 
 	return $messages;
@@ -1476,6 +1484,29 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		$publish_validation = pgds_validate_editorial_publish_post( $post_id );
 		if ( is_wp_error( $publish_validation ) ) {
 			$errors[] = $publish_validation->get_error_code();
+			remove_action( 'wp_after_insert_post', 'pgds_save_meta', 10 );
+			wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => 'draft',
+				)
+			);
+			add_action( 'wp_after_insert_post', 'pgds_save_meta', 10, 4 );
+		}
+	}
+
+	/*
+	 * A submission for review (Phóng viên → Chờ duyệt) must carry title, sapo, body and
+	 * category, and must keep them while it waits. Checked here, after the sapo and
+	 * classification above are stored, so the classic form is validated against what it
+	 * just saved, on submission and on every later save of a pending post. The block editor
+	 * is validated in pgds_rest_validate_pending_submission(); its follow-up meta-box
+	 * request carries the same values REST has just accepted, so it passes here too.
+	 */
+	if ( 'pending' === $post->post_status && function_exists( 'pgds_pending_submission_errors_for_post' ) ) {
+		$pending_errors = pgds_pending_submission_errors_for_post( $post_id );
+		if ( $pending_errors ) {
+			$errors = array_merge( $errors, $pending_errors );
 			remove_action( 'wp_after_insert_post', 'pgds_save_meta', 10 );
 			wp_update_post(
 				array(
