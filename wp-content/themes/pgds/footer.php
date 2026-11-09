@@ -11,8 +11,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 <footer class="pgds-footer block" role="contentinfo">
 	<div class="pgds-wrap pgds-footer__grid footer-grid wrap">
-		<div>
-			<h4><?php bloginfo( 'name' ); ?></h4>
+		<div class="pgds-footer__brand-col">
+			<?php
+			/*
+			 * Masthead logo in the footer (newsroom feedback, after the VietnamPlus footer).
+			 * The artwork is dark brown on transparent and the footer is dark brown, so it
+			 * sits on a paper-coloured plate rather than directly on the background.
+			 */
+			?>
+			<a class="pgds-footer__brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
+				<img
+					class="pgds-footer__logo"
+					src="<?php echo esc_url( PGDS_LOGO_URI ); ?>"
+					width="2048"
+					height="357"
+					alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"
+					loading="lazy"
+					decoding="async"
+				>
+			</a>
 			<p class="pgds-footer__intro">
 				<?php echo esc_html( __( 'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.', 'pgds' ) ); ?>
 			</p>
