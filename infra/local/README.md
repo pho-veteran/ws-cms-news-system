@@ -25,6 +25,9 @@ docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-scripts/setup.sh'
 # isolated CMS plus EPIC #3 category/SEO/importer/cron/cache regressions
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/tests/cms-editor-regression.sh'
 docker compose run --rm wpcli -c 'sh /var/www/html/.pgds-tools/tests/compatibility-regression.sh'
+
+# Pending-review validation (empty media blocks, REST, and Quick Edit feedback)
+docker compose run --rm wpcli -c 'wp --path=/var/www/html eval-file /var/www/html/.pgds-tools/tests/editorial-workflow-regression.php'
 ```
 
 Open http://localhost:8080 — the front page renders 11 blocks.
