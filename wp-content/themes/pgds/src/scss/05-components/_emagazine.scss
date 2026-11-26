@@ -111,8 +111,7 @@
     > img {
       display: block;
       width: 100%;
-      height: clamp(280px, 36.1vw, 520px);
-      object-fit: cover;
+      height: auto;
     }
 
     figcaption {
