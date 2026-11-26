@@ -631,6 +631,10 @@ function pgds_english_reader_strings() {
 		'Chuyên trang tin điện tử - tin tức, đời sống và văn hóa Phật giáo'       => 'A Buddhist news, culture, and lifestyle publication',
 		'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.'      => 'A Buddhist news, culture, and lifestyle publication.',
 		'Liên hệ'                                                                => 'Contact',
+		'Tổng biên tập: %s'                                                       => 'Editor-in-chief: %s',
+		'Phó Tổng biên tập: %s'                                                   => 'Deputy editor-in-chief: %s',
+		'Địa chỉ: %s'                                                            => 'Address: %s',
+		'Theo dõi chúng tôi'                                                     => 'Follow us',
 		'Tổng biên tập: [Họ tên]'                                                => 'Editor-in-Chief: [Name]',
 		'© %1$s %2$s'                                                             => '© %1$s %2$s',
 	);

@@ -24,10 +24,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 					$contact[ $option ] = $value;
 				}
 			}
+			$editor_name = $contact['pgds_editor_name'];
+			$editor_prefix = 'Tổng biên tập: ';
+			if ( str_starts_with( $editor_name, $editor_prefix ) ) {
+				$editor_name = sprintf( __( 'Tổng biên tập: %s', 'pgds' ), substr( $editor_name, strlen( $editor_prefix ) ) );
+			}
 			$phone = preg_replace( '/[^0-9+]/', '', $contact['pgds_contact_phone'] );
 			?>
 			<ul class="pgds-footer__contacts">
-				<li><?php echo esc_html( $contact['pgds_editor_name'] ); ?></li>
+				<li><?php echo esc_html( $editor_name ); ?></li>
 				<li><?php echo esc_html( sprintf( __( 'Phó Tổng biên tập: %s', 'pgds' ), $contact['pgds_deputy_editor_name'] ) ); ?></li>
 				<li><?php echo esc_html( sprintf( __( 'Địa chỉ: %s', 'pgds' ), $contact['pgds_contact_address'] ) ); ?></li>
 				<li><?php esc_html_e( 'Hotline:', 'pgds' ); ?> <a href="<?php echo esc_url( 'tel:' . $phone ); ?>"><?php echo esc_html( $contact['pgds_contact_phone'] ); ?></a></li>
