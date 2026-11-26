@@ -31,6 +31,10 @@ function pgds_icon_paths( $name ) {
 
 		// Play - video affordances.
 		'play'       => '<path d="M8 5.5v13l11-6.5z"/>',
+		'facebook'   => '<path d="M14 21v-8h3l.5-4H14V7c0-1 .5-1.5 1.5-1.5H18V2h-3c-3.3 0-5 2-5 5v2H7v4h3v8"/>',
+		'youtube'    => '<rect x="3" y="5.5" width="18" height="13" rx="3"/><path d="m10 9 5 3-5 3z"/>',
+		'tiktok'     => '<path d="M14 3v12a4.5 4.5 0 1 1-4.5-4.5M14 3c.4 3.2 2.1 5.1 5.5 5.5"/>',
+		'zalo'       => '<path d="M4 5h16v12H9l-5 3z"/><path d="M9 8.5h6l-6 5h6"/>',
 
 		// Video camera - media bullet list.
 		'video'      => '<rect x="2.5" y="6.5" width="13" height="11" rx="2"/><path d="M15.5 11l6-3.5v9l-6-3.5z"/>',

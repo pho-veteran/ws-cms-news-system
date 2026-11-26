@@ -17,7 +17,9 @@
     }
     grid-template-columns: 1.4fr 1fr 1fr 1fr;
     gap: $sp-7;
-    padding: $sp-10 0 $sp-6;
+    // Vertical only: keep .pgds-wrap's side gutters so the logo plate never touches the edge.
+    padding-top: $sp-10;
+    padding-bottom: $sp-6;
 
     @include mq-max(lg) {
       grid-template-columns: 1fr 1fr;
@@ -56,6 +58,33 @@
     opacity: .7;
     line-height: $lh-loose;
     margin-top: $sp-3;
+  }
+
+  &__contacts {
+    margin-top: $sp-3;
+    line-height: $lh-normal;
+  }
+
+  &__social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $sp-2;
+
+    li {
+      margin: 0;
+      opacity: 1;
+    }
+
+    a {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--pgds-gilt-pale);
+      border-radius: 50%;
+
+      &:focus-visible { @include focus-ring; }
+    }
   }
 
   &__bottom {
