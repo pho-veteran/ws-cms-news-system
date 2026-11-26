@@ -20,7 +20,7 @@ Tài liệu hướng dẫn chi tiết quy trình đăng bài, quản lý nội d
 3. Tích **Gửi thông báo cho người dùng (Send User Notification)** rồi bấm **Thêm người dùng (Add User)**. Người nhận mở liên kết trong email để tự đặt mật khẩu và đăng nhập bằng tài khoản vừa tạo.
 4. Nếu chưa nhận được email, kiểm tra địa chỉ và thư rác. Từ danh sách **Người dùng**, quản trị viên có thể chọn **Gửi liên kết đặt lại mật khẩu (Send password reset)** ở dòng tài khoản. Người dùng cũng có thể bấm **Quên mật khẩu?** ở trang đăng nhập.
 
-Phóng viên có thể tự soạn, lưu nháp và tải ảnh. Khi đã có tít, sa-pô, nội dung và chuyên mục, bấm **Gửi duyệt (Submit for Review)** để đưa bài vào **Chờ duyệt**. Trưởng BBT sử dụng tài khoản quản trị để duyệt và xuất bản.
+Phóng viên có thể tự soạn, lưu nháp và tải ảnh. Khi đã có tít, sa-pô, nội dung và chuyên mục, bấm **Gửi duyệt (Submit for Review)** để đưa bài vào **Chờ duyệt**. **Biên tập viên** có thể soạn, biên tập và xuất bản bài viết. **Quản trị viên** quản lý tài khoản, cấu hình hệ thống và có quyền xuất bản.
 
 ---
 

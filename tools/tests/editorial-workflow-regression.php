@@ -80,8 +80,11 @@ try {
 		throw new RuntimeException( $editor_id->get_error_message() );
 	}
 	wp_set_current_user( $editor_id );
-	$assert( ! current_user_can( 'publish_posts' ) && ! current_user_can( 'edit_published_posts' ), 'default editors cannot publish or change published articles' );
-	$assert( current_user_can( 'moderate_comments' ), 'default editors retain comment moderation' );
+	$assert( current_user_can( 'edit_posts' ) && current_user_can( 'publish_posts' ) && current_user_can( 'edit_published_posts' ), 'editors can write, publish and update articles' );
+	foreach ( array( 'publish_pages', 'delete_published_posts', 'create_users', 'edit_users', 'promote_users', 'delete_users', 'manage_options' ) as $cap ) {
+		$assert( ! current_user_can( $cap ), 'editors cannot ' . $cap );
+	}
+	$assert( current_user_can( 'moderate_comments' ), 'editors retain comment moderation' );
 	$administrators = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
 	if ( ! $administrators ) {
 		throw new RuntimeException( 'The suite requires an administrator account.' );
@@ -92,7 +95,9 @@ try {
 	}
 	require_once ABSPATH . 'wp-admin/includes/admin.php';
 	do_action( 'load-user-new.php' );
-	$assert( array( 'administrator', 'editor', 'pgds_reporter' ) === array_keys( get_editable_roles() ), 'Add User only exposes newsroom roles' );
+	$roles = get_editable_roles();
+	$assert( array( 'administrator', 'editor', 'pgds_reporter' ) === array_keys( $roles ), 'Add User only exposes newsroom roles' );
+	$assert( array( 'Quản trị viên', 'Biên tập viên', 'Phóng viên' ) === array_map( 'translate_user_role', array_column( $roles, 'name' ) ), 'WordPress displays Vietnamese names for the three newsroom roles' );
 	ob_start();
 	wp_dropdown_roles( 'subscriber' );
 	$role_options = new WP_HTML_Tag_Processor( ob_get_clean() );
@@ -170,6 +175,17 @@ try {
 	$assert( 400 === $response->get_status() && 'pending' === get_post_status( $post_id ), 'REST rejects replacing a pending article body with an empty gallery' );
 	$response = $rest_save( array( 'status' => 'publish' ) );
 	$assert( 403 === $response->get_status() && 'pending' === get_post_status( $post_id ), 'REST forbids a reporter from publishing their pending article' );
+	wp_set_current_user( $editor_id );
+	$publish_other_category = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $classification_draft );
+	$publish_other_category->set_body_params( array(
+		'status'     => 'publish',
+		'content'    => '<p>Nội dung bài Lối sống xanh.</p>',
+		'categories' => array( $green_living_id ),
+		'meta'       => array( '_pgds_primary_cat' => $green_living_id ),
+	) );
+	$published_elsewhere = rest_do_request( $publish_other_category );
+	$assert( 200 === $published_elsewhere->get_status() && 'publish' === get_post_status( $classification_draft ), 'REST lets an editor publish the classified draft' );
+	$assert( array( $green_living_id ) === wp_get_post_categories( $classification_draft ), 'publishing under Green Living does not attach Tin Phat su' );
 	wp_set_current_user( $administrators[0] );
 	$response = $rest_save( array( 'status' => 'publish' ) );
 	$assert( 200 === $response->get_status() && 'publish' === get_post_status( $post_id ), 'REST lets the newsroom administrator publish a complete submission' );
