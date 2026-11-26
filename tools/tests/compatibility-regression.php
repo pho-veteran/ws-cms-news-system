@@ -145,9 +145,11 @@ try {
 	$assert( false === has_action( 'save_post', 'pgds_flush_page_cache_on_transition' ), 'page cache purge is not attached to save_post' );
 
 	$cache_dir = trailingslashit( sys_get_temp_dir() ) . 'pgds-epic-3-cache-' . wp_generate_uuid4();
+	$purge_calls = 0;
 	add_filter(
 		'pgds_page_cache_directory',
-		static function () use ( $cache_dir ) {
+		static function () use ( $cache_dir, &$purge_calls ) {
+			++$purge_calls;
 			return $cache_dir;
 		}
 	);
@@ -159,7 +161,11 @@ try {
 
 		file_put_contents( $cache_marker, 'draft' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		pgds_flush_page_cache_on_transition( 'draft', 'draft', get_post( $draft_id ) );
+		do_action( 'shutdown' );
 		$assert( is_file( $cache_marker ), 'draft-to-draft does not purge the public page cache' );
+		wp_delete_post( $draft_id, true );
+		do_action( 'shutdown' );
+		$assert( is_file( $cache_marker ), 'deleting an unpublished draft keeps the public page cache' );
 
 		foreach (
 			array(
@@ -171,8 +177,25 @@ try {
 		) {
 			file_put_contents( $cache_marker, 'public' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 			pgds_flush_page_cache_on_transition( $transition[0], $transition[1], get_post( $video_id ) );
+			$assert( is_file( $cache_marker ), 'the transition leaves the cache in place until shutdown' );
+			do_action( 'shutdown' );
 			$assert( ! is_file( $cache_marker ), $transition[2] );
 		}
+
+		$previous_user = get_current_user_id();
+		$admins = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
+		wp_set_current_user( (int) reset( $admins ) );
+		$purge_calls = 0;
+		file_put_contents( $cache_marker, 'previous summary' );
+		$request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $article_id );
+		$request->set_body_params( array( 'meta' => array( '_pgds_sapo' => 'Updated summary' ) ) );
+		$response = rest_do_request( $request );
+		wp_set_current_user( $previous_user );
+		$assert( 200 === $response->get_status() && 'Updated summary' === get_post_meta( $article_id, '_pgds_sapo', true ), 'REST saves the public article metadata' );
+		$assert( is_file( $cache_marker ) && 0 === $purge_calls, 'REST completes metadata writes before clearing the cache' );
+		pgds_flush_page_cache_on_transition( 'publish', 'publish', get_post( $article_id ) );
+		do_action( 'shutdown' );
+		$assert( ! is_file( $cache_marker ) && 1 === $purge_calls, 'repeated invalidations purge only once at shutdown' );
 	} else {
 		$assert( false, 'temporary FastCGI cache directory is writable for transition tests' );
 	}

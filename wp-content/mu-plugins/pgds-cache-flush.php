@@ -44,6 +44,7 @@ function pgds_page_cache_directory() {
  * For the current scale, deleting everything is appropriate: one command, no leftovers, no mapping logic needed.
  */
 function pgds_flush_page_cache() {
+	remove_action( 'shutdown', 'pgds_flush_page_cache', PHP_INT_MAX );
 	/*
 	 * Resolve and sanity-check the target before deleting anything recursively.
 	 *
@@ -108,6 +109,18 @@ function pgds_flush_page_cache() {
 	}
 }
 
+function pgds_queue_page_cache_flush() {
+	// REST and editor hooks can still write terms and metadata after the post transition.
+	add_action( 'shutdown', 'pgds_flush_page_cache', PHP_INT_MAX );
+}
+
+function pgds_queue_page_cache_flush_on_deletion( $post_id, $post ) {
+	if ( 'revision' === $post->post_type || ( 'post' === $post->post_type && 'publish' !== $post->post_status ) ) {
+		return;
+	}
+	pgds_queue_page_cache_flush();
+}
+
 /**
  * Flush only when a post that IS or WAS publicly visible changed.
  *
@@ -163,14 +176,14 @@ function pgds_flush_page_cache_on_transition( $new_status, $old_status, $post ) 
 		return;
 	}
 
-	pgds_flush_page_cache();
+	pgds_queue_page_cache_flush();
 }
 
 // Content changes only: transition_post_status sees both statuses, so autosaves, revisions
 // and purely-private edits are excluded while publish AND unpublish both flush.
 add_action( 'transition_post_status', 'pgds_flush_page_cache_on_transition', 10, 3 );
-add_action( 'deleted_post', 'pgds_flush_page_cache' );
-add_action( 'edited_term', 'pgds_flush_page_cache' );
-add_action( 'wp_update_nav_menu', 'pgds_flush_page_cache' );
-add_action( 'switch_theme', 'pgds_flush_page_cache' );
-add_action( 'customize_save_after', 'pgds_flush_page_cache' );
+add_action( 'deleted_post', 'pgds_queue_page_cache_flush_on_deletion', 10, 2 );
+add_action( 'edited_term', 'pgds_queue_page_cache_flush' );
+add_action( 'wp_update_nav_menu', 'pgds_queue_page_cache_flush' );
+add_action( 'switch_theme', 'pgds_queue_page_cache_flush' );
+add_action( 'customize_save_after', 'pgds_queue_page_cache_flush' );
