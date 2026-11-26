@@ -505,10 +505,11 @@ add_action( 'wp_after_insert_post', 'pgds_enforce_pending_completeness', 20, 4 )
 function pgds_pending_menu_bubbles() {
 	global $menu;
 
-	if ( ! current_user_can( 'publish_posts' ) || ! function_exists( 'pgds_editorial_view_count' ) || ! is_array( $menu ) ) {
+	if ( ! current_user_can( 'publish_posts' ) || ! is_array( $menu ) ) {
 		return;
 	}
 
+	$counts = pgds_editorial_pending_counts();
 	foreach ( $menu as $index => $item ) {
 		$hook_id = isset( $item[5] ) ? (string) $item[5] : '';
 		if ( 0 !== strpos( $hook_id, 'menu-posts-' ) ) {
@@ -520,7 +521,7 @@ function pgds_pending_menu_bubbles() {
 			continue;
 		}
 
-		$count = (int) pgds_editorial_view_count( $surface, 'pending' );
+		$count = $counts[ $surface ];
 		if ( $count < 1 ) {
 			continue;
 		}

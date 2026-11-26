@@ -8,5 +8,6 @@ WP="wp --path=$WP_PATH --allow-root"
 
 $WP core is-installed >/dev/null
 $WP eval-file "$TEST_DIR/compatibility-regression.php"
+$WP eval-file "$TEST_DIR/pending-menu-regression.php"
 
 echo "==> EPIC #3 compatibility regression suite passed."

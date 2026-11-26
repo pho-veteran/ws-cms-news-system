@@ -323,6 +323,45 @@ function pgds_editorial_term_ids( array $slugs ) {
 	return $ids;
 }
 
+function pgds_editorial_surface_sql( $surface ) {
+	$definitions = pgds_editorial_surfaces();
+	if ( 'article' !== $surface ) {
+		return pgds_editorial_valid_pair_sql( pgds_editorial_term_ids( $definitions[ $surface ]['primary_slugs'] ) );
+	}
+
+	$specialized_ids = array();
+	foreach ( array_diff_key( $definitions, array( 'article' => true ) ) as $definition ) {
+		$specialized_ids = array_merge( $specialized_ids, pgds_editorial_term_ids( $definition['primary_slugs'] ) );
+	}
+	return 'NOT (' . pgds_editorial_valid_pair_sql( $specialized_ids ) . ')';
+}
+
+function pgds_editorial_pending_counts() {
+	global $wpdb;
+
+	$cache_key = 'pgds_pending_counts:' . wp_cache_get_last_changed( 'posts' ) . ':' . wp_cache_get_last_changed( 'terms' );
+	$cached = wp_cache_get( $cache_key, 'post-queries' );
+	if ( is_array( $cached ) ) {
+		return $cached;
+	}
+
+	$surfaces = array_keys( pgds_editorial_surfaces() );
+	$columns = array();
+	foreach ( $surfaces as $index => $surface ) {
+		$columns[] = 'SUM(' . pgds_editorial_surface_sql( $surface ) . ') AS pgds_count_' . $index;
+	}
+
+	$select = implode( ', ', $columns );
+	$row = $wpdb->get_row( "SELECT {$select} FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'pending'", ARRAY_N );
+	$counts = array();
+	foreach ( $surfaces as $index => $surface ) {
+		$counts[ $surface ] = (int) ( $row[ $index ] ?? 0 );
+	}
+	wp_cache_set( $cache_key, $counts, 'post-queries', MINUTE_IN_SECONDS );
+
+	return $counts;
+}
+
 /**
  * Mark the native list query with the active editorial surface.
  *
@@ -356,21 +395,11 @@ function pgds_admin_surface_where( $where, $query ) {
 		return $where;
 	}
 
-	$definitions = pgds_editorial_surfaces();
-	if ( 'article' === $surface ) {
-		$specialized_ids = array();
-		foreach ( array( 'emagazine', 'video', 'vietnam-buddhism' ) as $specialized ) {
-			$specialized_ids = array_merge( $specialized_ids, pgds_editorial_term_ids( $definitions[ $specialized ]['primary_slugs'] ) );
-		}
-		$where .= ' AND NOT (' . pgds_editorial_valid_pair_sql( $specialized_ids ) . ')';
-	} else {
-		$surface_ids = pgds_editorial_term_ids( $definitions[ $surface ]['primary_slugs'] );
-		$where      .= ' AND (' . pgds_editorial_valid_pair_sql( $surface_ids ) . ')';
-	}
+	$where .= ' AND (' . pgds_editorial_surface_sql( $surface ) . ')';
 
 	if ( 'needs-review' === $query->get( 'pgds_classification' ) ) {
 		$valid_ids = array();
-		foreach ( $definitions as $definition ) {
+		foreach ( pgds_editorial_surfaces() as $definition ) {
 			$valid_ids = array_merge( $valid_ids, pgds_editorial_term_ids( $definition['primary_slugs'] ) );
 		}
 		$where .= ' AND NOT (' . pgds_editorial_valid_pair_sql( $valid_ids ) . ')';
