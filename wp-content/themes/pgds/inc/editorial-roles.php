@@ -303,15 +303,16 @@ function pgds_pending_submission_errors( array $values ) {
  * Validate a stored post as a submission for review.
  *
  * @param int $post_id Post ID.
+ * @param int[]|null $assigned_ids Proposed categories, or null to use the stored categories.
  * @return string[] Missing-part codes.
  */
-function pgds_pending_submission_errors_for_post( $post_id ) {
+function pgds_pending_submission_errors_for_post( $post_id, $assigned_ids = null ) {
 	$post = get_post( $post_id );
 	if ( ! $post instanceof WP_Post ) {
 		return array();
 	}
 
-	$assigned_ids = wp_get_post_categories( $post->ID, array( 'fields' => 'ids' ) );
+	$assigned_ids ??= wp_get_post_categories( $post->ID, array( 'fields' => 'ids' ) );
 
 	return pgds_pending_submission_errors(
 		array(

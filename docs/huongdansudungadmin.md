@@ -167,8 +167,8 @@ Bài viết **E-magazine** là các tác phẩm báo chí chuyên sâu đa phư�
 
 3. **Nhập dữ liệu:**
    - **Tiêu đề & Nội dung:** Điền tiêu đề và soạn nội dung chi tiết.
-   - **Chuyên mục (Categories):** Tích chọn chuyên mục phù hợp (*Tin Phật sự, Phật tích, Lối sống xanh, Tốt đời đẹp đạo...*).
-   - **Cấu hình PGDS:** Nhập Sa-pô, chọn Chuyên mục chính hiển thị, và nhập Tên tác giả hiển thị.
+   - **Chuyên mục bài viết:** Chọn chuyên mục chính trong khung PGDS. Trường này để trống lúc tạo bài và bắt buộc trước khi gửi duyệt, xuất bản hoặc hẹn giờ. Có thể lưu nháp để chọn sau.
+   - **Chuyên mục phụ (Categories):** Tích thêm chuyên mục phụ trong bảng bên phải nếu cần. Trong khung PGDS, nhập Sa-pô và Tên tác giả hiển thị.
    - **Ảnh đại diện:** Chọn ảnh cho thẻ bài và khi chia sẻ. Với Bài viết và Vietnam Buddhism, dùng block **Ảnh (Image)** trong nội dung để đặt ảnh ở vị trí mong muốn và nhập chú thích.
 4. **Đăng bài:** Nhấn **Publish (Đăng bài)**.
 

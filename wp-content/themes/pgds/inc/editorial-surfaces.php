@@ -159,13 +159,18 @@ function pgds_get_editorial_classification( $post_id ) {
 	return pgds_classify_editorial_values( $primary_id, $assigned_ids );
 }
 
-function pgds_keep_unclassified_draft_categories_empty( $data, $postarr ) {
+function pgds_prevent_editorial_category_fallback( $data, $postarr ) {
 	static $clear_default = null;
 	if ( $clear_default ) {
 		remove_action( 'set_object_terms', $clear_default );
 		$clear_default = null;
 	}
-	if ( 'post' !== $data['post_type'] || 'draft' !== $data['post_status'] || array_filter( (array) ( $postarr['post_category'] ?? array() ) ) ) {
+	if ( 'post' !== $data['post_type'] || array_filter( (array) ( $postarr['post_category'] ?? array() ) ) ) {
+		return $data;
+	}
+
+	$classic_nonce = isset( $_POST['pgds_meta_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['pgds_meta_nonce'] ) ) : '';
+	if ( 'draft' !== $data['post_status'] && ! wp_verify_nonce( $classic_nonce, 'pgds_meta_save' ) ) {
 		return $data;
 	}
 
@@ -184,7 +189,7 @@ function pgds_keep_unclassified_draft_categories_empty( $data, $postarr ) {
 
 	return $data;
 }
-add_filter( 'wp_insert_post_data', 'pgds_keep_unclassified_draft_categories_empty', PHP_INT_MAX, 2 );
+add_filter( 'wp_insert_post_data', 'pgds_prevent_editorial_category_fallback', PHP_INT_MAX, 2 );
 
 /**
  * Read the allowlisted surface carried by the current admin request.
