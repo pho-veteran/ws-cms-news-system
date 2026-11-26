@@ -16,6 +16,7 @@ fi
 
 $WP core is-installed >/dev/null
 $WP eval-file "$VERIFY"
+$WP eval-file "$TEST_DIR/editorial-schedule-regression.php"
 $WP eval-file "$TEST_DIR/editorial-workflow-regression.php"
 
 echo "==> CMS editor regression suite passed."

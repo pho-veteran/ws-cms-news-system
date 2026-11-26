@@ -1346,6 +1346,20 @@ function pgds_validate_editorial_publish_post( $post_id ) {
 	return true;
 }
 
+function pgds_publish_scheduled_post( $post_id ) {
+	$post = get_post( $post_id );
+	if ( $post instanceof WP_Post && 'post' === $post->post_type && 'future' === $post->post_status && strtotime( $post->post_date_gmt . ' GMT' ) <= time() ) {
+		if ( is_wp_error( pgds_validate_editorial_publish_post( $post_id ) ) ) {
+			wp_update_post( array( 'ID' => $post_id, 'post_status' => 'draft' ) );
+			return;
+		}
+	}
+
+	check_and_publish_future_post( $post_id );
+}
+remove_action( 'publish_future_post', 'check_and_publish_future_post' );
+add_action( 'publish_future_post', 'pgds_publish_scheduled_post' );
+
 /**
  * Save editor-owned article metadata after WordPress applies final categories.
  *
@@ -1381,6 +1395,7 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 	$submitted_groups = array_map( 'sanitize_key', $submitted_groups );
 	$errors           = array();
 	$requested_surface = isset( $_POST['pgds_surface'] ) ? pgds_sanitize_editorial_surface( wp_unslash( $_POST['pgds_surface'] ) ) : '';
+	$will_be_public    = in_array( $post->post_status, array( 'publish', 'future' ), true );
 
 	if ( in_array( 'editorial', $submitted_groups, true ) && isset( $_POST['pgds_surface'] ) ) {
 		$classification = pgds_get_editorial_classification( $post_id );
@@ -1396,7 +1411,7 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 			$can_change = false;
 		}
 
-		if ( $can_change && 'publish' === $post->post_status && 'video' === $requested_surface ) {
+		if ( $can_change && $will_be_public && 'video' === $requested_surface ) {
 			$youtube_raw = isset( $_POST['_pgds_youtube_id'] )
 				? wp_unslash( $_POST['_pgds_youtube_id'] )
 				: get_post_meta( $post_id, '_pgds_youtube_id', true );
@@ -1480,7 +1495,7 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 	}
 
 	$was_published = $post_before instanceof WP_Post && 'publish' === $post_before->post_status;
-	if ( 'publish' === $post->post_status && ! $was_published ) {
+	if ( 'future' === $post->post_status || ( $will_be_public && ! $was_published ) ) {
 		$publish_validation = pgds_validate_editorial_publish_post( $post_id );
 		if ( is_wp_error( $publish_validation ) ) {
 			$errors[] = $publish_validation->get_error_code();
@@ -1723,7 +1738,7 @@ function pgds_rest_validate_article_meta( $prepared_post, $request ) {
 	$requested_status = $request->has_param( 'status' ) ? sanitize_key( (string) $request->get_param( 'status' ) ) : '';
 	$final_status    = $requested_status ? $requested_status : $current_status;
 	$workflow_change = $categories_supplied || array_key_exists( '_pgds_primary_cat', $meta ) || array_key_exists( '_pgds_youtube_id', $meta );
-	$validate_publish = 'publish' === $final_status && ( ! $post_id || 'publish' !== $current_status || $workflow_change );
+	$validate_publish = 'future' === $final_status || ( 'publish' === $final_status && ( ! $post_id || 'publish' !== $current_status || $workflow_change ) );
 
 	if ( $validate_publish ) {
 		$primary_id = array_key_exists( '_pgds_primary_cat', $meta )
