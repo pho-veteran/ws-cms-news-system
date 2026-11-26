@@ -164,6 +164,10 @@ Bài viết **E-magazine** là các tác phẩm báo chí chuyên sâu đa phư�
 
 ---
 
+### Sửa bài bị gắn nhầm Tin Phật sự
+
+Mở bài trong trình soạn thảo và xác nhận **Chuyên mục bài viết** đúng trong khung PGDS. Trong bảng **Chuyên mục** bên phải, bỏ chọn **Tin Phật sự** nếu bài không thuộc mục này, rồi cập nhật và kiểm tra lại ở danh sách bài. Giữ các chuyên mục phụ đã chọn có chủ đích.
+
 ### 🌏 3.4. Đăng bài Tiếng Anh (Vietnam Buddhism)
 
 1. **Truy cập:** Chọn menu **Vietnam Buddhism** trên thanh điều hướng.

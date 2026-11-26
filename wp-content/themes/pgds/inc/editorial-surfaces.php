@@ -159,6 +159,33 @@ function pgds_get_editorial_classification( $post_id ) {
 	return pgds_classify_editorial_values( $primary_id, $assigned_ids );
 }
 
+function pgds_keep_unclassified_draft_categories_empty( $data, $postarr ) {
+	static $clear_default = null;
+	if ( $clear_default ) {
+		remove_action( 'set_object_terms', $clear_default );
+		$clear_default = null;
+	}
+	if ( 'post' !== $data['post_type'] || 'draft' !== $data['post_status'] || array_filter( (array) ( $postarr['post_category'] ?? array() ) ) ) {
+		return $data;
+	}
+
+	// Core has already resolved the fallback. Remove it before later form and REST term writes.
+	$post_id       = (int) ( $postarr['ID'] ?? 0 );
+	$default_id    = (int) get_option( 'default_category' );
+	$clear_default = static function ( $saved_id, $terms, $tt_ids, $taxonomy ) use ( $post_id, $default_id, &$clear_default ) {
+		if ( 'category' !== $taxonomy || array( $default_id ) !== array_map( 'intval', $terms ) || ( $post_id && $post_id !== $saved_id ) ) {
+			return;
+		}
+		remove_action( 'set_object_terms', $clear_default );
+		$clear_default = null;
+		wp_remove_object_terms( $saved_id, $default_id, 'category' );
+	};
+	add_action( 'set_object_terms', $clear_default, 10, 4 );
+
+	return $data;
+}
+add_filter( 'wp_insert_post_data', 'pgds_keep_unclassified_draft_categories_empty', PHP_INT_MAX, 2 );
+
 /**
  * Read the allowlisted surface carried by the current admin request.
  *
