@@ -21,10 +21,10 @@ $original_user = get_current_user_id();
 $original_post = $_POST;
 $original_request = $_REQUEST;
 $post_id = 0;
-$own_draft_id = 0;
-$attachment_id = 0;
 $reporter_id = 0;
 $editor_id = 0;
+$own_draft_id = 0;
+$attachment_id = 0;
 $die_handler = static function () {
 	return static function ( $message ) {
 		throw new RuntimeException( (string) $message );
