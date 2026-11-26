@@ -89,6 +89,46 @@ try {
 	};
 	$assert( '' === $quick_edit( $scheduled_id ), 'Quick Edit accepts a complete scheduled video.' );
 	$assert( '' !== $quick_edit( $scheduled_id, array( 'post_category' => array() ) ) && has_category( $video_id, $scheduled_id ), 'Quick Edit rejects removing a scheduled video’s primary category before saving.' );
+
+	$unclassified_id = wp_insert_post( array( 'post_title' => 'PGDS unclassified admin draft', 'post_status' => 'draft' ) );
+	$ids[] = $unclassified_id;
+	$category_message = pgds_meta_feedback_messages( 'article' )['pgds_article_category_required'];
+	$assert( esc_html( $category_message ) === $quick_edit( $unclassified_id, array( '_status' => 'publish' ) ) && 'draft' === get_post_status( $unclassified_id ), 'Quick Edit rejects immediate publication of an unclassified draft.' );
+	$_POST = array(
+		'pgds_meta_nonce'    => wp_create_nonce( 'pgds_meta_save' ),
+		'pgds_meta_groups'   => array( 'editorial' ),
+		'pgds_surface'       => 'article',
+	);
+	wp_update_post( array( 'ID' => $unclassified_id, 'post_status' => 'draft' ) );
+	$feedback = $GLOBALS['pgds_meta_feedback'] ?? array();
+	$assert( array() === wp_get_post_categories( $unclassified_id ) && empty( $feedback['errors'] ), 'The classic form saves a draft without asking for a category.' );
+	wp_update_post( array( 'ID' => $unclassified_id, 'post_status' => 'publish' ) );
+	$assert( 'draft' === get_post_status( $unclassified_id ) && array() === wp_get_post_categories( $unclassified_id ), 'A rejected classic publication stays an uncategorized draft.' );
+	$_POST = array();
+
+	$bulk_die = static function () {
+		return static function ( $message ) {
+			throw new RuntimeException( (string) $message );
+		};
+	};
+	$_REQUEST = array(
+		'action'    => 'edit',
+		'bulk_edit' => 'Update',
+		'_wpnonce'  => wp_create_nonce( 'bulk-posts' ),
+		'_status'   => 'publish',
+		'post'      => array( $scheduled_id, $unclassified_id ),
+	);
+	add_filter( 'wp_die_handler', $bulk_die );
+	try {
+		do_action( 'load-edit.php' );
+		$assert( false, 'Bulk Edit must reject an unclassified article before publishing the batch.' );
+	} catch ( RuntimeException $exception ) {
+		$assert( str_contains( $exception->getMessage(), esc_html( $category_message ) ) && 'future' === get_post_status( $scheduled_id ) && 'draft' === get_post_status( $unclassified_id ), 'Bulk Edit rejects the batch before publication if an article has no primary category.' );
+	} finally {
+		remove_filter( 'wp_die_handler', $bulk_die );
+	}
+	$_REQUEST = $saved_request;
+
 	$quick_date = array_combine( array( 'aa', 'mm', 'jj', 'hh', 'mn', 'ss' ), preg_split( '/[- :]/', get_date_from_gmt( $later ) ) );
 	$quick_date['edit_date'] = '1';
 	$quick_date['_status'] = 'publish';

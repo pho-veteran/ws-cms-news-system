@@ -1,14 +1,6 @@
 <?php
 /**
- * Editorial roles: Trưởng BBT (administrator) publishes, Phóng viên submits for review.
- *
- * Newsroom feedback asked for two account levels so that publishing is a deliberate,
- * single-owner step:
- *
- *   - Trưởng ban biên tập — the administrator account. Full control of the CMS and the
- *     ONLY account allowed to publish.
- *   - Phóng viên — writes, edits and submits articles in the "Chờ duyệt" (pending) state,
- *     but cannot publish.
+ * Editorial roles for drafting, publishing articles, and administering the newsroom.
  *
  * The publish restriction is applied at runtime through `user_has_cap` rather than by
  * rewriting the stored editor/author roles, so it needs no migration, cannot drift from
@@ -100,6 +92,27 @@ add_action( 'load-user-new.php', static function () {
 } );
 
 /**
+ * Use Vietnamese newsroom role names even when the admin UI is in English.
+ *
+ * @param string $translation Translated text.
+ * @param string $text Original text.
+ * @param string $context Translation context.
+ * @return string
+ */
+function pgds_translate_newsroom_role( $translation, $text, $context ) {
+	if ( 'User role' !== $context ) {
+		return $translation;
+	}
+
+	return match ( $text ) {
+		'Administrator' => 'Quản trị viên',
+		'Editor'        => 'Biên tập viên',
+		default        => $translation,
+	};
+}
+add_filter( 'gettext_with_context_default', 'pgds_translate_newsroom_role', 10, 3 );
+
+/**
  * Capabilities that publish content or change content that is already live.
  *
  * Editing a published article changes what readers see without going back through review,
@@ -119,33 +132,31 @@ function pgds_publishing_capabilities() {
 }
 
 /**
- * Whether a capability set belongs to the Trưởng BBT (administrator) account.
- *
- * @param array<string,bool> $allcaps Capabilities of the user.
- * @return bool
- */
-function pgds_caps_can_publish( array $allcaps ) {
-	return ! empty( $allcaps['manage_options'] );
-}
-
-/**
- * Remove publishing rights from every account except the administrator.
+ * Editors retain WordPress's article publishing rights. Page publishing and deleting
+ * published content require the administrator capability.
  *
  * @param array<string,bool> $allcaps All capabilities of the user.
+ * @param string[]           $caps Required capabilities.
+ * @param array              $args Capability check arguments.
+ * @param WP_User            $user Account being checked.
  * @return array<string,bool>
  */
-function pgds_restrict_publishing_caps( $allcaps ) {
-	if ( ! is_array( $allcaps ) || pgds_caps_can_publish( $allcaps ) ) {
+function pgds_restrict_publishing_caps( $allcaps, $caps, $args, $user ) {
+	if ( ! is_array( $allcaps ) || ! empty( $allcaps['manage_options'] ) ) {
 		return $allcaps;
 	}
 
-	foreach ( pgds_publishing_capabilities() as $cap ) {
+	$restricted = pgds_publishing_capabilities();
+	if ( in_array( 'editor', $user->roles, true ) ) {
+		$restricted = array_diff( $restricted, array( 'publish_posts', 'edit_published_posts' ) );
+	}
+	foreach ( $restricted as $cap ) {
 		$allcaps[ $cap ] = false;
 	}
 
 	return $allcaps;
 }
-add_filter( 'user_has_cap', 'pgds_restrict_publishing_caps', 10, 1 );
+add_filter( 'user_has_cap', 'pgds_restrict_publishing_caps', 10, 4 );
 
 /**
  * Keep two everyday tasks that core ties to `edit_published_*` but that do not change an
@@ -292,15 +303,16 @@ function pgds_pending_submission_errors( array $values ) {
  * Validate a stored post as a submission for review.
  *
  * @param int $post_id Post ID.
+ * @param int[]|null $assigned_ids Proposed categories, or null to use the stored categories.
  * @return string[] Missing-part codes.
  */
-function pgds_pending_submission_errors_for_post( $post_id ) {
+function pgds_pending_submission_errors_for_post( $post_id, $assigned_ids = null ) {
 	$post = get_post( $post_id );
 	if ( ! $post instanceof WP_Post ) {
 		return array();
 	}
 
-	$assigned_ids = wp_get_post_categories( $post->ID, array( 'fields' => 'ids' ) );
+	$assigned_ids ??= wp_get_post_categories( $post->ID, array( 'fields' => 'ids' ) );
 
 	return pgds_pending_submission_errors(
 		array(
@@ -482,7 +494,7 @@ add_action( 'wp_ajax_inline-save', 'pgds_ajax_validate_pending_submission', 1 );
  * status because an earlier callback may already have reverted the post.
  *
  * Limited to logged-in accounts that cannot publish: the rule is about what a reporter
- * hands to the Trưởng BBT, not about system writes (cron, WP-CLI) or the reviewer.
+ * hands to the publisher, not about system writes (cron, WP-CLI) or the reviewer.
  *
  * @param int          $post_id     Post ID.
  * @param WP_Post      $post        Post object.
@@ -517,7 +529,7 @@ function pgds_enforce_pending_completeness( $post_id, $post, $update, $post_befo
 add_action( 'wp_after_insert_post', 'pgds_enforce_pending_completeness', 20, 4 );
 
 /* ===========================================================================
- * Review queue for the Trưởng BBT.
+ * Review queue for accounts that publish.
  * ======================================================================== */
 
 /**
@@ -570,7 +582,7 @@ function pgds_register_pending_dashboard_widget() {
 add_action( 'wp_dashboard_setup', 'pgds_register_pending_dashboard_widget' );
 
 /**
- * Render the latest submissions waiting for the Trưởng BBT, across every workflow.
+ * Render the latest pending submissions across every workflow.
  */
 function pgds_render_pending_dashboard_widget() {
 	$query = new WP_Query(

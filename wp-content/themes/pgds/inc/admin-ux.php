@@ -1172,7 +1172,7 @@ function pgds_admin_editor_hints( $hook ) {
 				if ( window.wp && window.wp.data ) {
 					var dispatch = window.wp.data.dispatch( 'core/editor' );
 					if ( dispatch && dispatch.lockPostSaving && dispatch.unlockPostSaving ) {
-						if ( changing && confirm && ! confirm.checked ) {
+						if ( changing && ( ( confirm && ! confirm.checked ) || ( isArticle && ! targetTermId() ) ) ) {
 							dispatch.lockPostSaving( 'pgds-surface-confirmation' );
 						} else {
 							dispatch.unlockPostSaving( 'pgds-surface-confirmation' );
@@ -1185,7 +1185,7 @@ function pgds_admin_editor_hints( $hook ) {
 
 			select.addEventListener( 'change', update );
 			if ( articleSelect ) {
-				articleSelect.addEventListener( 'change', syncEditorRecord );
+				articleSelect.addEventListener( 'change', update );
 			}
 			if ( confirm ) {
 				confirm.addEventListener( 'change', update );

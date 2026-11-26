@@ -1178,10 +1178,10 @@ function pgds_render_classification_control( $post, $surface ) {
 	echo '<div class="pgds-metabox__article-category" data-pgds="article-category">';
 	printf(
 		'<label class="pgds-metabox__label" for="pgds_article_primary_slug">%s</label>',
-		esc_html( $english ? 'Vietnamese Article category' : 'Chuyên mục bài viết' )
+		esc_html( $english ? 'Vietnamese Article category (required)' : 'Chuyên mục bài viết (bắt buộc)' )
 	);
-	echo '<select class="widefat" id="pgds_article_primary_slug" name="pgds_article_primary_slug" aria-describedby="pgds_article_primary_slug-help">';
-	printf( '<option value="">%s</option>', esc_html( $english ? '— Choose a category —' : '— Chọn chuyên mục —' ) );
+	echo '<select class="widefat" id="pgds_article_primary_slug" name="pgds_article_primary_slug" aria-required="true" aria-describedby="pgds_article_primary_slug-help">';
+	printf( '<option value="" disabled%s>%s</option>', selected( '', $article_slug, false ), esc_html( $english ? '— Choose a category —' : '— Chọn chuyên mục —' ) );
 	foreach ( $definitions['article']['primary_slugs'] as $slug ) {
 		$term = pgds_category_term( $slug );
 		if ( ! $term instanceof WP_Term ) {
@@ -1196,9 +1196,13 @@ function pgds_render_classification_control( $post, $surface ) {
 		);
 	}
 	echo '</select>';
+	$category_help = $english ? 'Choose a category before submitting for review, publishing, or scheduling. You can save a draft first.' : 'Chọn chuyên mục trước khi gửi duyệt, xuất bản hoặc hẹn giờ. Bạn có thể lưu nháp để chọn sau.';
+	if ( $classification['valid'] && 'article' !== $classification['surface'] ) {
+		$category_help = $english ? 'Choose the new primary category before saving this change to Article.' : 'Chọn chuyên mục chính mới trước khi lưu thay đổi sang loại Bài viết.';
+	}
 	printf(
 		'<p class="description" id="pgds_article_primary_slug-help">%s</p>',
-		esc_html( $english ? 'Required before publishing a Vietnamese Article.' : 'Bắt buộc trước khi xuất bản Bài viết.' )
+		esc_html( $category_help )
 	);
 	echo '</div>';
 
@@ -1353,7 +1357,18 @@ function pgds_is_scheduled_publication_date( $date_gmt ) {
 	return strtotime( $date_gmt . ' GMT' ) >= time() + MINUTE_IN_SECONDS;
 }
 
-function pgds_ajax_validate_scheduled_post() {
+function pgds_validate_list_publication( $post, $status, $categories ) {
+	if ( 'publish' === $status && 'publish' === $post->post_status ) {
+		$current = wp_get_post_categories( $post->ID );
+		if ( null === $categories || ( ! array_diff( $current, $categories ) && ! array_diff( $categories, $current ) ) ) {
+			return true;
+		}
+	}
+
+	return pgds_validate_editorial_publish_post( $post->ID, $categories );
+}
+
+function pgds_ajax_validate_publication() {
 	$post_id = isset( $_POST['post_ID'] ) ? absint( $_POST['post_ID'] ) : 0;
 	$post = get_post( $post_id );
 	if ( ! $post instanceof WP_Post || 'post' !== $post->post_type || ! current_user_can( 'publish_posts' ) || ! current_user_can( 'edit_post', $post_id ) ) {
@@ -1367,17 +1382,69 @@ function pgds_ajax_validate_scheduled_post() {
 
 	$form = array_merge( $_POST, array( 'post_type' => 'post', 'post_status' => $status ) );
 	$values = _wp_translate_postdata( true, $form );
-	if ( is_wp_error( $values ) || ( 'future' !== $status && ! pgds_is_scheduled_publication_date( $values['post_date_gmt'] ?? $post->post_date_gmt ) ) ) {
+	if ( is_wp_error( $values ) ) {
 		return;
 	}
-	$categories = isset( $values['post_category'] ) ? array_map( 'absint', (array) $values['post_category'] ) : null;
-	$validation = pgds_validate_editorial_publish_post( $post_id, $categories );
+	$categories = isset( $values['post_category'] ) ? array_filter( array_map( 'absint', (array) $values['post_category'] ) ) : null;
+	if ( pgds_is_scheduled_publication_date( $values['post_date_gmt'] ?? $post->post_date_gmt ) ) {
+		$status = 'future';
+	}
+	$validation = pgds_validate_list_publication( $post, $status, $categories );
 	if ( is_wp_error( $validation ) ) {
 		$surface = pgds_get_editorial_classification( $post_id )['surface'];
 		wp_die( esc_html( pgds_meta_feedback_messages( $surface )[ $validation->get_error_code() ] ) );
 	}
 }
-add_action( 'wp_ajax_inline-save', 'pgds_ajax_validate_scheduled_post', 2 );
+add_action( 'wp_ajax_inline-save', 'pgds_ajax_validate_publication', 2 );
+
+function pgds_validate_bulk_editorial_changes() {
+	$action = $_REQUEST['action'] ?? '-1';
+	if ( '-1' === $action ) {
+		$action = $_REQUEST['action2'] ?? '';
+	}
+	if ( 'edit' !== $action || ! empty( $_REQUEST['filter_action'] ) || ! isset( $_REQUEST['bulk_edit'], $_REQUEST['post'] ) ) {
+		return;
+	}
+	check_admin_referer( 'bulk-posts' );
+
+	$requested_status = isset( $_REQUEST['_status'] ) ? sanitize_key( wp_unslash( $_REQUEST['_status'] ) ) : '-1';
+	$new_categories   = is_array( $_REQUEST['post_category'] ?? null ) ? array_map( 'absint', $_REQUEST['post_category'] ) : array();
+	$indeterminate    = is_array( $_REQUEST['indeterminate_post_category'] ?? null ) ? array_map( 'absint', $_REQUEST['indeterminate_post_category'] ) : array();
+	foreach ( array_filter( array_map( 'intval', (array) $_REQUEST['post'] ) ) as $post_id ) {
+		$post = get_post( $post_id );
+		if ( ! $post instanceof WP_Post || 'post' !== $post->post_type || ! current_user_can( 'edit_post', $post_id ) || wp_check_post_lock( $post_id ) ) {
+			continue;
+		}
+		$status = in_array( $requested_status, array( '', '-1' ), true ) ? $post->post_status : $requested_status;
+		if ( in_array( $status, array( 'publish', 'future' ), true ) && ! current_user_can( 'publish_posts' ) ) {
+			$status = 'pending';
+		}
+		if ( ! in_array( $status, array( 'publish', 'future', 'pending' ), true ) ) {
+			continue;
+		}
+
+		$categories = null;
+		if ( $new_categories ) {
+			// Match WordPress's indeterminate checkboxes for the categories present on only some posts.
+			$categories = array_filter( array_merge(
+				array_intersect( wp_get_post_categories( $post_id ), $indeterminate ),
+				array_diff( $new_categories, $indeterminate )
+			) );
+		}
+		$surface = pgds_get_editorial_classification( $post_id )['surface'];
+		if ( 'pending' === $status ) {
+			$missing = pgds_pending_submission_errors_for_post( $post_id, $categories );
+			$message = $missing ? pgds_pending_submission_message( $missing, $surface, 'pending' === $post->post_status ) : '';
+		} else {
+			$validation = pgds_validate_list_publication( $post, $status, $categories );
+			$message    = is_wp_error( $validation ) ? pgds_meta_feedback_messages( $surface )[ $validation->get_error_code() ] : '';
+		}
+		if ( $message ) {
+			wp_die( esc_html( sprintf( 'Chưa cập nhật hàng loạt. Bài “%1$s” cần kiểm tra. %2$s', $post->post_title, $message ) ), '', array( 'response' => 400, 'back_link' => true ) );
+		}
+	}
+}
+add_action( 'load-edit.php', 'pgds_validate_bulk_editorial_changes' );
 
 function pgds_publish_scheduled_post( $post_id ) {
 	$post = get_post( $post_id );
@@ -1455,7 +1522,7 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 			}
 		}
 
-		if ( $can_change ) {
+		if ( $can_change && ( $will_be_public || 'article' !== $requested_surface || $article_slug || ( $classification['valid'] && 'article' !== $classification['surface'] ) ) ) {
 			$result = pgds_apply_editorial_classification( $post_id, $requested_surface, $article_slug );
 			if ( is_wp_error( $result ) ) {
 				$errors[] = $result->get_error_code();
@@ -1475,6 +1542,7 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		}
 	}
 
+	$classification_failed = (bool) $errors;
 	if ( in_array( 'homepage', $submitted_groups, true ) ) {
 		$new_featured = isset( $_POST['_pgds_is_featured'] );
 		$rank_input   = isset( $_POST['_pgds_feature_rank'] ) ? wp_unslash( $_POST['_pgds_feature_rank'] ) : '';
@@ -1532,6 +1600,8 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 		$publish_validation = pgds_validate_editorial_publish_post( $post_id );
 		if ( is_wp_error( $publish_validation ) ) {
 			$errors[] = $publish_validation->get_error_code();
+		}
+		if ( $classification_failed || is_wp_error( $publish_validation ) ) {
 			remove_action( 'wp_after_insert_post', 'pgds_save_meta', 10 );
 			wp_update_post(
 				array(
@@ -1553,7 +1623,7 @@ function pgds_save_meta( $post_id, $post, $update, $post_before ) {
 	 */
 	if ( 'pending' === $post->post_status && function_exists( 'pgds_pending_submission_errors_for_post' ) ) {
 		$pending_errors = pgds_pending_submission_errors_for_post( $post_id );
-		if ( $pending_errors ) {
+		if ( $classification_failed || $pending_errors ) {
 			$errors = array_merge( $errors, $pending_errors );
 			remove_action( 'wp_after_insert_post', 'pgds_save_meta', 10 );
 			wp_update_post(

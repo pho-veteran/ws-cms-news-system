@@ -20,7 +20,7 @@ Tài liệu hướng dẫn chi tiết quy trình đăng bài, quản lý nội d
 3. Tích **Gửi thông báo cho người dùng (Send User Notification)** rồi bấm **Thêm người dùng (Add User)**. Người nhận mở liên kết trong email để tự đặt mật khẩu và đăng nhập bằng tài khoản vừa tạo.
 4. Nếu chưa nhận được email, kiểm tra địa chỉ và thư rác. Từ danh sách **Người dùng**, quản trị viên có thể chọn **Gửi liên kết đặt lại mật khẩu (Send password reset)** ở dòng tài khoản. Người dùng cũng có thể bấm **Quên mật khẩu?** ở trang đăng nhập.
 
-Phóng viên có thể tự soạn, lưu nháp và tải ảnh. Khi đã có tít, sa-pô, nội dung và chuyên mục, bấm **Gửi duyệt (Submit for Review)** để đưa bài vào **Chờ duyệt**. Trưởng BBT sử dụng tài khoản quản trị để duyệt và xuất bản.
+Phóng viên có thể tự soạn, lưu nháp và tải ảnh. Khi đã có tít, sa-pô, nội dung và chuyên mục, bấm **Gửi duyệt (Submit for Review)** để đưa bài vào **Chờ duyệt**. **Biên tập viên** có thể soạn, biên tập và xuất bản bài viết. **Quản trị viên** quản lý tài khoản, cấu hình hệ thống và có quyền xuất bản.
 
 ---
 
@@ -167,8 +167,8 @@ Bài viết **E-magazine** là các tác phẩm báo chí chuyên sâu đa phư�
 
 3. **Nhập dữ liệu:**
    - **Tiêu đề & Nội dung:** Điền tiêu đề và soạn nội dung chi tiết.
-   - **Chuyên mục (Categories):** Tích chọn chuyên mục phù hợp (*Tin Phật sự, Phật tích, Lối sống xanh, Tốt đời đẹp đạo...*).
-   - **Cấu hình PGDS:** Nhập Sa-pô, chọn Chuyên mục chính hiển thị, và nhập Tên tác giả hiển thị.
+   - **Chuyên mục bài viết:** Chọn chuyên mục chính trong khung PGDS. Trường này để trống lúc tạo bài và bắt buộc trước khi gửi duyệt, xuất bản hoặc hẹn giờ. Có thể lưu nháp để chọn sau.
+   - **Chuyên mục phụ (Categories):** Tích thêm chuyên mục phụ trong bảng bên phải nếu cần. Trong khung PGDS, nhập Sa-pô và Tên tác giả hiển thị.
    - **Ảnh đại diện:** Chọn ảnh cho thẻ bài và khi chia sẻ. Với Bài viết và Vietnam Buddhism, dùng block **Ảnh (Image)** trong nội dung để đặt ảnh ở vị trí mong muốn và nhập chú thích.
 4. **Đăng bài:** Nhấn **Publish (Đăng bài)**.
 
