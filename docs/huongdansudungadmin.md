@@ -6,12 +6,21 @@ Tài liệu hướng dẫn chi tiết quy trình đăng bài, quản lý nội d
 
 ## 1. Đăng nhập trang Quản trị (Admin Dashboard)
 
-- **Đường dẫn truy cập trang quản trị (URL):** 👉 [http://localhost:8080/wp-admin](http://localhost:8080/wp-admin)
-- **Tài khoản đăng nhập mặc định:**
+- **Trang quản trị bản chạy thử local:** [http://localhost:8080/wp-admin](http://localhost:8080/wp-admin)
+- **Tài khoản mẫu của bản local:**
   - **Tên đăng nhập (Username):** `admin`
   - **Mật khẩu (Password):** `admin123`
 
 ![1. Bảng điều khiển Admin Dashboard](image/01_dashboard.png)
+
+### Cấp tài khoản riêng cho Phóng viên
+
+1. Quản trị viên đăng nhập trang quản trị của tòa soạn và mở **Người dùng → Thêm người dùng mới** (**Users → Add New User**).
+2. Nhập tên đăng nhập duy nhất và email riêng của từng người, chẳng hạn `phongvien@example.test` khi chạy thử. Trong danh sách **Vai trò (Role)**, chọn **Phóng viên**.
+3. Tích **Gửi thông báo cho người dùng (Send User Notification)** rồi bấm **Thêm người dùng (Add User)**. Người nhận mở liên kết trong email để tự đặt mật khẩu và đăng nhập bằng tài khoản vừa tạo.
+4. Nếu chưa nhận được email, kiểm tra địa chỉ và thư rác. Từ danh sách **Người dùng**, quản trị viên có thể chọn **Gửi liên kết đặt lại mật khẩu (Send password reset)** ở dòng tài khoản. Người dùng cũng có thể bấm **Quên mật khẩu?** ở trang đăng nhập.
+
+Phóng viên có thể tự soạn, lưu nháp và tải ảnh. Khi đã có tít, sa-pô, nội dung và chuyên mục, bấm **Gửi duyệt (Submit for Review)** để đưa bài vào **Chờ duyệt**. Trưởng BBT sử dụng tài khoản quản trị để duyệt và xuất bản.
 
 ---
 
