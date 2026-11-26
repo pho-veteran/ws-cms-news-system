@@ -159,6 +159,36 @@
   }
 }
 
+// --- Sidebar poster (Customizer → Poster bên lề) ----------------------------
+// Fills the strip the sidebar leaves empty beside a long "Tin mới" column. On wide
+// screens it sticks below the sticky category nav, so it stays in view while that
+// column scrolls; on narrow screens it is an ordinary block in the stacked flow.
+.pgds-poster {
+  margin-top: $sp-6;
+  margin-bottom: $sp-6;
+
+  @include mq(lg) {
+    position: sticky;
+    top: $sp-12 + $sp-4;
+  }
+
+  &__link {
+    display: block;
+    border-radius: $radius-lg;
+
+    &:focus-visible { @include focus-ring; }
+  }
+
+  &__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-lg;
+    background: var(--pgds-paper-deep);
+  }
+}
+
 // --- Buddha's teachings (teaching audio list) -------------------------------
 .pgds-teaching li {
   display: flex;

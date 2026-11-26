@@ -23,5 +23,6 @@ $lunar   = get_posts(
 	<?php
 	get_template_part( 'template-parts/sidebar-popular', null, array( 'posts' => $popular ) );
 	get_template_part( 'template-parts/sidebar-lunar', null, array( 'post' => $lunar[0] ?? null ) );
+	get_template_part( 'template-parts/sidebar-poster' );
 	?>
 </aside>

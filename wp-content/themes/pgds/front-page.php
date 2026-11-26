@@ -268,6 +268,7 @@ $render_each = static function ( $slug, $posts, $extra = array() ) {
 		<aside aria-label="<?php esc_attr_e( 'Thông tin bên lề', 'pgds' ); ?>">
 			<?php get_template_part( 'template-parts/sidebar-popular', null, array( 'posts' => $B['popular'] ) ); ?>
 			<?php get_template_part( 'template-parts/sidebar-lunar', null, array( 'post' => $B['lunar'] ) ); ?>
+			<?php get_template_part( 'template-parts/sidebar-poster' ); ?>
 		</aside>
 	</div>
 

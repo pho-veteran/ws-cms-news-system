@@ -47,6 +47,24 @@
 
   a:hover { color: var(--pgds-white); }
 
+  &__brand {
+    display: inline-block;
+    max-width: 300px;
+    margin-bottom: $sp-4;
+    padding: $sp-3 $sp-4;
+    background: var(--pgds-paper);
+    border-radius: $radius-lg;
+    line-height: 0;
+
+    &:focus-visible { @include focus-ring; }
+  }
+
+  &__logo {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
   &__intro {
     font-size: $fs-xs;
     opacity: .8;
