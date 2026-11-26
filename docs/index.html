@@ -676,7 +676,7 @@
         <h2 class="section-title"><i class="fa-solid fa-key"></i> 1. Đăng Nhập Trang Quản Trị (Admin Dashboard)</h2>
         
         <div class="card">
-          <p style="color: var(--text-muted); margin-bottom: 12px;">Đường dẫn đăng nhập chính thức trang quản trị hệ thống CMS PGDS:</p>
+          <p style="color: var(--text-muted); margin-bottom: 12px;">Thông tin đăng nhập mẫu dành cho bản chạy thử local.</p>
           
           <div class="cred-box">
             <div class="cred-info">
@@ -702,6 +702,17 @@
             <img src="image/01_dashboard.png" alt="Dashboard Admin PGDS">
           </div>
           <div class="img-caption"><i class="fa-solid fa-camera"></i> Hình 1: Giao diện Bảng điều khiển Admin Dashboard sau khi đăng nhập thành công.</div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Cấp tài khoản riêng cho Phóng viên</h3>
+          <ol style="padding-inline-start: 1.25rem; margin-block: 12px;">
+            <li>Quản trị viên mở <strong>Người dùng → Thêm người dùng mới</strong> (<strong>Users → Add New User</strong>) trên trang quản trị của tòa soạn.</li>
+            <li>Nhập tên đăng nhập duy nhất và email riêng của từng người, ví dụ <code>phongvien@example.test</code> khi chạy thử. Chọn vai trò <strong>Phóng viên</strong>.</li>
+            <li>Tích <strong>Gửi thông báo cho người dùng (Send User Notification)</strong> rồi bấm <strong>Thêm người dùng (Add User)</strong>. Người nhận mở liên kết trong email để đặt mật khẩu và đăng nhập.</li>
+            <li>Nếu chưa thấy email, kiểm tra địa chỉ và thư rác. Quản trị viên có thể chọn <strong>Gửi liên kết đặt lại mật khẩu (Send password reset)</strong> ở dòng tài khoản, hoặc người dùng bấm <strong>Quên mật khẩu?</strong> trên trang đăng nhập.</li>
+          </ol>
+          <p>Phóng viên tự soạn, lưu nháp và tải ảnh. Khi đủ tít, sa-pô, nội dung và chuyên mục, bấm <strong>Gửi duyệt (Submit for Review)</strong>. Trưởng BBT sử dụng tài khoản quản trị để duyệt và xuất bản.</p>
         </div>
       </section>
 
