@@ -213,7 +213,8 @@ Mở bài trong trình soạn thảo và xác nhận **Chuyên mục bài viết
 
    ![Giao diện Thư viện Media](image/11_media_library.png)
 
-2. Tải lên, tìm kiếm, chỉnh sửa thông tin hoặc xóa hình ảnh/tệp đính kèm.
+2. Phóng viên có thể tải lên, tìm và dùng ảnh trong bài, cũng như chỉnh sửa chú thích và văn bản thay thế của ảnh mình tải lên.
+3. Quản trị viên phụ trách xóa tệp khỏi Thư viện Media. Trước khi xóa, kiểm tra các bài đang dùng tệp vì một ảnh có thể xuất hiện ở nhiều bài.
 
 ---
 
