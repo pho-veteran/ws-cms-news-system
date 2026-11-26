@@ -50,16 +50,6 @@ $display_author = pgds_display_author( get_post() );
 				<?php endif; ?>
 			</header>
 
-			<?php if ( has_post_thumbnail() ) : ?>
-				<figure class="pgds-article__figure article-cover">
-					<?php the_post_thumbnail( 'pgds-lead', array( 'fetchpriority' => 'high' ) ); ?>
-					<?php $caption = get_the_post_thumbnail_caption(); ?>
-					<?php if ( $caption ) : ?>
-						<figcaption><?php echo esc_html( $caption ); ?></figcaption>
-					<?php endif; ?>
-				</figure>
-			<?php endif; ?>
-
 			<div class="pgds-article__body article-body">
 				<?php the_content(); ?>
 			</div>

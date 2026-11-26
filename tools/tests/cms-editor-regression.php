@@ -368,7 +368,27 @@ try {
 		update_post_meta( $related_current_id, '_pgds_primary_cat', (int) $valid_term->term_id );
 		delete_post_meta( $related_current_id, '_pgds_display_author' );
 
+		$thumbnail = wp_upload_bits( 'pgds-image-' . $token . '.jpg', null, file_get_contents( dirname( __DIR__ ) . '/preview/media/pgds-seed-01.jpg' ) );
+		if ( $thumbnail['error'] ) {
+			throw new RuntimeException( 'The regression suite could not upload the thumbnail fixture.' );
+		}
+		$thumbnail_id = wp_insert_attachment( array( 'post_title' => 'PGDS thumbnail fixture', 'post_mime_type' => 'image/jpeg' ), $thumbnail['file'], 0, true );
+		if ( is_wp_error( $thumbnail_id ) ) {
+			throw new RuntimeException( 'The regression suite could not create the thumbnail fixture.' );
+		}
+		$pgds_cms_editor_posts[] = (int) $thumbnail_id;
+		update_post_meta( $related_current_id, '_thumbnail_id', $thumbnail_id );
+		update_post_meta( $thumbnail_id, '_wp_attachment_image_alt', 'PGDS editorial image' );
+		$inline_image = '<figure class="wp-block-image"><img src="' . esc_url( $thumbnail['url'] ) . '" alt="PGDS editorial image"><figcaption>PGDS editorial caption</figcaption></figure>';
+		wp_update_post( array( 'ID' => $related_current_id, 'post_content' => $inline_image ) );
 		$related_markup = pgds_cms_editor_render_article( $related_current_id );
+		pgds_cms_editor_assert( '' !== get_the_post_thumbnail( $related_current_id ), 'the thumbnail remains available to article cards' );
+		preg_match( '/<div class="pgds-article__body article-body">(.*?)<\/div>/s', $related_markup, $body_markup );
+		$article_body = $body_markup[1] ?? '';
+		pgds_cms_editor_assert(
+			! str_contains( $related_markup, 'article-cover' ) && 1 === substr_count( $article_body, 'alt="PGDS editorial image"' ) && str_contains( $article_body, 'PGDS editorial caption' ),
+			'an image selected as the thumbnail and placed in the body renders once with its caption'
+		);
 		preg_match(
 			'/<section\b[^>]*\baria-labelledby="pgds-related-title"[^>]*>.*?<\/section>/s',
 			$related_markup,
