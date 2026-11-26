@@ -76,7 +76,7 @@ Bài viết **E-magazine** là các tác phẩm báo chí chuyên sâu đa phư�
 
 3. **Bước 3: Tải Ảnh đại diện Bìa (Featured Image):**
    - Ở cột cấu hình bên phải, tìm đến mục **Ảnh đại diện (Featured Image)**.
-   - Chọn ảnh chất lượng cao độ phân giải tối thiểu `1920x1080px` làm ảnh bìa chính (Banner Header) cho E-magazine.
+   - Chọn ảnh bìa đủ nét và giữ tỷ lệ gốc. Trang chi tiết hiển thị toàn bộ ảnh bìa dù ảnh ngang, dọc hay vuông. Có thể nhập chú thích và văn bản thay thế trong Thư viện Media.
 
 4. **Bước 4: Sử dụng 5 Mẫu Gutenberg Block Patterns E-magazine chuẩn (Kèm ảnh chụp thực tế từng ô):**
 
