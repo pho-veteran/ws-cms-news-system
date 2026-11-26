@@ -90,6 +90,15 @@ try {
 	foreach ( array( 'publish_posts', 'edit_published_posts', 'list_users', 'create_users', 'edit_users', 'promote_users', 'delete_users', 'manage_options' ) as $cap ) {
 		$assert( current_user_can( $cap ), 'newsroom administrators retain ' . $cap );
 	}
+	require_once ABSPATH . 'wp-admin/includes/admin.php';
+	do_action( 'load-user-new.php' );
+	$assert( array( 'administrator', 'editor', 'pgds_reporter' ) === array_keys( get_editable_roles() ), 'Add User only exposes newsroom roles' );
+	ob_start();
+	wp_dropdown_roles( 'subscriber' );
+	$role_options = new WP_HTML_Tag_Processor( ob_get_clean() );
+	$assert( $role_options->next_tag( 'option' ) && 'pgds_reporter' === $role_options->get_attribute( 'value' ), 'Add User falls back to the least privileged newsroom role' );
+	remove_filter( 'editable_roles', 'pgds_new_user_roles', 100 );
+	$assert( null !== get_role( 'subscriber' ), 'core roles remain available to existing accounts' );
 	wp_set_current_user( $reporter_id );
 	$term_id = (int) pgds_category_term( 'tin-phat-su' )->term_id;
 	$green_living_id = (int) pgds_category_term( 'loi-song-xanh' )->term_id;

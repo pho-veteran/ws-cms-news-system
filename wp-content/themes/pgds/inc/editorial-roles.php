@@ -79,6 +79,27 @@ function pgds_sync_editorial_roles() {
 add_action( 'init', 'pgds_sync_editorial_roles', 1 );
 
 /**
+ * Limit account creation to the newsroom roles available to the current administrator.
+ *
+ * @param array<string,array> $roles Assignable roles.
+ * @return array<string,array>
+ */
+function pgds_new_user_roles( $roles ) {
+	$newsroom_roles = array();
+	// WordPress reverses this order for Add User. With Subscriber hidden, default to Phóng viên.
+	foreach ( array( 'administrator', 'editor', 'pgds_reporter' ) as $role ) {
+		if ( isset( $roles[ $role ] ) ) {
+			$newsroom_roles[ $role ] = $roles[ $role ];
+		}
+	}
+	return $newsroom_roles;
+}
+
+add_action( 'load-user-new.php', static function () {
+	add_filter( 'editable_roles', 'pgds_new_user_roles', 100 );
+} );
+
+/**
  * Capabilities that publish content or change content that is already live.
  *
  * Editing a published article changes what readers see without going back through review,
