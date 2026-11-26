@@ -1589,6 +1589,9 @@ try {
 	$_POST['_pgds_youtube_id'] = 'https://example.test/watch?v=M7lc1UVf-VE';
 	wp_update_post( array( 'ID' => $teaching_id, 'post_status' => 'publish' ) );
 	pgds_cms_editor_assert( 'draft' === get_post_status( $teaching_id ), 'the teaching form rejects a non-YouTube URL' );
+	update_post_meta( $teaching_id, '_pgds_youtube_id', 'dQw4w9WgXcQ' );
+	wp_update_post( array( 'ID' => $teaching_id, 'post_status' => 'publish' ) );
+	pgds_cms_editor_assert( 'draft' === get_post_status( $teaching_id ), 'an invalid edit cannot publish a teaching draft with its previous video' );
 	$_POST['_pgds_youtube_id'] = 'M7lc1UVf-VE';
 	wp_update_post( array( 'ID' => $teaching_id, 'post_status' => 'publish' ) );
 	pgds_cms_editor_assert( 'publish' === get_post_status( $teaching_id ), 'the teaching form publishes an 11-character video ID' );

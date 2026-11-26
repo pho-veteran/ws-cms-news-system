@@ -2034,9 +2034,10 @@ function pgds_validate_teaching_publication( $data, $postarr ) {
 		? pgds_normalize_youtube_input( wp_unslash( $_POST['_pgds_youtube_id'] ) )
 		: pgds_validate_youtube_id( $postarr['meta_input']['_pgds_youtube_id'] ?? $stored );
 	if ( is_wp_error( $id ) || '' === $id ) {
-		if ( ! $classic || ! $stored ) {
-			$data['post_status'] = 'draft';
-		}
+		$previous_status = get_post_status( $post_id );
+		$data['post_status'] = $classic && $stored && in_array( $previous_status, array( 'publish', 'future' ), true )
+			? $previous_status
+			: 'draft';
 		if ( $classic ) {
 			pgds_record_meta_feedback( $post_id, array( is_wp_error( $id ) ? $id->get_error_code() : 'pgds_teaching_requires_youtube' ) );
 		}
