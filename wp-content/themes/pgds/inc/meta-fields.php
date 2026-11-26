@@ -218,6 +218,20 @@ function pgds_synchronized_meta_keys() {
 	);
 }
 
+function pgds_reset_youtube_sync_after_id_change( $meta_id, $post_id, $meta_key ) {
+	if ( '_pgds_youtube_id' !== $meta_key || 'post' !== get_post_type( $post_id ) ) {
+		return;
+	}
+
+	foreach ( pgds_synchronized_meta_keys() as $key ) {
+		delete_post_meta( $post_id, $key );
+	}
+	delete_post_meta( $post_id, '_pgds_yt_synced' );
+}
+add_action( 'added_post_meta', 'pgds_reset_youtube_sync_after_id_change', 10, 3 );
+add_action( 'updated_post_meta', 'pgds_reset_youtube_sync_after_id_change', 10, 3 );
+add_action( 'deleted_post_meta', 'pgds_reset_youtube_sync_after_id_change', 10, 3 );
+
 /**
  * Register typed post metadata for REST reads and writes.
  */
@@ -771,6 +785,7 @@ function pgds_meta_feedback_messages( $surface = '' ) {
 		'pgds_invalid_editorial_surface'             => 'Loại nội dung không hợp lệ. Giá trị phân loại trước đó được giữ nguyên.',
 		'pgds_article_category_required'             => 'Bài viết phải chọn một chuyên mục tiếng Việt hợp lệ trước khi xuất bản.',
 		'pgds_video_requires_youtube'                => 'Video phải có đường dẫn YouTube hoặc mã video hợp lệ trước khi xuất bản.',
+		'pgds_teaching_requires_youtube'             => 'Nhập đường dẫn YouTube hoặc mã video hợp lệ trước khi xuất bản hoặc hẹn giờ Lời Phật dạy.',
 		'pgds_surface_change_confirmation_required' => 'Hãy xác nhận trước khi chuyển bài sang một loại nội dung khác.',
 		'pgds_missing_editorial_category'            => 'Không tìm thấy chuyên mục bắt buộc. Hãy chạy lại bước khôi phục taxonomy trước khi lưu.',
 		'pgds_classification_write_failed'           => 'Không thể cập nhật đồng thời loại nội dung và chuyên mục. Phân loại trước đó đã được giữ nguyên.',
@@ -946,7 +961,7 @@ function pgds_prepare_meta_feedback() {
 	$token   = sanitize_text_field( wp_unslash( $_GET['pgds_meta_feedback'] ) );
 	$post     = get_post( $post_id );
 
-	if ( ! $post || 'post' !== $post->post_type || ! current_user_can( 'edit_post', $post_id ) ) {
+	if ( ! $post || ! in_array( $post->post_type, array( 'post', 'pgds_teaching' ), true ) || ! current_user_can( 'edit_post', $post_id ) ) {
 		return;
 	}
 
@@ -969,7 +984,7 @@ function pgds_admin_meta_notices() {
 	$feedback = $GLOBALS['pgds_meta_feedback'] ?? array();
 	$post_id  = (int) ( $feedback['post_id'] ?? 0 );
 
-	if ( ! $post_id ) {
+	if ( ! $post_id || 'pgds_teaching' === get_post_type( $post_id ) ) {
 		return;
 	}
 
@@ -1448,8 +1463,10 @@ add_action( 'load-edit.php', 'pgds_validate_bulk_editorial_changes' );
 
 function pgds_publish_scheduled_post( $post_id ) {
 	$post = get_post( $post_id );
-	if ( $post instanceof WP_Post && 'post' === $post->post_type && 'future' === $post->post_status && strtotime( $post->post_date_gmt . ' GMT' ) <= time() ) {
-		if ( is_wp_error( pgds_validate_editorial_publish_post( $post_id ) ) ) {
+	if ( $post instanceof WP_Post && 'future' === $post->post_status && strtotime( $post->post_date_gmt . ' GMT' ) <= time() ) {
+		$invalid_article  = 'post' === $post->post_type && is_wp_error( pgds_validate_editorial_publish_post( $post_id ) );
+		$invalid_teaching = 'pgds_teaching' === $post->post_type && ! pgds_video_id( $post );
+		if ( $invalid_article || $invalid_teaching ) {
 			wp_update_post( array( 'ID' => $post_id, 'post_status' => 'draft' ) );
 			return;
 		}
@@ -1959,23 +1976,74 @@ add_action( 'add_meta_boxes', 'pgds_add_teaching_meta_box' );
  */
 function pgds_render_teaching_meta_box( $post ) {
 	wp_nonce_field( 'pgds_teaching_meta_save', 'pgds_teaching_meta_nonce' );
-	$value = get_post_meta( $post->ID, '_pgds_youtube_id', true );
+	$value    = get_post_meta( $post->ID, '_pgds_youtube_id', true );
+	$feedback = $GLOBALS['pgds_meta_feedback'] ?? array();
+	if ( (int) ( $feedback['post_id'] ?? 0 ) === (int) $post->ID ) {
+		pgds_render_meta_feedback( $feedback['codes'], true );
+		unset( $GLOBALS['pgds_meta_feedback'] );
+	}
 	?>
 	<p>
 		<label for="pgds_teaching_youtube_id"><strong><?php esc_html_e( 'Video YouTube', 'pgds' ); ?></strong></label>
-		<input type="url"
+		<input type="text"
 			id="pgds_teaching_youtube_id"
 			name="_pgds_youtube_id"
 			value="<?php echo esc_attr( $value ); ?>"
 			class="widefat"
-			placeholder="https://www.youtube.com/watch?v=..."
-			pattern="https?://.*|[A-Za-z0-9_-]{11}" />
+			aria-describedby="pgds_teaching_youtube_help"
+			placeholder="https://www.youtube.com/watch?v=..." />
 	</p>
-	<p class="description">
-		<?php esc_html_e( 'Dán đường dẫn YouTube hoặc mã video 11 ký tự. Người đọc bấm tiêu đề sẽ mở video này trên YouTube. Không có link thì trang chi tiết sẽ chuyển về trang chủ.', 'pgds' ); ?>
+	<p class="description" id="pgds_teaching_youtube_help">
+		<?php esc_html_e( 'Dán đường dẫn YouTube hoặc mã video 11 ký tự. Bạn có thể bỏ trống khi lưu nháp. Video hợp lệ là bắt buộc để xuất bản hoặc hẹn giờ.', 'pgds' ); ?>
 	</p>
 	<?php
 }
+
+function pgds_validate_teaching_rest( $prepared_post, $request ) {
+	$post_id = absint( $request['id'] );
+	$status  = $prepared_post->post_status ?? get_post_status( $post_id );
+	$meta    = (array) $request->get_param( 'meta' );
+	$has_id  = array_key_exists( '_pgds_youtube_id', $meta );
+	$raw     = $has_id ? $meta['_pgds_youtube_id'] : get_post_meta( $post_id, '_pgds_youtube_id', true );
+	$id      = pgds_normalize_youtube_input( $raw );
+	$code    = is_wp_error( $id ) ? $id->get_error_code() : '';
+	if ( '' === $id && in_array( $status, array( 'publish', 'future' ), true ) ) {
+		$code = 'pgds_teaching_requires_youtube';
+	}
+	if ( $code ) {
+		return new WP_Error( $code, pgds_meta_feedback_messages()[ $code ], array( 'status' => 400 ) );
+	}
+	if ( $has_id ) {
+		$meta['_pgds_youtube_id']                      = $id;
+		$prepared_post->meta_input['_pgds_youtube_id'] = $id;
+		$request->set_param( 'meta', $meta );
+	}
+	return $prepared_post;
+}
+add_filter( 'rest_pre_insert_pgds_teaching', 'pgds_validate_teaching_rest', 10, 2 );
+
+function pgds_validate_teaching_publication( $data, $postarr ) {
+	if ( 'pgds_teaching' !== $data['post_type'] || ! in_array( $data['post_status'], array( 'publish', 'future' ), true ) ) {
+		return $data;
+	}
+	$post_id = absint( $postarr['ID'] ?? 0 );
+	$stored  = pgds_validate_youtube_id( get_post_meta( $post_id, '_pgds_youtube_id', true ) );
+	$nonce   = isset( $_POST['pgds_teaching_meta_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['pgds_teaching_meta_nonce'] ) ) : '';
+	$classic = wp_verify_nonce( $nonce, 'pgds_teaching_meta_save' );
+	$id      = $classic && isset( $_POST['_pgds_youtube_id'] )
+		? pgds_normalize_youtube_input( wp_unslash( $_POST['_pgds_youtube_id'] ) )
+		: pgds_validate_youtube_id( $postarr['meta_input']['_pgds_youtube_id'] ?? $stored );
+	if ( is_wp_error( $id ) || '' === $id ) {
+		if ( ! $classic || ! $stored ) {
+			$data['post_status'] = 'draft';
+		}
+		if ( $classic ) {
+			pgds_record_meta_feedback( $post_id, array( is_wp_error( $id ) ? $id->get_error_code() : 'pgds_teaching_requires_youtube' ) );
+		}
+	}
+	return $data;
+}
+add_filter( 'wp_insert_post_data', 'pgds_validate_teaching_publication', 10, 2 );
 
 /**
  * Save the teaching YouTube link.
@@ -2003,10 +2071,15 @@ function pgds_save_teaching_meta( $post_id ) {
 
 	$youtube_id = pgds_normalize_youtube_input( wp_unslash( $_POST['_pgds_youtube_id'] ) );
 	if ( is_wp_error( $youtube_id ) ) {
+		pgds_record_meta_feedback( $post_id, array( $youtube_id->get_error_code() ) );
 		return;
 	}
 
 	if ( '' === $youtube_id ) {
+		if ( in_array( get_post_status( $post_id ), array( 'publish', 'future' ), true ) ) {
+			pgds_record_meta_feedback( $post_id, array( 'pgds_teaching_requires_youtube' ) );
+			return;
+		}
 		delete_post_meta( $post_id, '_pgds_youtube_id' );
 		return;
 	}

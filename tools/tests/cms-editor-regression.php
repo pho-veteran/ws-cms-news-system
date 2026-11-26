@@ -495,6 +495,7 @@ try {
 		pgds_cms_editor_assert( isset( $registered_meta[ $key ] ), sprintf( '%s remains registered for existing post metadata', $key ) );
 	}
 
+	update_post_meta( $post_id, '_pgds_youtube_id', 'M7lc1UVf-VE' );
 	update_post_meta( $post_id, '_pgds_youtube_dur', 367 );
 	update_post_meta( $post_id, '_pgds_youtube_title', 'Legacy synchronized title' );
 	update_post_meta( $post_id, '_pgds_video_unavailable', '1' );
@@ -671,6 +672,7 @@ try {
 		pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_id', 'M7lc1UVf-VE', $input_label . ' preserves the prior canonical ID' );
 	}
 
+	update_post_meta( $post_id, '_pgds_yt_synced', time() );
 	$valid_youtube_inputs = array(
 		'dQw4w9WgXcQ'                                      => 'bare ID',
 		'https://youtu.be/dQw4w9WgXcQ'                     => 'short URL',
@@ -684,6 +686,9 @@ try {
 		$valid_youtube['_pgds_youtube_id'] = $input;
 		pgds_cms_editor_submit( $post_id, $valid_youtube );
 		pgds_cms_editor_assert_meta( $post_id, '_pgds_youtube_id', 'dQw4w9WgXcQ', $input_label . ' normalizes to the canonical ID' );
+	}
+	foreach ( array_merge( pgds_synchronized_meta_keys(), array( '_pgds_yt_synced' ) ) as $key ) {
+		pgds_cms_editor_assert( ! metadata_exists( 'post', $post_id, $key ), sprintf( 'changing the YouTube ID in the form removes %s', $key ) );
 	}
 
 	$clear_youtube                      = $valid_values;
@@ -846,6 +851,7 @@ try {
 	update_post_meta( $rest_post_id, '_pgds_youtube_dur', 367 );
 	update_post_meta( $rest_post_id, '_pgds_youtube_title', 'Synchronized REST title' );
 	update_post_meta( $rest_post_id, '_pgds_youtube_poster_id', 71 );
+	update_post_meta( $rest_post_id, '_pgds_yt_synced', time() );
 
 	$registered_sapo = $registered_meta['_pgds_sapo'];
 	pgds_cms_editor_assert(
@@ -879,6 +885,9 @@ try {
 	pgds_cms_editor_assert_meta( $rest_post_id, '_pgds_primary_cat', $invalid_category['term_id'], 'REST stores the newly assigned primary category' );
 	pgds_cms_editor_assert_meta( $rest_post_id, '_pgds_feature_rank', '3', 'REST stores a valid Featured rank' );
 	pgds_cms_editor_assert_meta( $rest_post_id, '_pgds_youtube_id', 'dQw4w9WgXcQ', 'REST canonicalizes a valid YouTube URL before storing it' );
+	foreach ( array_merge( pgds_synchronized_meta_keys(), array( '_pgds_yt_synced' ) ) as $key ) {
+		pgds_cms_editor_assert( ! metadata_exists( 'post', $rest_post_id, $key ), sprintf( 'changing the YouTube ID via REST removes %s', $key ) );
+	}
 
 	$rest_previous_title      = get_post( $rest_post_id )->post_title;
 	$rest_previous_categories = array_map( 'intval', wp_get_post_categories( $rest_post_id ) );
@@ -1567,6 +1576,40 @@ try {
 	if ( isset( $rest_video_draft_data['id'] ) ) {
 		$pgds_cms_editor_posts[] = (int) $rest_video_draft_data['id'];
 	}
+
+	$teaching_id = wp_insert_post( array( 'post_type' => 'pgds_teaching', 'post_title' => 'PGDS teaching ' . $token ) );
+	$pgds_cms_editor_posts[] = $teaching_id;
+	$previous_post = $_POST;
+	$_POST = array(
+		'pgds_teaching_meta_nonce' => wp_create_nonce( 'pgds_teaching_meta_save' ),
+		'_pgds_youtube_id'         => '',
+	);
+	wp_update_post( array( 'ID' => $teaching_id, 'post_status' => 'publish' ) );
+	pgds_cms_editor_assert( 'draft' === get_post_status( $teaching_id ), 'the teaching form keeps an empty publication as a draft' );
+	$_POST['_pgds_youtube_id'] = 'https://example.test/watch?v=M7lc1UVf-VE';
+	wp_update_post( array( 'ID' => $teaching_id, 'post_status' => 'publish' ) );
+	pgds_cms_editor_assert( 'draft' === get_post_status( $teaching_id ), 'the teaching form rejects a non-YouTube URL' );
+	$_POST['_pgds_youtube_id'] = 'M7lc1UVf-VE';
+	wp_update_post( array( 'ID' => $teaching_id, 'post_status' => 'publish' ) );
+	pgds_cms_editor_assert( 'publish' === get_post_status( $teaching_id ), 'the teaching form publishes an 11-character video ID' );
+	$_POST['_pgds_youtube_id'] = '';
+	wp_update_post( array( 'ID' => $teaching_id, 'post_status' => 'publish' ) );
+	pgds_cms_editor_assert_meta( $teaching_id, '_pgds_youtube_id', 'M7lc1UVf-VE', 'the teaching form preserves a published video when the field is cleared' );
+	$_POST = $previous_post;
+
+	$invalid_teaching = pgds_cms_editor_rest_request( 'POST', '/wp/v2/pgds_teaching', array( 'title' => 'Missing teaching video', 'status' => 'publish' ) );
+	pgds_cms_editor_assert_rest_error( $invalid_teaching, 'pgds_teaching_requires_youtube', 400, 'REST blocks publishing a teaching without a YouTube ID' );
+	$valid_teaching = pgds_cms_editor_rest_request( 'POST', '/wp/v2/pgds_teaching', array(
+		'title'  => 'Teaching with a YouTube link',
+		'status' => 'publish',
+		'meta'   => array( '_pgds_youtube_id' => 'https://youtu.be/M7lc1UVf-VE' ),
+	) );
+	$rest_teaching_id = (int) ( $valid_teaching->get_data()['id'] ?? 0 );
+	if ( $rest_teaching_id ) {
+		$pgds_cms_editor_posts[] = $rest_teaching_id;
+	}
+	pgds_cms_editor_assert( 201 === $valid_teaching->get_status() && 'publish' === get_post_status( $rest_teaching_id ), 'REST publishes a teaching with a YouTube URL' );
+	pgds_cms_editor_assert_meta( $rest_teaching_id, '_pgds_youtube_id', 'M7lc1UVf-VE', 'REST stores the canonical teaching video ID' );
 
 	$pattern_registry = WP_Block_Patterns_Registry::get_instance();
 	foreach ( array( 'emagazine-chapter-heading', 'emagazine-wide-image', 'emagazine-full-image', 'emagazine-image-pair', 'emagazine-pull-quote' ) as $pattern_slug ) {

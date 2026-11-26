@@ -17,16 +17,7 @@ $english           = pgds_is_english_reader_request();
 $comments_open     = comments_open();
 $comments_per_page = pgds_comments_per_page();
 $comment_page      = max( 1, (int) get_query_var( 'cpage' ) );
-$reader_comments   = get_comments(
-	array(
-		'post_id'      => get_queried_object_id(),
-		'source'       => 'comment',
-		'status'       => 'approve',
-		'orderby'      => 'comment_date_gmt',
-		'order'        => 'DESC',
-		'hierarchical' => false,
-	)
-);
+$reader_comments   = pgds_reader_comments( get_queried_object_id() );
 $reader_comments   = array_map(
 	static function ( $comment ) {
 		$flat_comment                 = clone $comment;

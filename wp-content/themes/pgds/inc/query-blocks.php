@@ -484,6 +484,7 @@ function pgds_home_blocks() {
 			'order'          => 'DESC',
 		)
 	);
+	$teaching = array_filter( $teaching, 'pgds_teaching_url' );
 	$lunar = get_posts(
 		array(
 			'post_type'      => 'pgds_lunar_note',

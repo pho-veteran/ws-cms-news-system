@@ -121,6 +121,28 @@ function pgds_queue_page_cache_flush_on_deletion( $post_id, $post ) {
 	pgds_queue_page_cache_flush();
 }
 
+function pgds_queue_reader_comment_cache_flush( $comment ) {
+	if ( in_array( $comment->comment_type, array( '', 'comment' ), true ) && 'publish' === get_post_status( $comment->comment_post_ID ) ) {
+		pgds_queue_page_cache_flush();
+	}
+}
+
+function pgds_flush_page_cache_on_comment_transition( $new_status, $old_status, $comment ) {
+	// A public comment submission must not be able to empty the entire site cache.
+	if ( 'new' !== $old_status && ( 'approved' === $new_status || 'approved' === $old_status ) ) {
+		pgds_queue_reader_comment_cache_flush( $comment );
+	}
+}
+add_action( 'transition_comment_status', 'pgds_flush_page_cache_on_comment_transition', 10, 3 );
+
+function pgds_flush_page_cache_on_comment_edit( $comment_id ) {
+	$comment = get_comment( $comment_id );
+	if ( $comment && '1' === (string) $comment->comment_approved ) {
+		pgds_queue_reader_comment_cache_flush( $comment );
+	}
+}
+add_action( 'edit_comment', 'pgds_flush_page_cache_on_comment_edit' );
+
 /**
  * Flush only when a post that IS or WAS publicly visible changed.
  *
