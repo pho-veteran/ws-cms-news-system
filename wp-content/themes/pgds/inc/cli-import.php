@@ -323,7 +323,7 @@ class PGDS_CLI_Command {
 							array( 'name' => $vid . '.jpg', 'tmp_name' => $tmp ),
 							$p->ID
 						);
-						if ( ! is_wp_error( $att_id ) ) {
+						if ( ! is_wp_error( $att_id ) && $this->yt_id_is_current( $p->ID, $vid ) ) {
 							update_post_meta( $p->ID, '_pgds_youtube_poster', wp_get_attachment_image_url( $att_id, 'pgds-lead' ) );
 							// Store the ID as well as the URL: the facade renders through
 							// wp_get_attachment_image() when it has an ID, which yields the
@@ -332,9 +332,11 @@ class PGDS_CLI_Command {
 							update_post_meta( $p->ID, '_pgds_youtube_poster_id', (int) $att_id );
 							$done++;
 							WP_CLI::log( "✓ {$vid}: poster downloaded." );
-						} else {
+						} elseif ( is_wp_error( $att_id ) ) {
 							@unlink( $tmp );
 							WP_CLI::warning( "{$vid}: sideload error — " . $att_id->get_error_message() );
+						} else {
+							wp_delete_attachment( $att_id, true );
 						}
 					} else {
 						WP_CLI::warning( "{$vid}: unable to download thumbnail." );
@@ -354,7 +356,9 @@ class PGDS_CLI_Command {
 			// Rotation cursor for --limit (see the meta_query above). Written for every post
 			// the loop reaches, including skips, so a post whose poster already exists still
 			// moves to the back of the queue instead of being re-selected every night.
-			update_post_meta( $p->ID, '_pgds_yt_synced', time() );
+			if ( $this->yt_id_is_current( $p->ID, $vid ) ) {
+				update_post_meta( $p->ID, '_pgds_yt_synced', time() );
+			}
 
 			++$processed;
 			if ( 0 === $processed % 25 ) {
@@ -370,6 +374,12 @@ class PGDS_CLI_Command {
 		}
 
 		WP_CLI::success( "yt-sync complete. New posters: {$done}." );
+	}
+
+	private function yt_id_is_current( $post_id, $video_id ) {
+		// The editor can change the ID while this process waits on YouTube.
+		wp_cache_delete( $post_id, 'post_meta' );
+		return $video_id === get_post_meta( $post_id, '_pgds_youtube_id', true );
 	}
 
 	/**
@@ -464,6 +474,9 @@ class PGDS_CLI_Command {
 				}
 				$returned[] = $vid;
 				$post_id    = $ids[ $vid ];
+				if ( ! $this->yt_id_is_current( $post_id, $vid ) ) {
+					continue;
+				}
 				$stats['checked']++;
 
 				// --- Availability (§6.3) ------------------------------------------
@@ -534,7 +547,7 @@ class PGDS_CLI_Command {
 			 */
 			$missing = array_diff( $chunk, $returned );
 			foreach ( $missing as $vid ) {
-				if ( ! isset( $ids[ $vid ] ) ) {
+				if ( ! isset( $ids[ $vid ] ) || ! $this->yt_id_is_current( $ids[ $vid ], $vid ) ) {
 					continue;
 				}
 				update_post_meta( $ids[ $vid ], '_pgds_video_unavailable', '1' );

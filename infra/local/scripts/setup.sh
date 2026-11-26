@@ -127,9 +127,9 @@ PGDS_TEACHING_BODY="<p>“Người thả được gánh nặng xuống mới bi�
 <p>Chấp niệm là việc giữ mãi một ý nghĩ, một mong muốn hay một vết thương và không cho nó đi qua. Buông bỏ không có nghĩa là quên, cũng không phải bỏ mặc — mà là thôi dùng sức để níu giữ điều đã qua.</p>
 <p>Thực hành cụ thể: khi một ý nghĩ cũ trở lại, chỉ cần nhận biết “đây là ý nghĩ cũ”, không tranh luận với nó, không nuôi thêm. Nó sẽ tự nhạt dần như mọi hiện tượng khác.</p>"
 
-PGDS_TEACHING_ID="$($WP post list --post_type=pgds_teaching --title="$PGDS_TEACHING_TITLE" --field=ID | head -1)"
+PGDS_TEACHING_ID="$($WP post list --post_type=pgds_teaching --post_status=any --title="$PGDS_TEACHING_TITLE" --field=ID | head -1)"
 if [ -z "$PGDS_TEACHING_ID" ]; then
-  $WP post create --post_type=pgds_teaching --post_status=publish \
+  $WP post create --post_type=pgds_teaching --post_status=draft \
     --post_title="$PGDS_TEACHING_TITLE" --post_content="$PGDS_TEACHING_BODY" >/dev/null || true
 elif [ -z "$($WP post get "$PGDS_TEACHING_ID" --field=post_content | tr -d '[:space:]')" ]; then
   $WP post update "$PGDS_TEACHING_ID" --post_content="$PGDS_TEACHING_BODY" >/dev/null || true

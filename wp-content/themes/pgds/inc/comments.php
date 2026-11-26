@@ -34,7 +34,7 @@ function pgds_auto_approve_reader_comment( $approved, $commentdata ) {
 add_filter( 'pre_comment_approved', 'pgds_auto_approve_reader_comment', 20, 2 );
 
 /**
- * Number of top-level comments shown on one reader page.
+ * Number of comments shown on one reader page.
  *
  * @return int
  */
@@ -82,6 +82,33 @@ function pgds_filter_default_comments_page( $value ) {
 }
 add_filter( 'option_default_comments_page', 'pgds_filter_default_comments_page' );
 
+function pgds_reader_comments( $post_id ) {
+	return get_comments( array(
+		'post_id'      => $post_id,
+		'type'         => 'comment',
+		'status'       => 'approve',
+		'orderby'      => array( 'comment_date_gmt' => 'DESC', 'comment_ID' => 'DESC' ),
+		'hierarchical' => false,
+	) );
+}
+
+function pgds_reader_comment_link( $link, $comment, $args ) {
+	if ( null !== $args['cpage'] || '1' !== (string) $comment->comment_approved || 'post' !== get_post_type( $comment->comment_post_ID ) ) {
+		return $link;
+	}
+
+	$comments = pgds_reader_comments( $comment->comment_post_ID );
+	$position = array_search( (int) $comment->comment_ID, array_map( 'intval', wp_list_pluck( $comments, 'comment_ID' ) ), true );
+	if ( false === $position ) {
+		return $link;
+	}
+
+	$page          = 1 + intdiv( $position, pgds_comments_per_page() );
+	$args['cpage'] = $page > 1 ? $page : 0;
+	return get_comment_link( $comment, $args );
+}
+add_filter( 'get_comment_link', 'pgds_reader_comment_link', 10, 3 );
+
 /**
  * Count reader-comment pages without depending on the global page_comments option.
  * Reader comments are intentionally presented as one flat discussion stream.
@@ -104,7 +131,8 @@ function pgds_comment_page_count( $comments ) {
 function pgds_comment_card( $comment, $args, $depth ) {
 	$english       = pgds_is_english_reader_request();
 	$author        = get_comment_author( $comment );
-	$permalink     = get_comment_link( $comment );
+	$page          = (int) ( $args['page'] ?? 1 );
+	$permalink     = get_comment_link( $comment, array( 'cpage' => $page > 1 ? $page : 0 ) );
 	$published_iso = get_comment_date( 'c', $comment );
 	$published     = $english
 		? sprintf( '%1$s at %2$s', get_comment_date( 'F j, Y', $comment ), get_comment_time( 'g:i a', false, true, $comment ) )

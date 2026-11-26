@@ -408,8 +408,7 @@ function pgds_youtube_watch_url( $video_id ) {
 /**
  * Public destination for a Lời Phật dạy card.
  *
- * YouTube when the teaching has a video ID; otherwise the permalink as a
- * fallback for legacy items that have not been migrated yet.
+ * Return the YouTube URL only when the teaching has a valid video ID.
  *
  * @param int|WP_Post $post Teaching post.
  * @return string
@@ -420,12 +419,11 @@ function pgds_teaching_url( $post ) {
 		return '';
 	}
 
-	$watch = pgds_youtube_watch_url( get_post_meta( $post->ID, '_pgds_youtube_id', true ) );
-	return $watch ? $watch : get_permalink( $post );
+	return pgds_youtube_watch_url( pgds_video_id( $post ) );
 }
 
 /**
- * Redirect singular Lời Phật dạy views to YouTube (or home when unmigrated).
+ * Redirect singular Lời Phật dạy views to YouTube.
  *
  * @return void
  */
@@ -439,15 +437,16 @@ function pgds_teaching_redirect() {
 		return;
 	}
 
-	$watch = pgds_youtube_watch_url( get_post_meta( $post->ID, '_pgds_youtube_id', true ) );
+	$watch = pgds_teaching_url( $post );
 	if ( $watch ) {
 		wp_safe_redirect( $watch, 302, 'pgds-teaching-youtube' );
 		exit;
 	}
 
-	// Legacy teaching without a YouTube link: no on-site body to show.
-	wp_safe_redirect( home_url( '/' ), 302, 'pgds-teaching-unmigrated' );
-	exit;
+	global $wp_query;
+	$wp_query->set_404();
+	status_header( 404 );
+	nocache_headers();
 }
 add_action( 'template_redirect', 'pgds_teaching_redirect' );
 

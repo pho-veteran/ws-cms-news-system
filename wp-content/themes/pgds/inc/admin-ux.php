@@ -844,14 +844,9 @@ function pgds_admin_editor_hints( $hook ) {
 		#pgds_article_meta [hidden] {
 			display: none !important;
 		}
-		/* The block editor persists the drawer height separately from its expanded
-		   attribute. Give the expanded area a floor so every field remains reachable;
-		   editors can still drag the handle to resize it. */
-		.edit-post-layout__metaboxes:not(:empty),
-		.edit-post-meta-boxes-area,
-		.editor-meta-boxes-area {
-			min-height: 320px;
-			overflow: auto;
+		.edit-post-layout__metaboxes {
+			max-height: 45dvh;
+			overflow-y: auto;
 		}
 	</style>
 	<script>

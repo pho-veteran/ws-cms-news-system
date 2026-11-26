@@ -167,6 +167,46 @@ try {
 		do_action( 'shutdown' );
 		$assert( is_file( $cache_marker ), 'deleting an unpublished draft keeps the public page cache' );
 
+		$reader_ids = array();
+		for ( $index = 0; $index <= pgds_comments_per_page(); ++$index ) {
+			$reader_ids[] = wp_insert_comment( array(
+				'comment_post_ID'  => $article_id,
+				'comment_parent'   => $reader_ids[0] ?? 0,
+				'comment_content'  => 'Reader fixture ' . $index,
+				'comment_date_gmt' => '2026-01-01 00:00:00',
+				'comment_approved' => 1,
+			) );
+		}
+		wp_insert_comment( array(
+			'comment_post_ID'  => $article_id,
+			'comment_type'     => 'pingback',
+			'comment_content'  => 'Hidden pingback',
+			'comment_approved' => 1,
+		) );
+		$sorted_ids = array_map( 'intval', wp_list_pluck( pgds_reader_comments( $article_id ), 'comment_ID' ) );
+		$assert( array_reverse( $reader_ids ) === $sorted_ids, 'reader pages order same-time comments and replies by ID and exclude pingbacks' );
+		$first = end( $reader_ids );
+		$oldest = $reader_ids[0];
+		$assert( get_comment_link( $first, array( 'cpage' => 0 ) ) === get_comment_link( $first ), 'the newest comment permalink points to page one' );
+		$assert( get_comment_link( $oldest, array( 'cpage' => 2 ) ) === get_comment_link( $oldest ), 'the oldest parent permalink points to page two' );
+		do_action( 'shutdown' );
+		$assert( is_file( $cache_marker ), 'public comment submissions keep the site-wide cache' );
+
+		foreach ( array( 'spam', 'approve', 'trash', 'approve' ) as $status ) {
+			file_put_contents( $cache_marker, 'comment moderation' );
+			wp_set_comment_status( $first, $status );
+			do_action( 'shutdown' );
+			$assert( ! is_file( $cache_marker ), 'reader comment moderation clears the public cache after ' . $status );
+		}
+		file_put_contents( $cache_marker, 'old comment text' );
+		wp_update_comment( array( 'comment_ID' => $first, 'comment_content' => 'Updated reader comment' ) );
+		do_action( 'shutdown' );
+		$assert( ! is_file( $cache_marker ), 'editing a published reader comment clears the public cache' );
+		file_put_contents( $cache_marker, 'deleted comment' );
+		wp_delete_comment( $first, true );
+		do_action( 'shutdown' );
+		$assert( ! is_file( $cache_marker ), 'permanently deleting a published reader comment clears the public cache' );
+
 		foreach (
 			array(
 				array( 'publish', 'draft', 'publish purges the public page cache' ),
