@@ -105,6 +105,114 @@ jobs:
           cd infra/local
           docker compose down --volumes --remove-orphans
 
+  synapse-sca:
+    name: Synapse SCA security scan (evaluation)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Scan dependencies and source
+        id: synapse
+        # Pin the action to its v0.2.1 commit and use the matching CLI release.
+        uses: KKloudTarus/synapse-ce@0613b8b7950554cd0a9fb54e1484991d6f1b93ea # v0.2.1
+        with:
+          path: .
+          fail-on: high
+          sarif: true
+          version: v0.2.1
+        continue-on-error: true
+
+      - name: Save Synapse findings
+        if: always()
+        id: synapse-report
+        uses: actions/upload-artifact@v4
+        with:
+          name: synapse-sarif
+          path: synapse.sarif
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Summarize Synapse findings
+        if: always()
+        shell: bash
+        env:
+          SYNAPSE_OUTCOME: ${{ steps.synapse.outcome }}
+          SYNAPSE_REPORT_URL: ${{ steps.synapse-report.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          [ -s synapse.sarif ] || {
+            echo "::error::Synapse did not produce a SARIF report"
+            exit 1
+          }
+          jq -e '.version == "2.1.0" and (.runs | type == "array")' synapse.sarif >/dev/null
+          {
+            echo '### Synapse security scan (evaluation)'
+            echo
+            echo "Scanner step: ${SYNAPSE_OUTCOME}. Findings are advisory during evaluation."
+            echo
+            echo '| Severity | Findings |'
+            echo '| --- | ---: |'
+            for severity in critical high medium low info; do
+              count="$(jq --arg severity "$severity" '[.runs[].results[] | select(.properties.severity == $severity)] | length' synapse.sarif)"
+              echo "| ${severity} | ${count} |"
+            done
+            echo
+            echo '#### Critical and high findings'
+            for severity in critical high; do
+              jq -r --arg severity "$severity" '
+                .runs[].results[]
+                | select(.properties.severity == $severity)
+                | "- **\($severity)** \(.message.text | gsub("[\\r\\n]"; " "))"
+              ' synapse.sarif
+            done
+            echo
+            if [ -n "$SYNAPSE_REPORT_URL" ]; then
+              echo "[Download full SARIF report](${SYNAPSE_REPORT_URL})"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  trivy-evaluation:
+    name: Trivy security scan (evaluation)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Scan dependencies, configuration, and secrets
+        # Pin trivy-action v0.36.0 and the Trivy CLI release independently.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_INCLUDE_DEV_DEPS: "true"
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          format: json
+          output: trivy.json
+          exit-code: "0"
+          version: v0.74.0
+          cache-dir: ${{ runner.temp }}/trivy-cache
+
+      - name: Show Trivy summary and create SARIF
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy convert --format table --report summary --scanners vuln,misconfig,secret trivy.json
+          trivy convert --format sarif --output trivy.sarif trivy.json
+
+      - name: Save Trivy findings
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-reports
+          path: |
+            trivy.json
+            trivy.sarif
+          if-no-files-found: error
+          retention-days: 7
+
   build:
     name: Build theme assets
     needs:
