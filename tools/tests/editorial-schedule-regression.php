@@ -12,6 +12,7 @@ $assert = static function ( $condition, $message ) use ( &$failures ) {
 };
 $saved_user = get_current_user_id();
 $saved_post = $_POST;
+$saved_request = $_REQUEST;
 $ids = array();
 $admin = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
 wp_set_current_user( (int) reset( $admin ) );
@@ -58,6 +59,43 @@ try {
 	$invalid_update = $save( array( 'meta' => array( '_pgds_youtube_id' => '' ) ), $scheduled_id );
 	$assert( 400 === $invalid_update->get_status() && 'dQw4w9WgXcQ' === get_post_meta( $scheduled_id, '_pgds_youtube_id', true ), 'REST rejects clearing the required ID on a scheduled video.' );
 
+	$legacy_id = wp_insert_post( array( 'post_title' => 'PGDS published legacy video', 'post_status' => 'publish', 'post_category' => array( $video_id ), 'meta_input' => array( '_pgds_primary_cat' => $video_id ) ) );
+	$ids[] = $legacy_id;
+	$date_only = $save( array( 'date_gmt' => $video['date_gmt'] ), $legacy_id );
+	$assert( 400 === $date_only->get_status() && 'publish' === get_post_status( $legacy_id ), 'REST rejects moving a legacy video without a YouTube ID into the schedule by date alone.' );
+
+	require_once ABSPATH . 'wp-admin/includes/post.php';
+	$quick_edit = static function ( $post_id, $changes = array() ) {
+		$_POST = $_REQUEST = array_merge( array(
+			'post_ID'       => $post_id,
+			'post_type'     => 'post',
+			'_status'       => 'future',
+			'_inline_edit'  => wp_create_nonce( 'inlineeditnonce' ),
+		), $changes );
+		$handler = static function () {
+			return static function ( $message ) {
+				throw new RuntimeException( (string) $message );
+			};
+		};
+		add_filter( 'wp_die_handler', $handler );
+		try {
+			do_action( 'wp_ajax_inline-save' );
+			return '';
+		} catch ( RuntimeException $exception ) {
+			return $exception->getMessage();
+		} finally {
+			remove_filter( 'wp_die_handler', $handler );
+		}
+	};
+	$assert( '' === $quick_edit( $scheduled_id ), 'Quick Edit accepts a complete scheduled video.' );
+	$assert( '' !== $quick_edit( $scheduled_id, array( 'post_category' => array() ) ) && has_category( $video_id, $scheduled_id ), 'Quick Edit rejects removing a scheduled video’s primary category before saving.' );
+	$quick_date = array_combine( array( 'aa', 'mm', 'jj', 'hh', 'mn', 'ss' ), preg_split( '/[- :]/', get_date_from_gmt( $later ) ) );
+	$quick_date['edit_date'] = '1';
+	$quick_date['_status'] = 'publish';
+	$assert( esc_html( pgds_meta_feedback_messages( 'video' )['pgds_video_requires_youtube'] ) === $quick_edit( $legacy_id, $quick_date ), 'Quick Edit validates a published video when its date moves into the future.' );
+	$_POST = array();
+	$_REQUEST = $saved_request;
+
 	$second = $save( $video );
 	$invalid_id = (int) $second->get_data()['id'];
 	delete_post_meta( $invalid_id, '_pgds_youtube_id' );
@@ -71,6 +109,7 @@ try {
 	}
 } finally {
 	$_POST = $saved_post;
+	$_REQUEST = $saved_request;
 	foreach ( $ids as $post_id ) {
 		wp_delete_post( $post_id, true );
 	}
