@@ -21,6 +21,8 @@ $original_user = get_current_user_id();
 $original_post = $_POST;
 $original_request = $_REQUEST;
 $post_id = 0;
+$own_draft_id = 0;
+$attachment_id = 0;
 $reporter_id = 0;
 $editor_id = 0;
 $die_handler = static function () {
@@ -144,6 +146,19 @@ try {
 	wp_set_current_user( $administrators[0] );
 	$response = $rest_save( array( 'status' => 'publish' ) );
 	$assert( 200 === $response->get_status() && 'publish' === get_post_status( $post_id ), 'REST lets the newsroom administrator publish a complete submission' );
+
+	$own_draft_id = wp_insert_post( array( 'post_title' => 'PGDS media draft', 'post_author' => $reporter_id, 'post_status' => 'draft' ), true );
+	$attachment_id = wp_insert_attachment( array( 'post_title' => 'PGDS shared image', 'post_author' => $reporter_id, 'post_mime_type' => 'image/jpeg' ), false, 0, true );
+	if ( is_wp_error( $own_draft_id ) || is_wp_error( $attachment_id ) ) {
+		throw new RuntimeException( 'Could not create the shared media fixtures.' );
+	}
+	update_post_meta( $post_id, '_thumbnail_id', $attachment_id );
+	$assert( user_can( $reporter_id, 'edit_post', $attachment_id ), 'reporters can edit the details of an image they uploaded' );
+	$assert( ! user_can( $reporter_id, 'delete_post', $attachment_id ), 'reporters cannot delete their upload used by a published article' );
+	$assert( user_can( $reporter_id, 'delete_post', $own_draft_id ), 'reporters can still delete their own drafts' );
+	wp_update_post( array( 'ID' => $attachment_id, 'post_parent' => $own_draft_id ) );
+	$assert( ! user_can( $reporter_id, 'delete_post', $attachment_id ), 'a draft parent does not grant permission to delete shared media' );
+	$assert( user_can( $administrators[0], 'delete_post', $attachment_id ), 'the newsroom administrator can delete shared media' );
 } catch ( Throwable $exception ) {
 	$assert( false, $exception->getMessage() );
 } finally {
@@ -151,6 +166,12 @@ try {
 	$_REQUEST = $original_request;
 	remove_filter( 'wp_die_handler', $die_handler );
 	remove_filter( 'wp_die_ajax_handler', $die_handler );
+	if ( $attachment_id && ! is_wp_error( $attachment_id ) ) {
+		wp_delete_attachment( $attachment_id, true );
+	}
+	if ( $own_draft_id && ! is_wp_error( $own_draft_id ) ) {
+		wp_delete_post( $own_draft_id, true );
+	}
 	if ( $post_id && ! is_wp_error( $post_id ) ) {
 		wp_delete_post( $post_id, true );
 	}

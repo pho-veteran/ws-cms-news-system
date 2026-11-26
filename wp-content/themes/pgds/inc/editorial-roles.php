@@ -134,8 +134,8 @@ add_filter( 'user_has_cap', 'pgds_restrict_publishing_caps', 10, 1 );
  *     article, which for a live article needs `edit_published_posts`. Comment moderators
  *     (`moderate_comments`) keep approving, marking spam and trashing comments.
  *   - A user's own media: core treats an unattached upload as published, so editing its alt
- *     text or caption, cropping or deleting it needs `edit/delete_published_posts`. The
- *     uploader (`upload_files`) keeps managing their own files.
+ *     text or caption, or cropping it needs `edit_published_posts`. The uploader keeps
+ *     that access. Deleting any attachment can break published references to the file.
  *
  * @param string[] $caps    Primitive capabilities required.
  * @param string   $cap     Meta capability being checked.
@@ -150,8 +150,12 @@ function pgds_map_editorial_meta_caps( $caps, $cap, $user_id, $args ) {
 
 	if ( ( 'edit_post' === $cap || 'delete_post' === $cap ) && ! empty( $args[0] ) ) {
 		$post = get_post( $args[0] );
-		if ( $post instanceof WP_Post && 'attachment' === $post->post_type && (int) $post->post_author === (int) $user_id ) {
-			return pgds_swap_required_caps( $caps, array( 'edit_published_posts', 'delete_published_posts' ), 'upload_files' );
+		if ( $post instanceof WP_Post && 'attachment' === $post->post_type ) {
+			if ( 'delete_post' === $cap ) {
+				$caps[] = 'delete_published_posts';
+			} elseif ( (int) $post->post_author === (int) $user_id ) {
+				return pgds_swap_required_caps( $caps, array( 'edit_published_posts' ), 'upload_files' );
+			}
 		}
 	}
 
