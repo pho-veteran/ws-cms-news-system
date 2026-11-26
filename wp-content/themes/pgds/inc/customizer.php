@@ -26,12 +26,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+function pgds_footer_contact_defaults() {
+	return array(
+		'pgds_editor_name'        => 'Tổng biên tập: Gia Thanh Mai',
+		'pgds_deputy_editor_name' => 'Vũ Ngọc Hà',
+		'pgds_contact_address'    => 'Học viện Báo chí và Tuyên truyền, 36 Xuân Thuỷ, Cầu Giấy, Hà Nội',
+		'pgds_contact_phone'      => '036 838 2604',
+		'pgds_contact_email'      => 'toasoan@phatgiaovadoisong.vn',
+	);
+}
+
+function pgds_footer_social_networks() {
+	return array( 'facebook' => 'Facebook', 'youtube' => 'YouTube', 'tiktok' => 'TikTok', 'zalo' => 'Zalo' );
+}
+
+function pgds_sanitize_footer_social_url( $value ) {
+	$url = sanitize_url( $value, array( 'http', 'https' ) );
+	return wp_parse_url( $url, PHP_URL_HOST ) ? $url : '';
+}
+
 /**
  * Register the "Toà soạn" section and its controls.
  *
  * @param WP_Customize_Manager $wp_customize Customizer manager.
  */
 function pgds_customize_register( $wp_customize ) {
+	$contact_defaults = pgds_footer_contact_defaults();
 	$wp_customize->add_section(
 		'pgds_editorial',
 		array(
@@ -40,6 +60,40 @@ function pgds_customize_register( $wp_customize ) {
 			'description' => __( 'Thông tin bắt buộc theo Nghị định 72/2013 và Luật Báo chí 2016: giấy phép hoạt động, cơ quan chủ quản, tổng biên tập, địa chỉ, điện thoại, email. Cần được duyệt trước khi phát hành.', 'pgds' ),
 		)
 	);
+
+	$contact_labels = array(
+		'pgds_deputy_editor_name' => __( 'Phó Tổng biên tập', 'pgds' ),
+		'pgds_contact_address'    => __( 'Địa chỉ tòa soạn', 'pgds' ),
+		'pgds_contact_phone'      => __( 'Hotline', 'pgds' ),
+	);
+	foreach ( $contact_labels as $option => $label ) {
+		$wp_customize->add_setting( $option, array(
+			'default'           => $contact_defaults[ $option ],
+			'type'              => 'option',
+			'capability'        => 'manage_options',
+			'sanitize_callback' => 'sanitize_text_field',
+		) );
+		$wp_customize->add_control( $option, array(
+			'section' => 'pgds_editorial',
+			'label'   => $label,
+			'type'    => 'text',
+		) );
+	}
+
+	foreach ( pgds_footer_social_networks() as $network => $label ) {
+		$option = 'pgds_social_' . $network;
+		$wp_customize->add_setting( $option, array(
+			'default'           => '',
+			'type'              => 'option',
+			'capability'        => 'manage_options',
+			'sanitize_callback' => 'pgds_sanitize_footer_social_url',
+		) );
+		$wp_customize->add_control( $option, array(
+			'section' => 'pgds_editorial',
+			'label'   => sprintf( __( 'Liên kết %s', 'pgds' ), $label ),
+			'type'    => 'url',
+		) );
+	}
 
 	/*
 	 * Legal block. 'refresh' rather than postMessage: the value is multi-line HTML inside a
@@ -71,7 +125,7 @@ function pgds_customize_register( $wp_customize ) {
 	$wp_customize->add_setting(
 		'pgds_editor_name',
 		array(
-			'default'           => '',
+			'default'           => $contact_defaults['pgds_editor_name'],
 			'type'              => 'option',
 			'capability'        => 'manage_options',
 			'sanitize_callback' => 'sanitize_text_field',
@@ -83,7 +137,7 @@ function pgds_customize_register( $wp_customize ) {
 		array(
 			'section'     => 'pgds_editorial',
 			'label'       => __( 'Tổng biên tập', 'pgds' ),
-			'description' => __( 'Hiển thị nguyên văn ở cột "Liên hệ", nên gồm cả chức danh. Ví dụ: Tổng biên tập: Nguyễn Văn A', 'pgds' ),
+			'description' => __( 'Nhập cả chức danh và họ tên, ví dụ Tổng biên tập: Nguyễn Văn A.', 'pgds' ),
 			'type'        => 'text',
 		)
 	);
@@ -91,7 +145,7 @@ function pgds_customize_register( $wp_customize ) {
 	$wp_customize->add_setting(
 		'pgds_contact_email',
 		array(
-			'default'           => '',
+			'default'           => $contact_defaults['pgds_contact_email'],
 			'type'              => 'option',
 			'capability'        => 'manage_options',
 			'sanitize_callback' => 'sanitize_email',
