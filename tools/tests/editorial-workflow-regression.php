@@ -21,6 +21,7 @@ $original_user = get_current_user_id();
 $original_post = $_POST;
 $original_request = $_REQUEST;
 $post_id = 0;
+$classification_draft = 0;
 $reporter_id = 0;
 $editor_id = 0;
 $die_handler = static function () {
@@ -89,6 +90,23 @@ try {
 	}
 	wp_set_current_user( $reporter_id );
 	$term_id = (int) pgds_category_term( 'tin-phat-su' )->term_id;
+	$green_living_id = (int) pgds_category_term( 'loi-song-xanh' )->term_id;
+	$classification_draft = wp_insert_post( array( 'post_title' => 'PGDS classification draft', 'post_status' => 'auto-draft' ), true );
+	if ( is_wp_error( $classification_draft ) ) {
+		throw new RuntimeException( $classification_draft->get_error_message() );
+	}
+	$draft_request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $classification_draft );
+	$draft_request->set_body_params( array( 'status' => 'draft' ) );
+	$draft_response = rest_do_request( $draft_request );
+	$assert( 200 === $draft_response->get_status() && array() === $draft_response->get_data()['categories'], 'saving an unclassified draft through REST does not attach the default category' );
+	wp_update_post( array( 'ID' => $classification_draft, 'post_title' => 'PGDS reopened draft' ) );
+	$assert( array() === wp_get_post_categories( $classification_draft ), 'saving the reopened draft through the form does not attach the default category' );
+	pgds_apply_editorial_classification( $classification_draft, 'article', 'loi-song-xanh' );
+	$assert( array( $green_living_id ) === wp_get_post_categories( $classification_draft ), 'classifying the saved draft attaches only the chosen category' );
+	wp_update_post( array( 'ID' => $classification_draft, 'post_category' => array( $term_id, $green_living_id ) ) );
+	pgds_apply_editorial_classification( $classification_draft, 'article', 'loi-song-xanh' );
+	$assert( has_category( $term_id, $classification_draft ), 'an explicitly selected default category remains assigned as a secondary category' );
+
 	$post_id = wp_insert_post( array(
 		'post_title'    => 'PGDS pending regression',
 		'post_status'   => 'draft',
@@ -153,6 +171,9 @@ try {
 	remove_filter( 'wp_die_ajax_handler', $die_handler );
 	if ( $post_id && ! is_wp_error( $post_id ) ) {
 		wp_delete_post( $post_id, true );
+	}
+	if ( $classification_draft && ! is_wp_error( $classification_draft ) ) {
+		wp_delete_post( $classification_draft, true );
 	}
 	if ( $reporter_id && ! is_wp_error( $reporter_id ) ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
