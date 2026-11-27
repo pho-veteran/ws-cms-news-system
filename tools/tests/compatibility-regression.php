@@ -91,6 +91,38 @@ try {
 		$assert( ! in_array( $unavailable_id, $index_ids, true ), 'video index query excludes an unavailable Video' );
 		$assert( ! in_array( $invalid_id, $index_ids, true ), 'video index query excludes an invalid YouTube ID' );
 
+		$english_id = $create_post( 'Vietnam Buddhism with a secondary category', 'vietnam-buddhism' );
+		$legacy_id  = $create_post( 'Legacy Tin Phat su without a primary category', 'tin-phat-su' );
+		$assert( ! is_wp_error( $english_id ) && ! is_wp_error( $legacy_id ), 'archive fixtures are created' );
+		if ( ! is_wp_error( $english_id ) && ! is_wp_error( $legacy_id ) ) {
+			wp_set_post_categories( $english_id, array( $canonical['vietnam-buddhism'], $canonical['tin-phat-su'] ) );
+			delete_post_meta( $legacy_id, '_pgds_primary_cat' );
+
+			$archive = static function ( $slug ) use ( $article_id, $english_id, $legacy_id, $video_id ) {
+				global $wp_the_query;
+				$previous_query = $wp_the_query;
+				$wp_the_query   = new WP_Query();
+				try {
+					$wp_the_query->query( array(
+						'category_name' => $slug,
+						'fields'        => 'ids',
+						'post__in'      => array( $article_id, $english_id, $legacy_id, $video_id ),
+						'post_status'   => 'publish',
+						'orderby'       => 'ID',
+						'order'         => 'ASC',
+					) );
+					return $wp_the_query;
+				} finally {
+					$wp_the_query = $previous_query;
+				}
+			};
+			$news_archive = $archive( 'tin-phat-su' );
+			$assert( array( $article_id, $legacy_id ) === $news_archive->posts && 2 === (int) $news_archive->found_posts, 'Tin Phat su excludes off-branch primary articles before counting pages and keeps legacy articles' );
+			$assert( array( $english_id ) === $archive( 'vietnam-buddhism' )->posts, 'Vietnam Buddhism keeps the article in its primary category' );
+			$assert( array( $video_id ) === $archive( 'media' )->posts, 'parent archives include primary categories in their child branches' );
+			$assert( has_category( $canonical['tin-phat-su'], $english_id ), 'the archive filter preserves saved secondary category assignments' );
+		}
+
 		global $post, $wp_query;
 		$previous_post  = $post;
 		$previous_query = $wp_query;
