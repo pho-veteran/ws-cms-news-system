@@ -4,9 +4,9 @@
 @use 'config' as *;
 
 .pgds-footer {
-  background: var(--pgds-surface-2);
-  border-top: 1px solid var(--color-border);
-  color: var(--color-text);
+  background: var(--color-bg-inverse);
+  border-top: 1px solid var(--pgds-line-dark);
+  color: var(--pgds-gilt-pale);
   font-size: $fs-xs;
   margin-top: $sp-5;
 
@@ -36,27 +36,36 @@
   }
 
   &__heading {
-    color: var(--color-brand-strong);
+    color: var(--pgds-gilt-light);
     font-size: $fs-sm;
     font-weight: $fw-bold;
     margin-bottom: $sp-3;
   }
 
   a:hover {
-    color: var(--color-brand);
+    color: var(--pgds-white);
     text-decoration: underline;
   }
 
   &__brand {
     display: block;
-    width: 224px;
+    width: fit-content;
     max-width: 100%;
     margin-bottom: $sp-3;
+    padding: $sp-2 $sp-3;
+    border-radius: $radius-md;
+    background: var(--pgds-paper);
+
+    img { width: 224px; }
   }
 
-  &__intro,
-  &__legal {
-    color: var(--color-text-muted);
+  &__intro {
+    opacity: .8;
+  }
+
+  &__contacts li,
+  &__categories li {
+    opacity: .85;
   }
 
   &__contacts {
@@ -65,7 +74,6 @@
     li + li { margin-top: $sp-1; }
 
     a {
-      color: var(--color-brand);
       font-weight: $fw-semibold;
       text-decoration: underline;
       text-underline-offset: 2px;
@@ -75,6 +83,7 @@
   &__legal {
     font-size: $fs-2xs;
     margin-top: $sp-3;
+    opacity: .7;
   }
 
   &__categories {
@@ -107,21 +116,15 @@
       place-items: center;
       width: 44px;
       height: 44px;
-      color: var(--color-text-inverse);
-      background: var(--color-brand-strong);
+      border: 1px solid var(--pgds-gilt-pale);
       border-radius: 50%;
-
-      &:hover {
-        color: var(--color-text-inverse);
-        background: var(--color-brand);
-      }
     }
   }
 
   &__bottom {
-    border-top: 1px solid var(--color-border);
-    color: var(--color-text-muted);
+    border-top: 1px solid var(--pgds-line-dark);
     font-size: $fs-2xs;
     padding-block: $sp-3;
+    opacity: .7;
   }
 }
