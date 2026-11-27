@@ -159,6 +159,77 @@ function pgds_get_editorial_classification( $post_id ) {
 	return pgds_classify_editorial_values( $primary_id, $assigned_ids );
 }
 
+/**
+ * Build the SQL predicate for posts with a valid primary/category pair.
+ *
+ * @param int[] $term_ids Allowed primary term IDs.
+ * @return string
+ */
+function pgds_editorial_valid_pair_sql( array $term_ids ) {
+	global $wpdb;
+
+	$term_ids = array_values( array_filter( array_map( 'absint', $term_ids ) ) );
+	if ( ! $term_ids ) {
+		return '0 = 1';
+	}
+
+	$ids = implode( ',', $term_ids );
+
+	return "EXISTS (
+		SELECT 1
+		FROM {$wpdb->postmeta} pgds_surface_meta
+		INNER JOIN {$wpdb->term_relationships} pgds_surface_rel
+			ON pgds_surface_rel.object_id = pgds_surface_meta.post_id
+		INNER JOIN {$wpdb->term_taxonomy} pgds_surface_tax
+			ON pgds_surface_tax.term_taxonomy_id = pgds_surface_rel.term_taxonomy_id
+		WHERE pgds_surface_meta.post_id = {$wpdb->posts}.ID
+			AND pgds_surface_meta.meta_key = '_pgds_primary_cat'
+			AND pgds_surface_tax.taxonomy = 'category'
+			AND pgds_surface_tax.term_id IN ({$ids})
+			AND CAST(pgds_surface_meta.meta_value AS UNSIGNED) = pgds_surface_tax.term_id
+	)";
+}
+
+/**
+ * Resolve canonical category IDs for classification queries.
+ *
+ * @param string[] $slugs Category slugs.
+ * @return int[]
+ */
+function pgds_editorial_term_ids( array $slugs ) {
+	$ids = array();
+	foreach ( $slugs as $slug ) {
+		$term = pgds_category_term( $slug );
+		if ( $term instanceof WP_Term ) {
+			$ids[] = (int) $term->term_id;
+		}
+	}
+
+	return $ids;
+}
+
+function pgds_category_archive_primary_where( $where, $query ) {
+	if ( is_admin() || ! $query->is_main_query() || ! $query->is_category() ) {
+		return $where;
+	}
+
+	$term = $query->get_queried_object();
+	if ( ! $term instanceof WP_Term ) {
+		return $where;
+	}
+
+	$branch = get_term_children( $term->term_id, 'category' );
+	if ( is_wp_error( $branch ) ) {
+		return $where;
+	}
+	$branch[] = $term->term_id;
+
+	// Posts without a valid primary keep their native category archive membership.
+	$other_primary_ids = array_diff( pgds_editorial_term_ids( pgds_category_slugs() ), $branch );
+	return $where . ' AND NOT (' . pgds_editorial_valid_pair_sql( $other_primary_ids ) . ')';
+}
+add_filter( 'posts_where', 'pgds_category_archive_primary_where', 10, 2 );
+
 function pgds_prevent_editorial_category_fallback( $data, $postarr ) {
 	static $clear_default = null;
 	if ( $clear_default ) {
