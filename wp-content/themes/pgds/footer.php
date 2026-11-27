@@ -1,6 +1,6 @@
 <?php
 /**
- * Footer with 4 columns + editorial legal info (proposal §2.3, §5.4 original table).
+ * Site footer, editorial contact details, and navigation.
  *
  * @package pgds
  */
@@ -8,11 +8,28 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+$social_links = array();
+foreach ( pgds_footer_social_networks() as $network => $label ) {
+	$url = pgds_sanitize_footer_social_url( get_option( 'pgds_social_' . $network, '' ) );
+	if ( $url ) {
+		$social_links[ $network ] = array( $label, $url );
+	}
+}
 ?>
 <footer class="pgds-footer block" role="contentinfo">
-	<div class="pgds-wrap pgds-footer__grid footer-grid wrap">
+	<div class="pgds-wrap pgds-footer__grid<?php echo $social_links ? ' pgds-footer__grid--with-social' : ''; ?>">
 		<div>
-			<h4><?php bloginfo( 'name' ); ?></h4>
+			<a class="pgds-footer__brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
+				<img
+					src="<?php echo esc_url( PGDS_LOGO_URI ); ?>"
+					width="2048"
+					height="357"
+					alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"
+					loading="lazy"
+					decoding="async"
+				>
+			</a>
 			<p class="pgds-footer__intro">
 				<?php echo esc_html( __( 'Chuyên trang tin điện tử — tin tức, đời sống và văn hóa Phật giáo.', 'pgds' ) ); ?>
 			</p>
@@ -53,36 +70,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php endif; ?>
 		</div>
 
-		<?php $footer_categories = pgds_category_tree(); ?>
-		<?php foreach ( array_chunk( $footer_categories, 3, true ) as $category_group ) : ?>
-			<div>
-				<h4><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></h4>
-				<ul>
-					<?php foreach ( $category_group as $slug => $node ) : ?>
-						<?php $term = pgds_category_term( $slug ); ?>
-						<?php if ( $term instanceof WP_Term ) : ?>
-							<?php $term_url = get_term_link( $term ); ?>
-							<?php if ( ! is_wp_error( $term_url ) ) : ?>
-								<li><a href="<?php echo esc_url( $term_url ); ?>"><?php echo esc_html( pgds_category_display_label( $slug, $node['label'] ) ); ?></a></li>
-							<?php endif; ?>
-						<?php endif; ?>
-					<?php endforeach; ?>
-				</ul>
-			</div>
-		<?php endforeach; ?>
+		<nav aria-labelledby="pgds-footer-categories">
+			<h2 class="pgds-footer__heading" id="pgds-footer-categories"><?php esc_html_e( 'Chuyên mục', 'pgds' ); ?></h2>
+			<ul class="pgds-footer__categories">
+				<?php
+				foreach ( pgds_category_tree() as $slug => $node ) :
+					$term = pgds_category_term( $slug );
+					if ( ! $term instanceof WP_Term ) {
+						continue;
+					}
+					$term_url = get_term_link( $term );
+					if ( ! is_wp_error( $term_url ) ) :
+						?>
+						<li><a href="<?php echo esc_url( $term_url ); ?>"><?php echo esc_html( pgds_category_display_label( $slug, $node['label'] ) ); ?></a></li>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</ul>
+		</nav>
 
-		<?php
-		$social_links = array();
-		foreach ( pgds_footer_social_networks() as $network => $label ) {
-			$url = pgds_sanitize_footer_social_url( get_option( 'pgds_social_' . $network, '' ) );
-			if ( $url ) {
-				$social_links[ $network ] = array( $label, $url );
-			}
-		}
-		?>
 		<?php if ( $social_links ) : ?>
-			<div>
-				<h4><?php esc_html_e( 'Theo dõi chúng tôi', 'pgds' ); ?></h4>
+			<div class="pgds-footer__follow">
+				<h2 class="pgds-footer__heading"><?php esc_html_e( 'Theo dõi chúng tôi', 'pgds' ); ?></h2>
 				<ul class="pgds-footer__social">
 					<?php foreach ( $social_links as $network => list( $label, $url ) ) : ?>
 						<li>
@@ -96,7 +104,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php endif; ?>
 	</div>
 
-	<div class="pgds-footer__bottom footer-bottom">
+	<div class="pgds-wrap pgds-footer__bottom">
 		<?php
 		printf(
 			/* translators: %1$s year, %2$s site name */

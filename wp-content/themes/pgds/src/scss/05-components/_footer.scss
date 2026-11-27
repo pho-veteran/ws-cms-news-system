@@ -4,65 +4,97 @@
 @use 'config' as *;
 
 .pgds-footer {
-  background: var(--color-bg-inverse);
-  color: var(--pgds-gilt-pale);
+  background: var(--pgds-surface-2);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: $fs-xs;
   margin-top: $sp-5;
 
   &__grid {
     display: grid;
+    grid-template-columns: 1fr;
+    gap: $sp-6;
+    padding-block: $sp-7;
 
     > * {
       min-width: 0;
       overflow-wrap: anywhere;
     }
-    grid-template-columns: 1.4fr 1fr 1fr 1fr;
-    gap: $sp-7;
-    // Vertical only: keep .pgds-wrap's side gutters so the logo plate never touches the edge.
-    padding-top: $sp-10;
-    padding-bottom: $sp-6;
 
-    @include mq-max(lg) {
-      grid-template-columns: 1fr 1fr;
+    @include mq(sm) {
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
     }
 
-    @include mq-max(sm) {
-      grid-template-columns: 1fr;
+    @include mq(lg) {
+      gap: clamp(24px, 4vw, 48px);
+      padding-block: $sp-8;
+
+      &--with-social {
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+      }
     }
   }
 
-  h4 {
-    color: var(--pgds-gilt-light);
-    font-size: $fs-xs;
-    letter-spacing: $ls-wider;
-    text-transform: uppercase;
-    margin-bottom: 14px;
+  &__heading {
+    color: var(--color-brand-strong);
+    font-size: $fs-sm;
+    font-weight: $fw-bold;
+    margin-bottom: $sp-3;
   }
 
-  ul { font-size: $fs-xs; }
-
-  li {
-    margin-bottom: $sp-2;
-    opacity: .85;
+  a:hover {
+    color: var(--color-brand);
+    text-decoration: underline;
   }
 
-  a:hover { color: var(--pgds-white); }
-
-  &__intro {
-    font-size: $fs-xs;
-    opacity: .8;
-    line-height: $lh-loose;
+  &__brand {
+    display: block;
+    width: 224px;
+    max-width: 100%;
+    margin-bottom: $sp-3;
   }
 
+  &__intro,
   &__legal {
-    font-size: $fs-3xs;
-    opacity: .7;
-    line-height: $lh-loose;
-    margin-top: $sp-3;
+    color: var(--color-text-muted);
   }
 
   &__contacts {
     margin-top: $sp-3;
-    line-height: $lh-normal;
+
+    li + li { margin-top: $sp-1; }
+
+    a {
+      color: var(--color-brand);
+      font-weight: $fw-semibold;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  }
+
+  &__legal {
+    font-size: $fs-2xs;
+    margin-top: $sp-3;
+  }
+
+  &__categories {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $sp-2 $sp-4;
+
+    @include mq(sm) {
+      grid-template-columns: 1fr;
+    }
+
+    @include mq(lg) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  &__follow {
+    @include mq(lg) {
+      justify-self: end;
+    }
   }
 
   &__social {
@@ -70,28 +102,26 @@
     flex-wrap: wrap;
     gap: $sp-2;
 
-    li {
-      margin: 0;
-      opacity: 1;
-    }
-
     a {
       display: grid;
       place-items: center;
       width: 44px;
       height: 44px;
-      border: 1px solid var(--pgds-gilt-pale);
+      color: var(--color-text-inverse);
+      background: var(--color-brand-strong);
       border-radius: 50%;
 
-      &:focus-visible { @include focus-ring; }
+      &:hover {
+        color: var(--color-text-inverse);
+        background: var(--color-brand);
+      }
     }
   }
 
   &__bottom {
-    border-top: 1px solid var(--pgds-line-dark);
-    text-align: center;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
     font-size: $fs-2xs;
-    padding: $sp-4 0;
-    opacity: .7;
+    padding-block: $sp-3;
   }
 }
